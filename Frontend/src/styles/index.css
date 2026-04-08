@@ -1,0 +1,9 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+@import 'leaflet/dist/leaflet.css';
+
+/* Ensure root container has non-static position for motion/scroll calculations */
+#root {
+	position: relative;
+}

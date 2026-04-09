@@ -72,7 +72,10 @@ export const loginService = async (userName: string, password: string): Promise<
     }
 
     const user = await authModel.findOne({
-        userName: userName
+        $or: [
+            { userName: userName },
+            { email: userName }
+        ]
     });
 
     if (!user) {

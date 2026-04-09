@@ -78,7 +78,6 @@ export const GetPermissions = async (req: Request, res: Response, next: NextFunc
     try {
         const merged = Object.assign({}, req.body || {}, req.query || {});
         const { page, limit, search } = merged as { page?: string; limit?: string; search?: string };
-        console.log("GetPermission permID:", search);
 
         const result = await permissionRepo.getPermissions(search as string);
         if (!result) {

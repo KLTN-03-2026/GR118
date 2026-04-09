@@ -2,3 +2,5 @@ Email: admin@baocaovn.com — Role: admin
 Email: canbo@baocaovn.com — Role: cán bộ
 Email: user@baocaovn.com — Role: user
 Mật khẩu mặc định cho tất cả: 123456
+Email: admin@baocaovn.com
+Mật khẩu: admin123456

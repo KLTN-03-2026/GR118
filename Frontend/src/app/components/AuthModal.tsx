@@ -16,7 +16,7 @@ interface AuthModalProps {
 const CITIES = ["TP. Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Cần Thơ", "Hải Phòng", "Biên Hòa", "Huế", "Nha Trang"];
 
 export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProps) {
-  const { login, register, sendResetCode, verifyResetCode, resetPassword } = useAuth();
+  const { login, register, sendResetCode, verifyResetCode, resetPassword, sendRegisterCode, verifyRegisterCode } = useAuth();
   const [tab, setTab] = useState<"login" | "register" | "forgot-password">(defaultTab);
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -32,6 +32,8 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     name: "", email: "", password: "", confirmPassword: "", phone: "", city: "",
   });
   const [regErrors, setRegErrors] = useState<Record<string, string>>({});
+  const [regStep, setRegStep] = useState<1 | 2>(1);
+  const [regCode, setRegCode] = useState("");
 
   // Forgot password form
   const [forgotStep, setForgotStep] = useState<1 | 2 | 3>(1);
@@ -55,6 +57,8 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     setShowPass(false);
     setShowConfirmPass(false);
     setForgotStep(1);
+    setRegStep(1);
+    setRegCode("");
     setGeneratedCode("");
   };
 
@@ -103,9 +107,35 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     }
   };
 
-  const handleRegister = async () => {
+  const handleRegisterStep1 = async () => {
     if (!validateRegister()) return;
     setLoading(true);
+    const res = await sendRegisterCode(regData.email);
+    setLoading(false);
+    
+    if (res.success) {
+      setRegStep(2);
+      toast.success(`Mã xác thực đã được gửi đến ${regData.email}`);
+    } else {
+      setRegErrors({ general: res.error || "Không thể gửi OTP" });
+    }
+  };
+
+  const handleRegisterStep2 = async () => {
+    if (!regCode || regCode.length !== 6) {
+      setRegErrors({ code: "Vui lòng nhập mã xác thực gồm 6 chữ số" });
+      return;
+    }
+    
+    setLoading(true);
+    const verifyRes = await verifyRegisterCode(regData.email, regCode);
+    
+    if (!verifyRes.success) {
+      setLoading(false);
+      setRegErrors({ general: verifyRes.error || "Mã xác thực không đúng" });
+      return;
+    }
+    
     const res = await register({
       name: regData.name,
       email: regData.email,
@@ -114,6 +144,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
       city: regData.city,
     });
     setLoading(false);
+    
     if (res.success) {
       setSuccess(true);
       toast.success("Đăng ký thành công! Chào mừng bạn đến với BáoCáoVN 🎉");
@@ -356,106 +387,94 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
                           transition={{ duration: 0.25 }}
                           className="space-y-3"
                         >
-                          <div>
-                            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-                              Tạo tài khoản
-                              <Sparkles size={20} className="text-yellow-400" />
-                            </h2>
-                            <p className="text-gray-500 text-sm mt-1">Tham gia cộng đồng xây dựng Việt Nam tốt đẹp hơn</p>
-                          </div>
+                          {regStep === 1 ? (
+                            <motion.div key="reg1" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-3">
+                              <div>
+                                <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+                                  Tạo tài khoản
+                                  <Sparkles size={20} className="text-yellow-400" />
+                                </h2>
+                                <p className="text-gray-500 text-sm mt-1">Tham gia cộng đồng xây dựng Việt Nam tốt đẹp hơn</p>
+                              </div>
 
-                          {regErrors.general && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -8 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              className="flex items-center gap-2 p-3 bg-red-50 rounded-xl border border-red-100 text-red-600 text-sm"
-                            >
-                              <X size={14} />
-                              {regErrors.general}
+                              {regErrors.general && (
+                                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 p-3 bg-red-50 rounded-xl border border-red-100 text-red-600 text-sm">
+                                  <X size={14} />
+                                  {regErrors.general}
+                                </motion.div>
+                              )}
+
+                              <InputField icon={User} placeholder="Họ và tên" value={regData.name} onChange={(v) => setRegData((d) => ({ ...d, name: v }))} error={regErrors.name} />
+                              <InputField icon={Mail} type="email" placeholder="Email" value={regData.email} onChange={(v) => setRegData((d) => ({ ...d, email: v }))} error={regErrors.email} />
+                              <InputField
+                                icon={Lock} type={showPass ? "text" : "password"} placeholder="Mật khẩu (tối thiểu 6 ký tự)" value={regData.password} onChange={(v) => setRegData((d) => ({ ...d, password: v }))} error={regErrors.password}
+                                rightIcon={<button type="button" onClick={() => setShowPass(!showPass)} className="text-gray-400 hover:text-gray-600">{showPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>}
+                              />
+                              <InputField
+                                icon={Lock} type={showConfirmPass ? "text" : "password"} placeholder="Xác nhận mật khẩu" value={regData.confirmPassword} onChange={(v) => setRegData((d) => ({ ...d, confirmPassword: v }))} error={regErrors.confirmPassword}
+                                rightIcon={<button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="text-gray-400 hover:text-gray-600">{showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>}
+                              />
+                              <div className="grid grid-cols-2 gap-3">
+                                <InputField icon={Phone} placeholder="Số điện thoại" value={regData.phone} onChange={(v) => setRegData((d) => ({ ...d, phone: v }))} />
+                                <div className="relative">
+                                  <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                  <select value={regData.city} onChange={(e) => setRegData((d) => ({ ...d, city: e.target.value }))} className="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all text-sm bg-white text-gray-600">
+                                    <option value="">Tỉnh/Thành</option>
+                                    {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                                  </select>
+                                </div>
+                              </div>
+
+                              {regData.password && <PasswordStrength password={regData.password} />}
+
+                              <button
+                                onClick={handleRegisterStep1} disabled={loading}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-semibold shadow-lg shadow-red-200 hover:shadow-red-300 hover:scale-[1.02] transition-all duration-200 disabled:opacity-70 disabled:scale-100"
+                              >
+                                {loading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
+                                {loading ? "Đang gửi..." : "Tiếp tục"}
+                              </button>
+
+                              <p className="text-center text-sm text-gray-500">
+                                Đã có tài khoản?{" "}
+                                <button onClick={() => switchTab("login")} className="text-red-600 font-semibold hover:underline">
+                                  Đăng nhập
+                                </button>
+                              </p>
+                            </motion.div>
+                          ) : (
+                            <motion.div key="reg2" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4">
+                              <button onClick={() => setRegStep(1)} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors mb-2">
+                                <ArrowLeft size={14} /> Quay lại
+                              </button>
+
+                              <div>
+                                <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">Xác thực Email</h2>
+                                <p className="text-gray-500 text-sm mt-1">Nhập mã xác thực đã được gửi đến email đăng ký của bạn</p>
+                              </div>
+
+                              {regErrors.general && (
+                                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 p-3 bg-red-50 rounded-xl border border-red-100 text-red-600 text-sm">
+                                  <X size={14} />
+                                  {regErrors.general}
+                                </motion.div>
+                              )}
+
+                              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                                <p className="text-sm text-blue-900">📧 Mã xác thực đã được gửi đến <span className="font-semibold">{regData.email}</span></p>
+                              </div>
+
+                              <InputField icon={KeyRound} type="text" placeholder="Nhập mã 6 chữ số" value={regCode} onChange={(v) => setRegCode(v)} error={regErrors.code} />
+
+                              <button
+                                onClick={handleRegisterStep2} disabled={loading}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-semibold shadow-lg shadow-red-200 hover:shadow-red-300 hover:scale-[1.02] transition-all duration-200 disabled:opacity-70 disabled:scale-100"
+                              >
+                                {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                                {loading ? "Đang xử lý..." : "Xác thực & Tạo tài khoản"}
+                              </button>
                             </motion.div>
                           )}
-
-                          <InputField
-                            icon={User}
-                            placeholder="Họ và tên"
-                            value={regData.name}
-                            onChange={(v) => setRegData((d) => ({ ...d, name: v }))}
-                            error={regErrors.name}
-                          />
-                          <InputField
-                            icon={Mail}
-                            type="email"
-                            placeholder="Email"
-                            value={regData.email}
-                            onChange={(v) => setRegData((d) => ({ ...d, email: v }))}
-                            error={regErrors.email}
-                          />
-                          <InputField
-                            icon={Lock}
-                            type={showPass ? "text" : "password"}
-                            placeholder="Mật khẩu (tối thiểu 6 ký tự)"
-                            value={regData.password}
-                            onChange={(v) => setRegData((d) => ({ ...d, password: v }))}
-                            error={regErrors.password}
-                            rightIcon={
-                              <button type="button" onClick={() => setShowPass(!showPass)} className="text-gray-400 hover:text-gray-600">
-                                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                              </button>
-                            }
-                          />
-                          <InputField
-                            icon={Lock}
-                            type={showConfirmPass ? "text" : "password"}
-                            placeholder="Xác nhận mật khẩu"
-                            value={regData.confirmPassword}
-                            onChange={(v) => setRegData((d) => ({ ...d, confirmPassword: v }))}
-                            error={regErrors.confirmPassword}
-                            rightIcon={
-                              <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="text-gray-400 hover:text-gray-600">
-                                {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
-                              </button>
-                            }
-                          />
-                          <div className="grid grid-cols-2 gap-3">
-                            <InputField
-                              icon={Phone}
-                              placeholder="Số điện thoại"
-                              value={regData.phone}
-                              onChange={(v) => setRegData((d) => ({ ...d, phone: v }))}
-                            />
-                            <div className="relative">
-                              <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                              <select
-                                value={regData.city}
-                                onChange={(e) => setRegData((d) => ({ ...d, city: e.target.value }))}
-                                className="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all text-sm bg-white text-gray-600"
-                              >
-                                <option value="">Tỉnh/Thành</option>
-                                {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Password strength */}
-                          {regData.password && (
-                            <PasswordStrength password={regData.password} />
-                          )}
-
-                          <button
-                            onClick={handleRegister}
-                            disabled={loading}
-                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-semibold shadow-lg shadow-red-200 hover:shadow-red-300 hover:scale-[1.02] transition-all duration-200 disabled:opacity-70 disabled:scale-100"
-                          >
-                            {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                            {loading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
-                          </button>
-
-                          <p className="text-center text-sm text-gray-500">
-                            Đã có tài khoản?{" "}
-                            <button onClick={() => switchTab("login")} className="text-red-600 font-semibold hover:underline">
-                              Đăng nhập
-                            </button>
-                          </p>
                         </motion.div>
                       ) : (
                         <motion.div

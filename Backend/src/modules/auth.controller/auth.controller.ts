@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import authModel from '../../models/auth.model';
 import bcrypt from "bcrypt";
+import otpModel from "../../models/otp.model";
 
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -27,6 +28,19 @@ export const register = async (req: Request, res: Response) => {
     try {
         let { userName, email, password } = req.body;
 
+        const verifiedOtp = await otpModel.findOne({
+            email: email?.trim().toLowerCase(),
+            type: "register",
+            used: true
+        }).sort({ updatedAt: -1 });
+
+        if (!verifiedOtp) {
+            return res.status(400).json({
+                success: false,
+                message: "Vui lòng xác thực email bằng mã OTP trước khi đăng ký"
+            });
+        }
+
         const result = await authRepo.CreateNewUser(userName, email, password);
 
         if (!result.success || !result.data) {
@@ -43,6 +57,9 @@ export const register = async (req: Request, res: Response) => {
             })
         }
         await userRepo.AddNewRolesToNewUser(newUser._id.toString(), userRole._id.toString());
+        
+        await otpModel.deleteMany({ email: email?.trim().toLowerCase(), type: "register" });
+
         return res.status(201).json({
             success: true,
             message: "Account created successfully"
@@ -81,8 +98,12 @@ export const login = async (req: Request, res: Response) => {
                 message: "User role not found"
             });
         }
+        
+        const roleRes = await roleSchema.find({ _id: { $in: roleIds } }).lean();
+        const primaryRole = roleRes.length > 0 ? roleRes[0].name.toLowerCase() : "user";
+        const primaryRoleId = roleIds[0] || null;
 
-        console.log("User " + user.userName + " logged in with roles: " + roleIds.join(", "));
+        console.log("User " + user.userName + " logged in with roles: " + roleRes.map(r => r.name).join(", "));
 
         const accessToken = generateTokens(user._id.toString(), roleIds).accessToken;
         const refreshToken = generateTokens(user._id.toString(), roleIds).refreshToken;
@@ -111,7 +132,9 @@ export const login = async (req: Request, res: Response) => {
                 user: {
                     _id: user._id,
                     userName: user.userName,
-                    email: user.email
+                    email: user.email,
+                    role: primaryRole,
+                    roleId: primaryRoleId
                 }
             })
     }
@@ -151,6 +174,10 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
             });
         }
 
+        const roleIds = await userRepo.GetRoleIDsByUserID(user._id.toString());
+        const roleRes = await roleSchema.find({ _id: { $in: roleIds } }).lean();
+        const primaryRole = roleRes.length > 0 ? roleRes[0].name.toLowerCase() : "user";
+        const primaryRoleId = roleIds.length > 0 ? roleIds[0] : null;
 
         const isProduction = process.env.NODE_ENV === 'production';
 
@@ -173,7 +200,9 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
                 user: {
                     _id: user._id,
                     userName: user.userName,
-                    email: user.email
+                    email: user.email,
+                    role: primaryRole,
+                    roleId: primaryRoleId
                 }
             });
 

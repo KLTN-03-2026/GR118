@@ -37,6 +37,8 @@ interface AuthContextType {
   resetPassword: (email: string, code: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   sendChangePasswordOTP: (email: string, currentPassword: string) => Promise<{ success: boolean; error?: string; code?: string }>;
   changePassword: (email: string, code: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  sendRegisterCode: (email: string) => Promise<{ success: boolean; error?: string; code?: string }>;
+  verifyRegisterCode: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 interface RegisterData {
@@ -163,6 +165,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const sendRegisterCode = async (email: string): Promise<{ success: boolean; error?: string; code?: string }> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/otp/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, type: "register" }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        return { success: false, error: data.message || "Gửi mã thất bại" };
+      }
+      return { success: true };
+    } catch {
+      return { success: false, error: "Không thể kết nối đến máy chủ" };
+    }
+  };
+
+  const verifyRegisterCode = async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code, type: "register" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) return { success: true };
+      return { success: false, error: data.message || "Mã xác thực không đúng" };
+    } catch {
+      return { success: false, error: "Không thể kết nối đến máy chủ" };
+    }
+  };
+
   const sendChangePasswordOTP = async (email: string, _currentPassword: string): Promise<{ success: boolean; error?: string; code?: string }> => {
     // Note: Verification of currentPassword should ideally happen on BE before sending OTP
     return await sendResetCode(email);
@@ -203,7 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateProfile, sendResetCode, verifyResetCode, resetPassword, sendChangePasswordOTP, changePassword }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateProfile, sendResetCode, verifyResetCode, resetPassword, sendChangePasswordOTP, changePassword, sendRegisterCode, verifyRegisterCode }}>
       {children}
     </AuthContext.Provider>
   );
@@ -225,6 +259,8 @@ export function useAuth() {
       resetPassword: async () => ({ success: false, error: "Auth not initialized" }),
       sendChangePasswordOTP: async () => ({ success: false, error: "Auth not initialized" }),
       changePassword: async () => ({ success: false, error: "Auth not initialized" }),
+      sendRegisterCode: async () => ({ success: false, error: "Auth not initialized" }),
+      verifyRegisterCode: async () => ({ success: false, error: "Auth not initialized" }),
     };
   }
   return ctx;

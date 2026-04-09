@@ -202,7 +202,7 @@ export const getUser = async (userId: string) => {
 
     const roleIds = roles.map(r => r.role_id);
 
-    const roleRes = await roleSchema.find({ role_id: { $in: roleIds } }).lean();
+    const roleRes = await roleSchema.find({ _id: { $in: roleIds } }).lean();
 
     const roleName = roleRes.map(r => r.name);
 

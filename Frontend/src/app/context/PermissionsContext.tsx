@@ -39,7 +39,13 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     permissionData: Omit<Permission, "id" | "createdAt">
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const res = await api.post("/auth/permissions", permissionData);
+      const payload = {
+        name: permissionData.name,
+        description: permissionData.description,
+        resourceID: permissionData.resource,
+        actionIDs: permissionData.actions,
+      };
+      const res = await api.post("/auth/permissions", payload);
       if (res.success) {
         // Reload permissions from server
         const updated = await api.get("/auth/permissions");
@@ -58,7 +64,14 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     updates: Partial<Permission>
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const res = await api.put(`/auth/permissions/${id}`, updates);
+      const payload = {
+        permID: id,
+        name: updates.name,
+        description: updates.description,
+        resourceID: updates.resource,
+        actionIDs: updates.actions,
+      };
+      const res = await api.post(`/auth/permissions`, payload);
       if (res.success) {
         setPermissions((prev) =>
           prev.map((p) =>

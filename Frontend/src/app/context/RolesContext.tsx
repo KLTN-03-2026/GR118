@@ -21,10 +21,20 @@ export function RolesProvider({ children }: { children: ReactNode }) {
   const fetchRoles = async () => {
     try {
       const res = await api.get("/auth/role");
-      if (res.success && res.data) {
-        setRoles(res.data);
-      } else if (res.roles) {
-        setRoles(res.roles);
+      if (res.success && (res.roles || res.data)) {
+        const rawRoles = res.roles || res.data;
+        const mappedRoles = rawRoles.map((r: any) => ({
+          id: r.role_id || r.id,
+          name: r.name,
+          description: r.description || "",
+          permissionIds: r.permissions ? r.permissions.map((p: any) => p.perm_id) : (r.permissionIds || []),
+          isActive: r.is_active !== undefined ? r.is_active : (r.isActive !== undefined ? r.isActive : true),
+          isSystem: r.is_root !== undefined ? r.is_root : (r.isSystem || false),
+          createdAt: r.created_at || r.createdAt || new Date().toISOString(),
+          updatedAt: r.updated_at || r.updatedAt,
+          userCount: r.userCount || 0,
+        }));
+        setRoles(mappedRoles);
       }
     } catch (error) {
       console.error("Failed to load roles:", error);

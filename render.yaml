@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: issue-reporting-system
+    env: static
+    buildCommand: cd Frontend && npm install --legacy-peer-deps && npm run build
+    staticPublishPath: Frontend/dist
+    routes:
+      - path: /*
+        destination: /index.html

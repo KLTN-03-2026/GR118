@@ -62,7 +62,7 @@ export const assignRoleToUser = async (
         throw new Error("roleIds must be an array");
     }
 
-    const existing = await userRoleScheme.find({
+    const existing = await userRoleSchema.find({
         user_id: userId
     }).lean();
 
@@ -84,7 +84,7 @@ export const assignRoleToUser = async (
         await userRoleSchema.deleteMany({
             user_id: userId,
             role_id: { $in: toRemove }
-        }, { session: session || null });
+        }, session ? { session } : undefined);
     }
 
     await syncUserPrimaryRole(userId, session);
@@ -96,7 +96,7 @@ export const assignRoleToUser = async (
 
 export const CountUsersByRoles = async (roleIds: string[]) => {
 
-    return await userRoleScheme.aggregate([
+    return await userRoleSchema.aggregate([
         {
             $match: {
                 role_id: { $in: roleIds }
@@ -231,8 +231,9 @@ export const getUser = async (userId: string) => {
         return null;
     }
 
-    const roleIds = roles.map(r => r.role_id);
-    const validRoleObjectIds = roleIds.filter(id => id && mongoose.Types.ObjectId.isValid(id));
+    const existingRoles = await userRoleSchema.find({ user_id: userId }).lean();
+    const roleIds = existingRoles.map((r: any) => r.role_id);
+    const validRoleObjectIds = roleIds.filter((id: any) => id && mongoose.Types.ObjectId.isValid(id));
 
     const roleRes = await roleSchema.find({ 
         $or: [
@@ -511,7 +512,7 @@ export const deleteUser = async (userId: string) => {
 
     try {
         await authSchema.findByIdAndDelete(userId).session(session);
-        await userRoleScheme.deleteMany({ user_id: userId }).session(session);
+        await userRoleSchema.deleteMany({ user_id: userId }).session(session);
         
         await session.commitTransaction();
         session.endSession();

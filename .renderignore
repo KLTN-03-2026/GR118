@@ -1,0 +1,5 @@
+Backend/
+AI/
+node_modules/
+.git/
+.npmrc

@@ -53,7 +53,7 @@ export const GetRoles = async (req: Request, res: Response, next: NextFunction) 
 
 export const GetRoleById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const roleId = req.params.id;
+        const roleId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
         if (!roleId) {
             const err = ERROR_CODES.INVALID_INPUT;
             return next(new AppError(err.statusCode, err.code, "Missing required Role ID"));
@@ -82,7 +82,8 @@ export const GetRoleById = async (req: Request, res: Response, next: NextFunctio
 export const DeleteRole = async (req: Request, res: Response, next: NextFunction) => {
     try {
         // Frontend gửi DELETE /role?id=xxx — đọc từ query param trước, fallback sang body
-        const roleId = (req.query.id as string) || req.body.roleId;
+        const rawRoleId = Array.isArray(req.query.id) ? req.query.id[0] : req.query.id;
+        const roleId = typeof rawRoleId === "string" ? rawRoleId : req.body.roleId;
         if (!roleId) {
             const err = ERROR_CODES.INVALID_INPUT;
             return next(new AppError(err.statusCode, err.code, "Missing required Role ID"));

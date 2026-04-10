@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { issueRepo } from "../../repos/issue.repo";
 
+const normalizeParam = (value: string | string[] | undefined): string => {
+  if (Array.isArray(value)) return value[0];
+  return value ?? "";
+};
+
 export const getAllIssues = async (req: Request, res: Response) => {
   try {
     const issues = await issueRepo.getAllIssues();
@@ -13,7 +18,7 @@ export const getAllIssues = async (req: Request, res: Response) => {
 
 export const getIssueById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = normalizeParam(req.params.id);
     const issue = await issueRepo.getIssueById(id);
     if (!issue) {
       return res.status(404).json({ success: false, message: "Không tìm thấy báo cáo" });
@@ -37,7 +42,7 @@ export const createIssue = async (req: Request, res: Response) => {
 
 export const updateIssueStatus = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = normalizeParam(req.params.id);
     const { status, note } = req.body;
     const updatedIssue = await issueRepo.updateIssueStatus(id, status, note);
     if (!updatedIssue) {
@@ -51,7 +56,7 @@ export const updateIssueStatus = async (req: Request, res: Response) => {
 
 export const verifyIssue = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = normalizeParam(req.params.id);
     const verificationData = req.body;
     
     // In a real app we'd get user info from JWT, here we assume it's in body
@@ -67,7 +72,7 @@ export const verifyIssue = async (req: Request, res: Response) => {
 
 export const upvoteIssue = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = normalizeParam(req.params.id);
     const updatedIssue = await issueRepo.voteIssue(id);
     if (!updatedIssue) {
       return res.status(404).json({ success: false, message: "Không tìm thấy báo cáo" });

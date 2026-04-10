@@ -1,9 +1,12 @@
+import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import resourceSchema from "../../models/auth/resources";
 import actionSchema from "../../models/auth/actions";
 import permissionSchema from "../../models/auth/permissions";
 import permissionActionSchema from "../../models/auth/permission_actions";
 import rolePermissionSchema from "../../models/auth/role_permissions";
+import roleModel from "../../models/auth/roles";
+import authModel from "../../models/auth.model";
 import userRoleScheme from "../../models/auth/user_role";
 import mongoose from "mongoose";
 
@@ -160,8 +163,8 @@ export const SeedDemoData = async (req: Request, res: Response, next: NextFuncti
 
             // Sync role
             await userRoleScheme.findOneAndUpdate(
-                { user_id: user._id, role_id: u.roleId },
-                { user_id: user._id, role_id: u.roleId },
+                { user_id: user._id.toString(), role_id: u.roleId } as any,
+                { user_id: user._id.toString(), role_id: u.roleId } as any,
                 { upsert: true }
             );
         }

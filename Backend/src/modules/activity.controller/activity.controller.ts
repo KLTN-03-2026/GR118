@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { activityRepo } from "../../repos/activity.repo";
 
+const normalizeParam = (value: string | string[] | undefined): string => {
+  if (Array.isArray(value)) return value[0];
+  return value ?? "";
+};
+
 export const getAllActivities = async (req: Request, res: Response) => {
   try {
     const activities = await activityRepo.getAllActivities();
@@ -13,7 +18,7 @@ export const getAllActivities = async (req: Request, res: Response) => {
 
 export const getActivityById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = normalizeParam(req.params.id);
     const activity = await activityRepo.getActivityById(id);
     if (!activity) {
       return res.status(404).json({ success: false, message: "Không tìm thấy hoạt động" });
@@ -37,7 +42,7 @@ export const createActivity = async (req: Request, res: Response) => {
 
 export const registerParticipant = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = normalizeParam(req.params.id);
     const participantData = req.body;
     
     // Validate if activity allows
@@ -55,7 +60,7 @@ export const registerParticipant = async (req: Request, res: Response) => {
 
 export const cancelRegistration = async (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = normalizeParam(req.params.id);
       const { userId } = req.body; // or req.user
   
       const updatedActivity = await activityRepo.cancelRegistration(id, userId);
@@ -70,7 +75,7 @@ export const cancelRegistration = async (req: Request, res: Response) => {
 
 export const updateActivity = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = normalizeParam(req.params.id);
     const activityData = req.body;
     const updatedActivity = await activityRepo.updateActivity(id, activityData);
     if (!updatedActivity) {
@@ -85,7 +90,7 @@ export const updateActivity = async (req: Request, res: Response) => {
 
 export const deleteActivity = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = normalizeParam(req.params.id);
     const success = await activityRepo.deleteActivity(id);
     if (!success) {
       return res.status(404).json({ success: false, message: "Không tìm thấy hoạt động để xóa" });

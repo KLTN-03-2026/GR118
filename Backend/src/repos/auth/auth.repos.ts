@@ -177,6 +177,10 @@ export const loginWithGoogleService = async (idToken: string): Promise<ServiceRe
         }
     }
 
+    if (!user) {
+        throw new Error("Google login user creation failed");
+    }
+
     const roleIds = await userRepo.GetRoleIDsByUserID(user._id.toString());
 
     if (!roleIds.length) {

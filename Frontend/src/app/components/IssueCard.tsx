@@ -74,7 +74,7 @@ export function IssueCard({ issue, index = 0 }: IssueCardProps) {
 
           <div className="flex items-center gap-1.5 text-gray-400 text-xs mb-3">
             <MapPin size={12} className="text-red-400 flex-shrink-0" />
-            <span className="truncate">{issue.location}, {issue.district}</span>
+            <span className="truncate">{issue.location}, {issue.ward}, {issue.district}</span>
           </div>
 
           {/* Rating Display */}

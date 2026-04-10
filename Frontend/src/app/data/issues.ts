@@ -50,6 +50,7 @@ export interface Issue {
   status: IssueStatus;
   location: string;
   district: string;
+  ward: string;
   city: string;
   lat: number;
   lng: number;

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Permission } from "../data/permissions";
+import { Permission, PermissionResource } from "../data/permissions";
 import { api } from "../../utils/api";
 
 interface PermissionsContextType {
@@ -13,25 +13,113 @@ interface PermissionsContextType {
 
 const PermissionsContext = createContext<PermissionsContextType | null>(null);
 
+// Mapping resource_id (backend name) → PermissionResource (frontend type)
+const RESOURCE_NAME_TO_TYPE: Record<string, PermissionResource> = {
+  issues_vande: "issues_vande",
+  activities_volunteer: "activities_volunteer",
+  stats_overview: "stats_overview",
+  issues_mgnt: "issues_mgnt",
+  issues_process: "issues_process",
+  users_mgnt: "users_mgnt",
+  reports_stats: "reports_stats",
+  activities_mgnt: "activities_mgnt",
+  perms_mgnt: "perms_mgnt",
+  roles_mgnt: "roles_mgnt",
+};
+
+// Map action names từ backend (create/read/update...) → frontend PermissionAction
+const ACTION_NAME_MAP: Record<string, string> = {
+  create: "create",
+  read: "read",
+  update: "update",
+  delete: "delete",
+  approve: "approve",
+  export: "export",
+  assign: "assign",
+};
+
+/**
+ * Map một permission từ backend format sang frontend Permission format.
+ * Backend trả về: { perm_id, resource_id, name, description, is_root, createdAt }
+ * Frontend cần:  { id, resource, name, description, actions, isSystem, createdAt }
+ *
+ * Backend's resource_id ở list endpoint là resource "id" (ví dụ "res_issues")
+ * hoặc resource "name" (ví dụ "issues") tùy endpoint.
+ * Chúng ta map cả hai trường hợp.
+ */
+function mapBackendPermission(raw: any): Permission {
+  // Resolve resource type
+  let resourceType: PermissionResource = "system";
+  const rid: string = raw.resource_id || "";
+
+  // Thử match theo name trực tiếp
+  if (RESOURCE_NAME_TO_TYPE[rid]) {
+    resourceType = RESOURCE_NAME_TO_TYPE[rid];
+  } else {
+    // Thử match theo suffix (ví dụ "res_issues" → "issues")
+    const parts = rid.split("_");
+    const suffix = parts.slice(1).join("_");
+    if (suffix && RESOURCE_NAME_TO_TYPE[suffix]) {
+      resourceType = RESOURCE_NAME_TO_TYPE[suffix];
+    }
+  }
+
+  // Map actions: backend có thể trả thêm actions trong 1 số endpoint detail
+  const rawActions: string[] = Array.isArray(raw.actions) ? raw.actions : [];
+  const mappedActions = rawActions
+    .map((a: any) => {
+      const name = typeof a === "string" ? a : a?.name || a?.action_id || "";
+      return ACTION_NAME_MAP[name] || name;
+    })
+    .filter(Boolean) as Permission["actions"];
+
+  return {
+    id: raw.perm_id || raw._id || raw.id || "",
+    name: raw.name || "",
+    description: raw.description || "",
+    resource: resourceType,
+    actions: mappedActions,
+    createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
+    updatedAt: raw.updatedAt || raw.updated_at,
+    createdBy: raw.createdBy,
+    isSystem: raw.is_root ?? false,
+  };
+}
+
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchPermissions = async () => {
-      try {
-        const res = await api.get("/auth/permissions");
-        if (res.success && res.data) {
-          setPermissions(res.data);
-        } else if (res.permissions) {
-          setPermissions(res.permissions);
-        }
-      } catch (error) {
-        console.error("Failed to load permissions:", error);
-      } finally {
-        setIsLoading(false);
+  const fetchPermissions = async () => {
+    try {
+      // Fetch tất cả permissions — limit=500 để lấy hết
+      const res = await api.get("/auth/permissions?limit=500");
+      console.log("[PermissionsContext] API response:", res);
+      let rawList: any[] = [];
+
+      if (res.success && Array.isArray(res.permissions) && res.permissions.length > 0) {
+        rawList = res.permissions;
+      } else if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        rawList = res.data;
+      } else {
+        console.warn("[PermissionsContext] No permissions in response:", {
+          success: res.success,
+          permissionsType: typeof res.permissions,
+          permissionsLength: res.permissions?.length,
+          keys: Object.keys(res),
+        });
       }
-    };
+
+      console.log("[PermissionsContext] rawList length:", rawList.length);
+      setPermissions(rawList.map(mapBackendPermission));
+    } catch (error) {
+      console.error("[PermissionsContext] Failed to load permissions:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchPermissions();
   }, []);
 
@@ -39,18 +127,42 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     permissionData: Omit<Permission, "id" | "createdAt">
   ): Promise<{ success: boolean; error?: string }> => {
     try {
+      // Tìm resource theo name để lấy resource_id
+      const resourcesRes = await api.get("/auth/permissions/resources");
+      let resourceId = permissionData.resource; // fallback về resource name
+
+      if (resourcesRes.success && resourcesRes.resources) {
+        const found = resourcesRes.resources.find(
+          (r: any) => r.name === permissionData.resource || r.resource_id === permissionData.resource
+        );
+        if (found) resourceId = found.resource_id;
+      }
+
+      // Tìm action_ids tương ứng với resource + action names
+      const actionsRes = await api.get(`/auth/permissions/action?resourceID=${resourceId}`);
+      let actionIDs: string[] = [];
+
+      if (actionsRes.success && actionsRes.actions) {
+        actionIDs = actionsRes.actions
+          .filter((a: any) => permissionData.actions.includes(a.name))
+          .map((a: any) => a.action_id);
+      }
+
+      // Fallback: nếu không tìm được action_ids từ backend, gửi action names và để backend tự xử
+      if (actionIDs.length === 0) {
+        actionIDs = permissionData.actions as string[];
+      }
+
       const payload = {
         name: permissionData.name,
         description: permissionData.description,
-        resourceID: permissionData.resource,
-        actionIDs: permissionData.actions,
+        resourceID: resourceId,
+        actionIDs: actionIDs,
       };
+
       const res = await api.post("/auth/permissions", payload);
       if (res.success) {
-        // Reload permissions from server
-        const updated = await api.get("/auth/permissions");
-        if (updated.success && updated.data) setPermissions(updated.data);
-        else if (updated.permissions) setPermissions(updated.permissions);
+        await fetchPermissions(); // reload
         return { success: true };
       }
       return { success: false, error: res.message || "Thêm quyền thất bại" };
@@ -71,7 +183,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
         resourceID: updates.resource,
         actionIDs: updates.actions,
       };
-      const res = await api.post(`/auth/permissions`, payload);
+      const res = await api.post("/auth/permissions", payload);
       if (res.success) {
         setPermissions((prev) =>
           prev.map((p) =>

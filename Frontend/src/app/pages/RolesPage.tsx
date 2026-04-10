@@ -32,7 +32,7 @@ import {
 } from "../components/ui/drawer";
 
 export function RolesPage() {
-  const { user } = useAuth();
+  const { can } = useAuth();
   const { roles, isLoading, addRole, deleteRole } = useRoles();
   const { permissions } = usePermissions();
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,7 +41,6 @@ export function RolesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form state lifted up
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -49,8 +48,7 @@ export function RolesPage() {
     isActive: true,
   });
 
-  // Redirect if not admin
-  if (!user || user.role !== "admin") {
+  if (!can("roles_mgnt", "read")) {
     return <Navigate to="/" replace />;
   }
 
@@ -233,13 +231,15 @@ export function RolesPage() {
                 <p className="text-gray-500">Quản lý vai trò và phân quyền hệ thống</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowAddDrawer(true)}
-              className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all"
-            >
-              <Plus size={18} />
-              Thêm vai trò
-            </button>
+            {can("roles_mgnt", "create") && (
+              <button
+                onClick={() => setShowAddDrawer(true)}
+                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all"
+              >
+                <Plus size={18} />
+                Thêm vai trò
+              </button>
+            )}
           </div>
         </div>
 
@@ -370,7 +370,7 @@ export function RolesPage() {
                     <Eye size={16} />
                     Chi tiết
                   </Link>
-                  {!role.isSystem && (
+                  {can("roles_mgnt", "delete") && !role.isSystem && (
                     <button
                       onClick={() => setShowDeleteModal(role.id)}
                       disabled={!!(role.userCount && role.userCount > 0)}

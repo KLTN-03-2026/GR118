@@ -20,6 +20,19 @@ export const getRoles = async (search: string) => {
 
     const roles = await roleSchema.find(query).lean();
 
+    // Fetch user count for each role
+    const rolesWithUserCount = await Promise.all(
+        roles.map(async (role) => {
+            const userCount = await userRoleScheme.countDocuments({
+                role_id: role.role_id
+            });
+            return {
+                ...role,
+                userCount
+            };
+        })
+    );
+
     const total = await roleSchema.countDocuments(query);
 
     const rootCount = await roleSchema.countDocuments({
@@ -28,7 +41,7 @@ export const getRoles = async (search: string) => {
     });
 
     return {
-        items: roles,
+        items: rolesWithUserCount,
         total,
         rootCount
     };
@@ -43,11 +56,18 @@ export const getRoleById = async (roleId: string): Promise<RoleRow[] | null> => 
         return null;
     }
 
+    const userCount = await userRoleScheme.countDocuments({
+        role_id: roleId
+    });
+
     const permissions = await rolePermissionSchema.find({
         role_id: roleId
     }).lean();
 
-    const permIds = permissions.map(p => p.perm_id);
+    // Lấy ID từ cả bảng liên kết và mảng phi chuẩn hóa trong bản ghi Role
+    const relationalIds = permissions.map(p => p.perm_id);
+    const denormalizedIds = role.permissions || [];
+    const permIds = [...new Set([...relationalIds, ...denormalizedIds])];
 
     const perms = await Permissions.find({
         perm_id: { $in: permIds }
@@ -63,8 +83,9 @@ export const getRoleById = async (roleId: string): Promise<RoleRow[] | null> => 
         updated_at: role?.updatedAt,
         permission_id: p.perm_id || "",
         permission_name: p.name || "",
-        permission_description: p.description || ""
-    }));
+        permission_description: p.description || "",
+        userCount: userCount
+    } as any));
 
     if (result.length === 0 && role) {
         return [{
@@ -77,8 +98,9 @@ export const getRoleById = async (roleId: string): Promise<RoleRow[] | null> => 
             updated_at: role.updatedAt,
             permission_id: null,
             permission_name: null,
-            permission_description: null
-        }];
+            permission_description: null,
+            userCount: userCount
+        } as any];
     }
 
     return result;
@@ -87,8 +109,15 @@ export const getRoleById = async (roleId: string): Promise<RoleRow[] | null> => 
 
 export const upsertRole = async (data: any) => {
     if (data.role_id) {
+        const filter: any = {
+            $or: [{ role_id: data.role_id }]
+        };
+        if (mongoose.Types.ObjectId.isValid(data.role_id)) {
+            filter.$or.push({ _id: data.role_id });
+        }
+
         return await roleSchema.findOneAndUpdate(
-            { role_id: data.role_id },
+            filter,
             data,
             {
                 returnDocument: "after"
@@ -98,20 +127,27 @@ export const upsertRole = async (data: any) => {
 
     const existing = await roleSchema.findOne({ name: data.name });
     if (existing) {
-        throw new Error("Role name already exists");
+        // Ném lỗi rõ ràng để controller bắt được
+        const error: any = new Error("Tên vai trò này đã tồn tại");
+        error.statusCode = 400;
+        throw error;
     }
 
     return await roleSchema.create({
         ...data,
-        role_id: randomUUID()
+        role_id: new mongoose.Types.ObjectId().toString()
     });
 };
 
 export const deleteRole = async (roleId: string) => {
+    const filter: any = {
+        $or: [{ role_id: roleId }]
+    };
+    if (mongoose.Types.ObjectId.isValid(roleId)) {
+        filter.$or.push({ _id: roleId });
+    }
 
-    const result = await roleSchema.deleteOne({
-        role_id: roleId
-    });
+    const result = await roleSchema.deleteOne(filter);
 
     await rolePermissionSchema.deleteMany({
         role_id: roleId
@@ -120,13 +156,31 @@ export const deleteRole = async (roleId: string) => {
     return result.deletedCount > 0;
 };
 
+// Quick lookup by role_id — used for is_root checks before deletion
+export const findRoleById = async (roleId: string) => {
+    const filter: any = {
+        $or: [{ role_id: roleId }]
+    };
+    if (mongoose.Types.ObjectId.isValid(roleId)) {
+        filter.$or.push({ _id: roleId });
+    }
+    return await roleSchema.findOne(filter).lean();
+};
+
 export const disableOrEnableRole = async (
     roleId: string,
     status: boolean
 ) => {
 
+    const filter: any = {
+        $or: [{ role_id: roleId }]
+    };
+    if (mongoose.Types.ObjectId.isValid(roleId)) {
+        filter.$or.push({ _id: roleId });
+    }
+
     return await roleSchema.updateOne(
-        { role_id: roleId },
+        filter,
         {
             $set: { is_active: status },
             $currentDate: { updatedAt: true }
@@ -137,19 +191,17 @@ export const disableOrEnableRole = async (
 
 export const upsertPermissionsForRole = async (
     roleId: string,
-    permIds: string[]
+    permIds: string[] = [] // Default to empty array
 ) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
         const current = await rolePermissionSchema.find({
             role_id: roleId
-        }).session(session).lean();
+        }).lean();
 
         const currentPermIds = current.map(x => x.perm_id);
 
-        const toAdd = permIds.filter(id => !currentPermIds.includes(id));
-        const toRemove = currentPermIds.filter(id => !permIds.includes(id));
+        const toAdd = (permIds || []).filter(id => !currentPermIds.includes(id));
+        const toRemove = currentPermIds.filter(id => !(permIds || []).includes(id));
 
         const operations: any[] = [];
 
@@ -176,18 +228,19 @@ export const upsertPermissionsForRole = async (
             });
         }
         if (operations.length > 0) {
-            await rolePermissionSchema.bulkWrite(operations, { session });
+            await rolePermissionSchema.bulkWrite(operations);
         }
-        await session.commitTransaction();
+
+        // Đồng bộ trường permissions vào thẳng bảng roles
+        await roleSchema.updateOne(
+            { role_id: roleId },
+            { $set: { permissions: permIds || [] } }
+        );
 
         return { message: "Permissions updated successfully" };
 
     } catch (err) {
-
-        await session.abortTransaction();
         throw err;
-    } finally {
-        session.endSession();
     }
 };
 

@@ -19,6 +19,7 @@ export interface Activity {
   content: string; // Nội dung chi tiết
   location: string;
   district: string;
+  ward: string;
   city: string;
   lat: number;
   lng: number;

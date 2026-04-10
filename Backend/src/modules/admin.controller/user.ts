@@ -154,13 +154,22 @@ export const UpdateUser = async (req: Request, res: Response, next: NextFunction
             return next(new AppError(err.statusCode, err.code, "User not found"));
         }
 
-        const { userName, email, password, roleIds } = req.body;
+        const { userName, email, password, roleIds, roleId } = req.body;
+        
+        console.log(`[UpdateUser] Request for ID: ${id}`);
+        console.log(`[UpdateUser] Payload:`, JSON.stringify({ userName, email, hasPassword: !!password, roleIds, roleId }));
+
+        // Fallback: nếu client gửi roleId (số ít) thay vì roleIds (mảng)
+        let finalRoleIds = roleIds;
+        if (!finalRoleIds && roleId) {
+            finalRoleIds = [roleId];
+        }
 
         const result = await userRepo.updateUserByAdmin(id, {
             userName,
             email,
             password,
-            roleIds
+            roleIds: finalRoleIds
         });
 
         if (!result.success || !result.data) {

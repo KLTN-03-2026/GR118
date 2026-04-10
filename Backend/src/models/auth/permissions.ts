@@ -25,6 +25,11 @@ const permissionSchema = new mongoose.Schema({
     is_root: {
         type: Boolean,
         default: false
+    },
+
+    actions: {
+        type: [String],
+        default: []
     }
 
 }, { timestamps: true });

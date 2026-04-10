@@ -7,12 +7,26 @@ export class PermissionMapper {
         if (!description) {
             description = "";
         }
+        const permId = perms.perm_id || (perms._id ? perms._id.toString() : "");
+        
+        // Ưu tiên dùng actions từ phép JOIN (actions_joined), nếu không có thì dùng actions thô từ document
+        const actions = (perms.actions_joined && perms.actions_joined.length > 0)
+            ? perms.actions_joined.map((a: any) => ({
+                action_id: a.action_id,
+                name: a.name
+            }))
+            : (Array.isArray(perms.actions) ? perms.actions.map((id: string) => ({
+                action_id: id,
+                name: id.split("_").pop() || id
+            })) : []);
+
         return {
-            perm_id: perms.perm_id,
+            perm_id: permId,
             resource_id: perms.resource_id,
             name: perms.name,
             description: description,
-            is_root: perms.is_root
+            is_root: perms.is_root,
+            actions: actions
         }
     }
 
@@ -23,15 +37,23 @@ export class PermissionMapper {
         }
 
         const first = perms[0];
-
         const description = first.description || "";
 
-        const actions: ActionInfo[] = perms
+        // Lấy danh sách từ JOIN
+        let actions: ActionInfo[] = perms
             .filter(p => p.action_id && p.action_name)
             .map(p => ({
                 action_id: p.action_id!,
                 name: p.action_name!
             }));
+
+        // Nếu JOIN không có kết quả, dùng raw_actions (dữ liệu trực tiếp từ bảng permissions)
+        if (actions.length === 0 && first.raw_actions && first.raw_actions.length > 0) {
+            actions = first.raw_actions.map(id => ({
+                action_id: id,
+                name: id.split("_").pop() || id
+            }));
+        }
 
         const resource: ResourceInfo = {
             resource_id: first.resource_id,

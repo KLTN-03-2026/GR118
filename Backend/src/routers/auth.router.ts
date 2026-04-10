@@ -4,7 +4,7 @@ import { sendOtp, verifyOtp, resetPasswordWithOtp } from '../modules/auth.contro
 import { SeedDemoData } from '../modules/auth.controller/seed.controller';
 import { authLimiter } from '../middlewares/rate-limit.middleware';
 import { DeletePermission, GetActions, GetPermission, GetPermissions, GetResources, UpsertPermission } from '../modules/admin.controller/permission';
-import { DeleteRole, DisableOrEnableRole, GetRoleById, GetRoles, UpsertRole } from '../modules/admin.controller/role';
+import { DeleteRole, UpdateRole, GetRoleById, GetRoles, UpsertRole } from '../modules/admin.controller/role';
 import { AssignRoleToUser, CreateNewUser, GetUsers, GetUserById, LockOrUnlockUser, UpdateUser, DeleteUser } from '../modules/admin.controller/user';
 
 const router = Router();
@@ -31,9 +31,10 @@ router.post("/users/lockOrUnlock/:id", LockOrUnlockUser);
 // permission
 router.post("/permissions", UpsertPermission);
 router.get("/permissions", GetPermissions);
-router.get("/permissions/:id", GetPermission);
+// ⚠️  Specific paths MUST come before /:id — otherwise Express treats 'action'/'resources' as the id param
 router.get("/permissions/action", GetActions);
 router.get("/permissions/resources", GetResources);
+router.get("/permissions/:id", GetPermission);
 router.delete("/permissions/:id", DeletePermission);
 
 
@@ -41,9 +42,9 @@ router.delete("/permissions/:id", DeletePermission);
 //role
 router.post("/role", UpsertRole);
 router.get("/role", GetRoles);
-router.get("/role", GetRoleById);
+router.get("/role/:id", GetRoleById);
 router.delete("/role", DeleteRole);
-router.patch("/role", DisableOrEnableRole);
+router.patch("/role", UpdateRole);
 
 
 // router

@@ -9,4 +9,5 @@ export interface PermissionRow {
     updated_at: Date;
     action_id?: string | null;
     action_name?: string | null;
+    raw_actions?: string[];
 }

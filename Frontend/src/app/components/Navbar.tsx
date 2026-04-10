@@ -19,7 +19,7 @@ const navLinks = [
 
 export function Navbar() {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, can } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -40,8 +40,11 @@ export function Navbar() {
   const openLogin = () => { setAuthTab("login"); setAuthOpen(true); };
   const openRegister = () => { setAuthTab("register"); setAuthOpen(true); };
 
-  // Kiểm tra xem user có phải admin hoặc moderator không
-  const isAdminOrModerator = user?.role === "admin" || user?.role === "moderator";
+  // Check for any staff-level permission to show admin/moderator menus
+  const hasStaffAccess = can("issues_mgnt", "read") ||
+    can("issues_process", "read") ||
+    can("activities_mgnt", "read") ||
+    can("stats_overview", "read");
 
   // Kiểm tra xem có đang ở trang chủ và chưa scroll không
   const isHomePageTop = location.pathname === "/" && !scrolled;
@@ -49,11 +52,10 @@ export function Navbar() {
   return (
     <>
       <motion.nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
             ? "bg-white/95 backdrop-blur-md shadow-lg shadow-black/5"
             : "bg-transparent"
-        }`}
+          }`}
         initial={{ y: -80 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
@@ -66,28 +68,26 @@ export function Navbar() {
                 <Shield size={18} className="text-white" />
               </div>
               <div className="hidden sm:block">
-                <span className={`font-black text-lg transition-colors duration-300 ${
-                  isHomePageTop ? "text-white" : "text-[#1a1a2e]"
-                }`}>Báo Cáo</span>
+                <span className={`font-black text-lg transition-colors duration-300 ${isHomePageTop ? "text-white" : "text-[#1a1a2e]"
+                  }`}>Báo Cáo</span>
                 <span className="font-black text-red-600 text-lg">VN</span>
               </div>
             </Link>
 
             {/* Desktop Nav */}
             <div className="hidden lg:flex items-center gap-1">
-              {!isAdminOrModerator && navLinks.map((link) => {
+              {!hasStaffAccess && navLinks.map((link) => {
                 const isActive = location.pathname === link.to;
                 return (
                   <Link
                     key={link.to}
                     to={link.to}
-                    className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      isActive
+                    className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
                         ? isHomePageTop ? "text-white" : "text-red-600"
-                        : isHomePageTop 
-                          ? "text-white/90 hover:text-white hover:bg-white/10" 
+                        : isHomePageTop
+                          ? "text-white/90 hover:text-white hover:bg-white/10"
                           : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                    }`}
+                      }`}
                   >
                     {isActive && !isHomePageTop && (
                       <motion.div
@@ -108,45 +108,31 @@ export function Navbar() {
 
             {/* Right actions */}
             <div className="flex items-center gap-2">
-              <NotificationBell isLight={isHomePageTop} />
-
-              {!isAdminOrModerator && (
+              {can("issues_vande", "create") && (
                 <Link
                   to="/report"
                   className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-red-200 hover:shadow-red-300 hover:scale-105 transition-all duration-200"
                 >
                   <PlusCircle size={16} />
-                  Báo cáo ngay
-                </Link>
-              )}
-
-              {/* Nút Báo cáo vấn đề cho Admin/Moderator trên navbar */}
-              {isAdminOrModerator && (
-                <Link
-                  to="/report"
-                  className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-red-200 hover:shadow-red-300 hover:scale-105 transition-all duration-200"
-                >
-                  <PlusCircle size={16} />
-                  Báo cáo vấn đề
+                  {hasStaffAccess ? "Báo cáo vấn đề" : "Báo cáo ngay"}
                 </Link>
               )}
 
               {/* Auth */}
-              {!isAdminOrModerator && (
+              {!hasStaffAccess && (
                 <div className="hidden lg:block">
                   <UserMenu onLoginClick={openLogin} isLight={isHomePageTop} />
                 </div>
               )}
 
               {/* Hamburger cho Admin/Moderator (Desktop & Mobile) */}
-              {isAdminOrModerator && (
+              {hasStaffAccess && (
                 <button
                   onClick={() => setAdminMenuOpen(!adminMenuOpen)}
-                  className={`p-2 rounded-xl transition-all duration-200 ${
-                    isHomePageTop 
-                      ? "text-white hover:bg-white/10" 
+                  className={`p-2 rounded-xl transition-all duration-200 ${isHomePageTop
+                      ? "text-white hover:bg-white/10"
                       : "text-gray-600 hover:bg-gray-100"
-                  }`}
+                    }`}
                   title="Menu quản lý"
                 >
                   {adminMenuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -154,14 +140,13 @@ export function Navbar() {
               )}
 
               {/* Hamburger cho mobile (chỉ user thường) */}
-              {!isAdminOrModerator && (
+              {!hasStaffAccess && (
                 <button
                   onClick={() => setMenuOpen(!menuOpen)}
-                  className={`lg:hidden p-2 rounded-xl transition-all duration-200 ${
-                    isHomePageTop 
-                      ? "text-white hover:bg-white/10" 
+                  className={`lg:hidden p-2 rounded-xl transition-all duration-200 ${isHomePageTop
+                      ? "text-white hover:bg-white/10"
                       : "text-gray-600 hover:bg-gray-100"
-                  }`}
+                    }`}
                 >
                   {menuOpen ? <X size={22} /> : <Menu size={22} />}
                 </button>
@@ -170,7 +155,7 @@ export function Navbar() {
           </div>
         </div>
       </motion.nav>
-
+ 
       {/* Admin/Moderator Menu Drawer */}
       <Drawer open={adminMenuOpen} onOpenChange={setAdminMenuOpen} direction="right">
         <DrawerContent className="bg-white">
@@ -187,7 +172,7 @@ export function Navbar() {
               Menu quản lý dành cho admin và cán bộ
             </DrawerDescription>
           </DrawerHeader>
-          
+
           <div className="overflow-y-auto p-4 pb-6 flex flex-col gap-2">
             {/* User Info */}
             {user && (
@@ -206,7 +191,7 @@ export function Navbar() {
                     <div className="text-sm font-bold text-gray-900 truncate">{user.name}</div>
                     <div className="text-xs text-gray-500 truncate">{user.email}</div>
                     <div className="text-xs font-semibold text-indigo-600 mt-1 uppercase">
-                      {user.role === "admin" ? "Quản trị viên" : "Cán bộ"}
+                      {user.roleName || user.role}
                     </div>
                   </div>
                 </div>
@@ -224,11 +209,10 @@ export function Navbar() {
                   <Link
                     key={link.to}
                     to={link.to}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      isActive
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
                         ? "bg-red-50 text-red-600 border border-red-100"
                         : "text-gray-700 hover:bg-gray-50"
-                    }`}
+                      }`}
                   >
                     <link.icon size={18} />
                     {link.label}
@@ -236,150 +220,122 @@ export function Navbar() {
                 );
               })}
             </div>
-            
-            {/* Admin Links */}
-            {user?.role === "admin" && (
-              <div className="mb-4">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">
-                  Chức năng Admin
-                </div>
+
+            {/* Admin/Moderator Section - Dynamically filtered */}
+            <div className="mb-4">
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">
+                Chức năng quản trị
+              </div>
+
+              {can("stats_overview", "read") && (
                 <Link
                   to="/dashboard"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname === "/dashboard"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname === "/dashboard"
                       ? "bg-blue-50 text-blue-600 border border-blue-100"
                       : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <LayoutDashboard size={18} />
                   Thống kê tổng quan
                 </Link>
+              )}
+
+              {can("issues_mgnt", "read") && (
                 <Link
                   to="/admin"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname === "/admin"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname === "/admin"
                       ? "bg-orange-50 text-orange-600 border border-orange-100"
                       : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <Settings size={18} />
                   Quản lý báo cáo
                 </Link>
+              )}
+
+              {can("issues_process", "read") && (
                 <Link
                   to="/moderator/issues"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname === "/moderator/issues"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname === "/moderator/issues"
                       ? "bg-indigo-50 text-indigo-600 border border-indigo-100"
                       : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <ClipboardCheck size={18} />
                   Xử lý báo cáo
                 </Link>
+              )}
+
+              {can("users_mgnt", "read") && (
                 <Link
                   to="/admin/users"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname === "/admin/users"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname === "/admin/users"
                       ? "bg-violet-50 text-violet-600 border border-violet-100"
                       : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <Users size={18} />
                   Quản lý người dùng
                 </Link>
+              )}
+
+              {can("reports_stats", "read") && (
                 <Link
                   to="/statistics"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname === "/statistics"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname === "/statistics"
                       ? "bg-purple-50 text-purple-600 border border-purple-100"
                       : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <BarChart3 size={18} />
                   Thống kê báo cáo
                 </Link>
+              )}
+
+              {can("activities_mgnt", "read") && (
                 <Link
                   to="/moderator/activities"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname === "/moderator/activities"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname === "/moderator/activities"
                       ? "bg-green-50 text-green-600 border border-green-100"
                       : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <Calendar size={18} />
-                  Quản lý hoạt động tình nguyện
-                </Link>
-                <Link
-                  to="/admin/permissions"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname.startsWith("/admin/permissions")
-                      ? "bg-amber-50 text-amber-600 border border-amber-100"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <Key size={18} />
-                  Quản lý quyền
-                </Link>
-                <Link
-                  to="/admin/roles"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname.startsWith("/admin/roles")
-                      ? "bg-rose-50 text-rose-600 border border-rose-100"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <ShieldCheck size={18} />
-                  Quản lý vai trò
-                </Link>
-              </div>
-            )}
-            
-            {/* Moderator Links */}
-            {user?.role === "moderator" && (
-              <div className="mb-4">
-                <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">
-                  Chức năng cán bộ
-                </div>
-                <Link
-                  to="/moderator/issues"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname === "/moderator/issues"
-                      ? "bg-indigo-50 text-indigo-600 border border-indigo-100"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <ClipboardCheck size={18} />
-                  Xử lý báo cáo
-                </Link>
-                <Link
-                  to="/statistics"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname === "/statistics"
-                      ? "bg-purple-50 text-purple-600 border border-purple-100"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <BarChart3 size={18} className="flex-shrink-0" />
-                  <span className="break-words">Thống kê đơn vị</span>
-                </Link>
-                <Link
-                  to="/moderator/activities"
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    location.pathname === "/moderator/activities"
-                      ? "bg-green-50 text-green-600 border border-green-100"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <Calendar size={18} />
                   Quản lý hoạt động
                 </Link>
-              </div>
-            )}
+              )}
+
+              {can("perms_mgnt", "read") && (
+                <Link
+                  to="/admin/permissions"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname.startsWith("/admin/permissions")
+                      ? "bg-amber-50 text-amber-600 border border-amber-100"
+                      : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                >
+                  <Key size={18} />
+                  Quản lý quyền
+                </Link>
+              )}
+
+              {can("roles_mgnt", "read") && (
+                <Link
+                  to="/admin/roles"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${location.pathname.startsWith("/admin/roles")
+                      ? "bg-rose-50 text-rose-600 border border-rose-100"
+                      : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                >
+                  <ShieldCheck size={18} />
+                  Quản lý vai trò
+                </Link>
+              )}
+            </div>
 
             {/* User Section */}
             <div className="border-t border-gray-100 pt-4">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-2">
-                Ti khoản
+                Tài khoản
               </div>
               <Link
                 to="/profile"
@@ -431,7 +387,7 @@ export function Navbar() {
               Menu điều hướng chính
             </DrawerDescription>
           </DrawerHeader>
-          
+
           <div className="overflow-y-auto p-4 pb-6 flex flex-col gap-2">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.to;
@@ -439,18 +395,17 @@ export function Navbar() {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    isActive
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
                       ? "bg-red-50 text-red-600 border border-red-100"
                       : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <link.icon size={18} />
                   {link.label}
                 </Link>
               );
             })}
-            
+
             <Link
               to="/report"
               className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-red-200 mt-2"
@@ -458,7 +413,7 @@ export function Navbar() {
               <PlusCircle size={16} />
               Báo cáo vấn đề ngay
             </Link>
-            
+
             {!user ? (
               <div className="flex gap-2 pt-2">
                 <button
@@ -497,7 +452,7 @@ export function Navbar() {
                     <span><span className="font-bold text-gray-900">{user.resolvedCount}</span> đã giải quyết</span>
                   </div>
                 </div>
-                
+
                 <Link
                   to="/profile"
                   className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 mb-2"
@@ -519,7 +474,7 @@ export function Navbar() {
                   <Heart size={18} />
                   Hoạt động của tôi
                 </Link>
-                {(user.role === "moderator" || user.role === "admin") && (
+                {can("activities_mgnt", "read") && (
                   <Link
                     to="/moderator/activities"
                     className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 mb-2"

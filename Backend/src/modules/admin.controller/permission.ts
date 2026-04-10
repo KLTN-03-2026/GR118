@@ -52,10 +52,11 @@ export const UpsertPermission = async (req: Request, res: Response, next: NextFu
 
 export const DeletePermission = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const {permID} = req.body;
+        // Read from route param first (DELETE /permissions/:id), fallback to body for backward compat
+        const permID = req.params.id || req.body.permID;
         if (!permID) {
             const err = ERROR_CODES.INVALID_INPUT;
-            return next(new AppError(err.statusCode, err.code, "Missing required fields"));
+            return next(new AppError(err.statusCode, err.code, "Missing required fields: permID"));
         }
 
         await permissionRepo.deletePermission(permID);

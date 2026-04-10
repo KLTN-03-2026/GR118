@@ -24,6 +24,11 @@ const roleSchema = new mongoose.Schema({
     is_active: {
         type: Boolean,
         default: true
+    },
+
+    permissions: {
+        type: [String],
+        default: []
     }
 
 }, { timestamps: true });

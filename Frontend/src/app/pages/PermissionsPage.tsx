@@ -34,15 +34,110 @@ import {
   DrawerDescription,
 } from "../components/ui/drawer";
 
+// ──────────────────────────────────────────────────────────
+// Subcomponents
+// ──────────────────────────────────────────────────────────
+
+const DeletePermissionModal = ({
+  permissionId,
+  permissions,
+  onClose,
+  onDelete,
+}: {
+  permissionId: string;
+  permissions: any[];
+  onClose: () => void;
+  onDelete: (id: string) => Promise<{ success: boolean; error?: string }>;
+}) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const permission = permissions.find((p) => p.id === permissionId);
+
+  if (!permission) return null;
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    const result = await onDelete(permissionId);
+    setIsDeleting(false);
+
+    if (result.success) {
+      toast.success("Xóa quyền thành công!");
+      onClose();
+    } else {
+      toast.error(result.error || "Có lỗi xảy ra");
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={() => !isDeleting && onClose()}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-4 mb-4">
+          <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+            <AlertCircle size={24} className="text-red-500" />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-900 text-lg mb-1">Xác nhận xóa quyền</h3>
+            <p className="text-gray-600 text-sm">
+              Bạn có chắc chắn muốn xóa quyền <span className="font-semibold">"{permission.name}"</span>?
+            </p>
+            {permission.isSystem && (
+              <p className="text-red-600 text-sm mt-2 font-semibold">
+                ⚠️ Đây là quyền hệ thống, không thể xóa!
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={isDeleting}
+            className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all disabled:opacity-50"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting || permission.isSystem}
+            className="flex-1 px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Đang xóa...
+              </>
+            ) : (
+              <>
+                <Trash2 size={18} />
+                Xóa quyền
+              </>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 export function PermissionsPage() {
-  const { user } = useAuth();
+  const { can, user } = useAuth();
   const { permissions, addPermission, deletePermission } = usePermissions();
   const [searchQuery, setSearchQuery] = useState("");
   const [resourceFilter, setResourceFilter] = useState<PermissionResource | "all">("all");
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
 
-  // Form state lifted up so Drawer doesn't remount it
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -51,8 +146,7 @@ export function PermissionsPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect if not admin
-  if (!user || user.role !== "admin") {
+  if (!can("perms_mgnt", "read")) {
     return <Navigate to="/" replace />;
   }
 
@@ -125,90 +219,9 @@ export function PermissionsPage() {
     }));
   };
 
-  // Delete Permission Modal
-  const DeletePermissionModal = ({ permissionId }: { permissionId: string }) => {
-    const [isDeleting, setIsDeleting] = useState(false);
-    const permission = permissions.find((p) => p.id === permissionId);
-
-    if (!permission) return null;
-
-    const handleDelete = async () => {
-      setIsDeleting(true);
-      const result = await deletePermission(permissionId);
-      setIsDeleting(false);
-
-      if (result.success) {
-        toast.success("Xóa quyền thành công!");
-        setShowDeleteModal(null);
-      } else {
-        toast.error(result.error || "Có lỗi xảy ra");
-      }
-    };
-
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-        onClick={() => !isDeleting && setShowDeleteModal(null)}
-      >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-white rounded-2xl p-6 max-w-md w-full"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-start gap-4 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
-              <AlertCircle size={24} className="text-red-500" />
-            </div>
-            <div>
-              <h3 className="font-bold text-gray-900 text-lg mb-1">Xác nhận xóa quyền</h3>
-              <p className="text-gray-600 text-sm">
-                Bạn có chắc chắn muốn xóa quyền <span className="font-semibold">"{permission.name}"</span>?
-              </p>
-              {permission.isSystem && (
-                <p className="text-red-600 text-sm mt-2 font-semibold">
-                  ⚠️ Đây là quyền hệ thống, không thể xóa!
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowDeleteModal(null)}
-              disabled={isDeleting}
-              className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all disabled:opacity-50"
-            >
-              Hủy
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting || permission.isSystem}
-              className="flex-1 px-6 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Đang xóa...
-                </>
-              ) : (
-                <>
-                  <Trash2 size={18} />
-                  Xóa quyền
-                </>
-              )}
-            </button>
-          </div>
-        </motion.div>
-      </motion.div>
-    );
-  };
 
   return (
-    <div className="min-h-screen pt-20 pb-16 bg-gray-50">
+    <div className="min-h-screen pt-20 pb-16 bg-gray-50 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
         {/* Header */}
         <div className="mb-8">
@@ -222,13 +235,15 @@ export function PermissionsPage() {
                 <p className="text-gray-500">Quản lý các quyền truy cập trong hệ thống</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowAddDrawer(true)}
-              className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-            >
-              <Plus size={18} />
-              Thêm quyền
-            </button>
+            {can("perms_mgnt", "create") && (
+              <button
+                onClick={() => setShowAddDrawer(true)}
+                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+              >
+                <Plus size={18} />
+                Thêm quyền
+              </button>
+            )}
           </div>
         </div>
 
@@ -288,14 +303,14 @@ export function PermissionsPage() {
         {/* Permissions Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredPermissions.length === 0 ? (
-            <div className="col-span-full bg-white rounded-2xl p-12 text-center border border-gray-100">
+            <div key="empty-state" className="col-span-full bg-white rounded-2xl p-12 text-center border border-gray-100">
               <AlertCircle size={48} className="mx-auto mb-3 text-gray-300" />
               <p className="text-gray-400">Không tìm thấy quyền nào</p>
             </div>
           ) : (
             filteredPermissions.map((permission, index) => (
               <motion.div
-                key={permission.id}
+                key={permission.id || `perm-${index}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
@@ -341,14 +356,16 @@ export function PermissionsPage() {
                     >
                       <Edit3 size={16} />
                     </Link>
-                    <button
-                      onClick={() => setShowDeleteModal(permission.id)}
-                      className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors disabled:opacity-50"
-                      title={permission.isSystem ? "Không thể xóa quyền hệ thống" : "Xóa"}
-                      disabled={permission.isSystem}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    {can("perms_mgnt", "delete") && (
+                      <button
+                        onClick={() => setShowDeleteModal(permission.id)}
+                        className="p-2 hover:bg-red-50 rounded-lg text-red-600 transition-colors disabled:opacity-50"
+                        title={permission.isSystem ? "Không thể xóa quyền hệ thống" : "Xóa"}
+                        disabled={permission.isSystem}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -477,6 +494,25 @@ export function PermissionsPage() {
                           </span>
                         )}
                       </label>
+
+                      {/* Hiển thị preview các hành động đã chọn */}
+                      {formData.actions.length > 0 && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex flex-wrap gap-2 mb-4 p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200"
+                        >
+                          {formData.actions.map((action) => (
+                            <span
+                              key={action}
+                              className="px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-sm font-semibold flex items-center gap-2 border border-blue-100 shadow-sm"
+                            >
+                              <CheckCircle2 size={14} className="text-blue-500" />
+                              {ACTION_LABELS[action]}
+                            </span>
+                          ))}
+                        </motion.div>
+                      )}
                       <div className="grid grid-cols-2 gap-3">
                         {allActions.map((action) => (
                           <button
@@ -537,7 +573,15 @@ export function PermissionsPage() {
 
       {/* Delete Modal */}
       <AnimatePresence>
-        {showDeleteModal && <DeletePermissionModal permissionId={showDeleteModal} />}
+        {showDeleteModal && (
+          <DeletePermissionModal
+            key="delete-modal"
+            permissionId={showDeleteModal}
+            permissions={permissions}
+            onClose={() => setShowDeleteModal(null)}
+            onDelete={deletePermission}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

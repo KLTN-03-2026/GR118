@@ -127,7 +127,7 @@ function StatCard({ card, index }: { card: typeof statCards[0]; index: number })
 }
 
 export function DashboardPage() {
-  const { user } = useAuth();
+  const { can } = useAuth();
   const { issues } = useIssues();
 
   const categoryData = Object.entries(CATEGORY_LABELS).map(([key, label]) => ({
@@ -142,12 +142,8 @@ export function DashboardPage() {
     color: STATUS_COLORS[key as keyof typeof STATUS_COLORS],
   }));
 
-  // Chỉ admin mới được xem dashboard
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
-  if (user.role !== "admin") {
+  // Dynamic permission guard
+  if (!can("stats_overview", "read")) {
     return (
       <div className="min-h-screen pt-20 pb-16 bg-gray-50 flex items-center justify-center">
         <div className="max-w-md mx-auto px-4">
@@ -161,7 +157,7 @@ export function DashboardPage() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Truy cập bị từ chối</h2>
             <p className="text-gray-600 mb-6">
-              Trang thống kê chỉ dành cho quản trị viên. Bạn không có quyền truy cập vào trang này.
+              Bảng thống kê tổng quan chỉ dành cho người dùng có thẩm quyền. Bạn không có quyền xem trang này.
             </p>
             <button onClick={() => window.location.href = "/"} className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">Về trang chủ</button>
           </motion.div>

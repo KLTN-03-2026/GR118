@@ -1,0 +1,6 @@
+
+[2026-04-09T08:34:16.759Z] UpsertRole Error: Tên vai trò này đã tồn tại
+Stack: Error: Tên vai trò này đã tồn tại
+    at Object.upsertRole (D:\IssueReportingSystem\Backend\src\repos\auth\roles.repos.ts:102:28)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at UpsertRole (D:\IssueReportingSystem\Backend\src\modules\admin.controller\role.ts:153:24)

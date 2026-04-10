@@ -273,6 +273,7 @@ type ActionType = "receive" | "assign" | "processing" | "need_info" | "complete"
 
 function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string; userName: string }) {
   const { receiveIssue, assignIssue, startProcessing, requestAdditionalInfo, completeIssue, rejectIssue } = useIssues();
+  const { can } = useAuth();
   const [activeAction, setActiveAction] = useState<ActionType>(null);
   const [assignedTo, setAssignedTo] = useState(issue.assignedTo ?? "");
   const [processingNote, setProcessingNote] = useState("");
@@ -360,7 +361,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
     <div className="space-y-3">
       {/* Action Buttons */}
       <div className="grid grid-cols-2 gap-2">
-        {canReceive && (
+        {canReceive && can("issues_process", "update") && (
           <button
             onClick={() => setActiveAction("receive")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -372,7 +373,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <Inbox size={15} /> Tiếp nhận
           </button>
         )}
-        {canAssign && (
+        {canAssign && can("issues_process", "assign") && (
           <button
             onClick={() => setActiveAction("assign")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -384,7 +385,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <UserCheck size={15} /> Phân công
           </button>
         )}
-        {canProcess && (
+        {canProcess && can("issues_process", "update") && (
           <button
             onClick={() => setActiveAction("processing")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -396,7 +397,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <RefreshCw size={15} /> Cập nhật tiến độ
           </button>
         )}
-        {canNeedInfo && (
+        {canNeedInfo && can("issues_process", "update") && (
           <button
             onClick={() => setActiveAction("need_info")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -408,7 +409,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <Info size={15} /> Yêu cầu bổ sung
           </button>
         )}
-        {canComplete && (
+        {canComplete && can("issues_process", "approve") && (
           <button
             onClick={() => setActiveAction("complete")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -420,7 +421,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <CheckSquare size={15} /> Hoàn thành
           </button>
         )}
-        {canReject && (
+        {canReject && can("issues_process", "update") && (
           <button
             onClick={() => setActiveAction("reject")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${

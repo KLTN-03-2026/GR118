@@ -187,7 +187,7 @@ export function IssueDetailPage() {
                 <div className="flex flex-wrap gap-3 mb-4 text-sm text-gray-500">
                   <span className="flex items-center gap-1.5">
                     <MapPin size={14} className="text-red-400" />
-                    {issue.location}, {issue.district}, {issue.city}
+                    {issue.location}, {issue.ward}, {issue.district}, {issue.city}
                   </span>
                   <span className="flex items-center gap-1.5">
                     <Clock size={14} className="text-gray-400" />
@@ -291,7 +291,7 @@ export function IssueDetailPage() {
                 lat={issue.lat}
                 lng={issue.lng}
                 title={issue.title}
-                location={`${issue.location}, ${issue.district}, ${issue.city}`}
+                location={`${issue.location}, ${issue.ward}, ${issue.district}, ${issue.city}`}
               />
             </motion.div>
 
@@ -345,6 +345,7 @@ export function IssueDetailPage() {
                 {[
                   { label: "Mã báo cáo", value: `#VN${issue.id.padStart(6, "0")}` },
                   { label: "Danh mục", value: CATEGORY_LABELS[issue.category] },
+                  { label: "Phường/Xã", value: issue.ward },
                   { label: "Quận/Huyện", value: issue.district },
                   { label: "Thành phố", value: issue.city },
                   { label: "Cập nhật lần cuối", value: new Date(issue.updatedAt).toLocaleDateString("vi-VN") },

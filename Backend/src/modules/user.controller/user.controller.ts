@@ -11,6 +11,15 @@ export const uploadFIle = async (req: Request, res: Response) => {
             throw new AppError(err.statusCode, err.code, err.message);
         }
         const fileUrl = await uploadToR2(req.file);
+        
+        // Cập nhật avatar của người dùng vào DB
+        const userId = req.user?._id;
+        if (userId) {
+            await userRepo.updateUserByAdmin(userId.toString(), {
+                avatar: fileUrl
+            } as any);
+        }
+
         res.status(200).json({
             message: "File uploaded successfully",
             url: fileUrl

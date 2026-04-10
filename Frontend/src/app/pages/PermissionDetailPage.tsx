@@ -296,6 +296,21 @@ export function PermissionDetailPage() {
                 <label className="block font-semibold text-gray-700 mb-3">
                   Hành động <span className="text-red-500">*</span>
                 </label>
+                
+                {/* Hiển thị preview các hành động đã chọn */}
+                {formData.actions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4 p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                    {formData.actions.map((action) => (
+                      <span
+                        key={action}
+                        className="px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-sm font-semibold flex items-center gap-2 border border-blue-100 shadow-sm"
+                      >
+                        <CheckCircle2 size={14} className="text-blue-500" />
+                        {ACTION_LABELS[action]}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {allActions.map((action) => (
                     <button

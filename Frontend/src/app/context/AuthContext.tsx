@@ -39,6 +39,8 @@ interface AuthContextType {
   changePassword: (email: string, code: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   sendRegisterCode: (email: string) => Promise<{ success: boolean; error?: string; code?: string }>;
   verifyRegisterCode: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  uploadAvatar: (file: File) => Promise<{ success: boolean; url?: string; error?: string }>;
+  can: (resource: string, action: string) => boolean;
 }
 
 interface RegisterData {
@@ -95,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           resolvedCount: beUser.resolvedCount || 0,
           role: beUser.role || "user",
           roleId: beUser.roleId,
+          permissions: beUser.permissions || {},
           banned: beUser.lockEnd && new Date(beUser.lockEnd) > new Date() ? true : false,
           banReason: beUser.lockReason
         };
@@ -236,8 +239,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const uploadAvatar = async (file: File): Promise<{ success: boolean; url?: string; error?: string }> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`${API_BASE_URL}/users/upload`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        // Cập nhật state user ngay lập tức
+        updateProfile({ avatar: data.url });
+        return { success: true, url: data.url };
+      }
+      return { success: false, error: data.message || "Tải ảnh lên thất bại" };
+    } catch {
+      return { success: false, error: "Không thể kết nối đến máy chủ" };
+    }
+  };
+
+  const can = (resource: string, action: string): boolean => {
+    if (!user) return false;
+    // Admin has all permissions bypass
+    if (user.role === "admin") return true; 
+    
+    // Check specific permissions mapping
+    if (!user.permissions) return false;
+    const resourcePerms = user.permissions[resource];
+    if (!resourcePerms) return false;
+    
+    return resourcePerms.includes(action);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateProfile, sendResetCode, verifyResetCode, resetPassword, sendChangePasswordOTP, changePassword, sendRegisterCode, verifyRegisterCode }}>
+    <AuthContext.Provider value={{ 
+      user, isLoading, login, register, logout, updateProfile, 
+      sendResetCode, verifyResetCode, resetPassword, 
+      sendChangePasswordOTP, changePassword, 
+      sendRegisterCode, verifyRegisterCode,
+      uploadAvatar,
+      can
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -261,6 +306,8 @@ export function useAuth() {
       changePassword: async () => ({ success: false, error: "Auth not initialized" }),
       sendRegisterCode: async () => ({ success: false, error: "Auth not initialized" }),
       verifyRegisterCode: async () => ({ success: false, error: "Auth not initialized" }),
+      uploadAvatar: async () => ({ success: false, error: "Auth not initialized" }),
+      can: () => false,
     };
   }
   return ctx;

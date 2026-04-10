@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Activity, Participant } from "../data/activities";
 import { api } from "../../utils/api";
+import { toast } from "sonner";
 
 interface ActivitiesContextType {
   activities: Activity[];
@@ -27,7 +28,21 @@ export function ActivitiesProvider({ children }: { children: ReactNode }) {
       try {
         const response = await api.get("/activities");
         if (response.success && response.data) {
-          setActivities(response.data);
+          const normalized = response.data.map((a: any) => ({
+            ...a,
+            id: a.id || a._id,
+            participants: a.participants?.map((p: any) => ({ ...p, id: p.id || p._id })) || []
+          }));
+          setActivities(normalized);
+          
+          // Also extract all participants for the participants state
+          const allParticipants: Participant[] = [];
+          normalized.forEach((a: Activity) => {
+            if (a.participants) {
+              allParticipants.push(...a.participants);
+            }
+          });
+          setParticipants(allParticipants);
         }
       } catch (error) {
         console.error("Failed to load activities:", error);
@@ -48,97 +63,93 @@ export function ActivitiesProvider({ children }: { children: ReactNode }) {
     return participants.filter((p) => p.userId === userId);
   };
 
-  const addActivity = (activityData: Omit<Activity, "id" | "createdAt" | "updatedAt" | "currentParticipants">) => {
-    const newActivity: Activity = {
-      ...activityData,
-      id: `act_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      currentParticipants: 0,
-    };
-    setActivities((prev) => [newActivity, ...prev]);
+  const addActivity = async (activityData: Omit<Activity, "id" | "createdAt" | "updatedAt" | "currentParticipants">) => {
+    try {
+      const response = await api.post("/activities", activityData);
+      if (response.success && response.data) {
+        const newActivity: Activity = {
+          ...response.data,
+          id: response.data.id || response.data._id,
+        };
+        setActivities((prev) => [newActivity, ...prev]);
+      }
+    } catch (error) {
+      console.error("Failed to add activity:", error);
+      toast.error("Không thể lưu hoạt động lên máy chủ");
+    }
   };
 
-  const updateActivity = (id: string, updates: Partial<Activity>) => {
-    setActivities((prev) =>
-      prev.map((a) =>
-        a.id === id
-          ? { ...a, ...updates, updatedAt: new Date().toISOString() }
-          : a
-      )
-    );
+  const updateActivity = async (id: string, updates: Partial<Activity>) => {
+    try {
+      // Assuming a generic update endpoint exists or create one
+      // If no generic update exists, we use status toggle endpoints if that's all we have
+      const response = await api.patch(`/activities/${id}`, updates);
+      if (response.success && response.data) {
+        setActivities((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to update activity:", error);
+    }
   };
 
-  const deleteActivity = (id: string) => {
-    setActivities((prev) => prev.filter((a) => a.id !== id));
-    // Also remove all participants
-    setParticipants((prev) => prev.filter((p) => p.activityId !== id));
+  const deleteActivity = async (id: string) => {
+    try {
+      const response = await api.delete(`/activities/${id}`);
+      if (response.success) {
+        setActivities((prev) => prev.filter((a) => a.id !== id));
+        setParticipants((prev) => prev.filter((p) => p.activityId !== id));
+      }
+    } catch (error) {
+      console.error("Failed to delete activity:", error);
+    }
   };
 
-  const registerForActivity = (
+  const registerForActivity = async (
     activityId: string,
     participantData: Omit<Participant, "id" | "registeredAt" | "status">
   ) => {
-    const activity = activities.find((a) => a.id === activityId);
-    if (!activity) return;
-
-    // Check if already registered
-    const alreadyRegistered = participants.some(
-      (p) =>
-        p.activityId === activityId &&
-        p.userId === participantData.userId &&
-        p.status === "registered"
-    );
-
-    if (alreadyRegistered) return;
-
-    const newParticipant: Participant = {
-      ...participantData,
-      id: `p_${Date.now()}`,
-      registeredAt: new Date().toISOString(),
-      status: "registered",
-    };
-
-    setParticipants((prev) => [...prev, newParticipant]);
-    
-    // Update current participants count
-    setActivities((prev) =>
-      prev.map((a) =>
-        a.id === activityId
-          ? { 
-              ...a, 
-              currentParticipants: a.currentParticipants + 1,
-              updatedAt: new Date().toISOString() 
-            }
-          : a
-      )
-    );
+    try {
+      const response = await api.post(`/activities/${activityId}/register`, participantData);
+      if (response.success && response.data) {
+        // Refresh the activities to get updated counts and participant list
+        const updated = response.data;
+        const normalized = { ...updated, id: updated.id || updated._id };
+        
+        setActivities((prev) => prev.map(a => a.id === activityId ? normalized : a));
+        
+        // Update global participants list
+        if (normalized.participants) {
+          setParticipants(prev => {
+            const others = prev.filter(p => p.activityId !== activityId);
+            return [...others, ...normalized.participants];
+          });
+        }
+        toast.success("Đăng ký tham gia thành công!");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Đăng ký thất bại");
+    }
   };
 
-  const cancelRegistration = (participantId: string) => {
+  const cancelRegistration = async (participantId: string) => {
+    // We need activityId to call the API as defined in the controller
     const participant = participants.find((p) => p.id === participantId);
     if (!participant) return;
 
-    setParticipants((prev) =>
-      prev.map((p) =>
-        p.id === participantId
-          ? { ...p, status: "cancelled", cancelledAt: new Date().toISOString() }
-          : p
-      )
-    );
-
-    // Update current participants count
-    setActivities((prev) =>
-      prev.map((a) =>
-        a.id === participant.activityId
-          ? { 
-              ...a, 
-              currentParticipants: Math.max(0, a.currentParticipants - 1),
-              updatedAt: new Date().toISOString() 
-            }
-          : a
-      )
-    );
+    try {
+      const response = await api.post(`/activities/${participant.activityId}/cancel`, { userId: participant.userId });
+      if (response.success) {
+        // Refresh local state similar to register
+        const updatedActivity = response.data;
+        const normalized = { ...updatedActivity, id: updatedActivity.id || updatedActivity._id };
+        setActivities(prev => prev.map(a => a.id === participant.activityId ? normalized : a));
+        toast.success("Đã hủy đăng ký");
+      }
+    } catch (error) {
+      toast.error("Không thể hủy đăng ký");
+    }
   };
 
   const updateParticipantStatus = (participantId: string, status: Participant["status"]) => {

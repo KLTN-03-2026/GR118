@@ -9,4 +9,5 @@ export interface RoleResponse{
     created_at: Date;
     updated_at: Date;
     permissions: PermissionsInfo[] | null;
+    userCount?: number;
 }

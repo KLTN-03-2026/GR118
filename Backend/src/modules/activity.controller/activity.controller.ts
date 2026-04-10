@@ -67,3 +67,32 @@ export const cancelRegistration = async (req: Request, res: Response) => {
       res.status(500).json({ success: false, message: "Lỗi máy chủ nội bộ" });
     }
   };
+
+export const updateActivity = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const activityData = req.body;
+    const updatedActivity = await activityRepo.updateActivity(id, activityData);
+    if (!updatedActivity) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy hoạt động để cập nhật" });
+    }
+    res.status(200).json({ success: true, data: updatedActivity, message: "Cập nhật thành công" });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật activity:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ nội bộ" });
+  }
+};
+
+export const deleteActivity = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const success = await activityRepo.deleteActivity(id);
+    if (!success) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy hoạt động để xóa" });
+    }
+    res.status(200).json({ success: true, message: "Xóa hoạt động thành công" });
+  } catch (error) {
+    console.error("Lỗi khi xóa activity:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ nội bộ" });
+  }
+};

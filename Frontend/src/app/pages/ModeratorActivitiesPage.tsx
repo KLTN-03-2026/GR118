@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Link } from "react-router";
 import {
@@ -20,6 +20,8 @@ import {
   Clock,
   Phone,
   Mail,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useActivities } from "../context/ActivitiesContext";
 import { useAuth } from "../context/AuthContext";
@@ -28,7 +30,7 @@ import { PageTitle } from "../components/PageTitle";
 import { Activity, Participant } from "../data/activities";
 
 export function ModeratorActivitiesPage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { activities, addActivity, updateActivity, deleteActivity, getActivityParticipants } =
     useActivities();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -37,20 +39,8 @@ export function ModeratorActivitiesPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [search, setSearch] = useState("");
 
-  // Check if user is moderator or admin
-  if (!user || (user.role !== "moderator" && user.role !== "admin")) {
-    return (
-      <div className="min-h-screen pt-28 flex flex-col items-center justify-center text-gray-400">
-        <AlertCircle size={48} className="mb-4" />
-        <p className="text-lg font-medium">Bạn không có quyền truy cập trang này</p>
-        <Link to="/" className="mt-4 text-green-500 hover:underline">
-          ← Về trang chủ
-        </Link>
-      </div>
-    );
-  }
 
-  const myActivities = activities.filter((a) => a.creatorId === user.id);
+  const myActivities = activities.filter((a) => a.creatorId === user?.id);
 
   const filtered = useMemo(() => {
     let list = [...myActivities];
@@ -63,6 +53,19 @@ export function ModeratorActivitiesPage() {
     }
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [myActivities, search]);
+
+  // Dynamic permission guard (moved after hooks)
+  if (!can("activities_mgnt", "read")) {
+    return (
+      <div className="min-h-screen pt-28 flex flex-col items-center justify-center text-gray-400">
+        <AlertCircle size={48} className="mb-4" />
+        <p className="text-lg font-medium">Bạn không có quyền quản lý hoạt động tình nguyện</p>
+        <Link to="/" className="mt-4 text-green-500 hover:underline">
+          ← Về trang chủ
+        </Link>
+      </div>
+    );
+  }
 
   const handleToggleRegistration = (activity: Activity) => {
     updateActivity(activity.id, { registrationOpen: !activity.registrationOpen });
@@ -110,13 +113,15 @@ export function ModeratorActivitiesPage() {
               </div>
             }
             action={
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-green-200 hover:scale-105 transition-transform duration-200"
-              >
-                <Plus size={18} />
-                Tạo hoạt động mới
-              </button>
+              can("activities_mgnt", "create") && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg shadow-green-200 hover:scale-105 transition-transform duration-200"
+                >
+                  <Plus size={18} />
+                  Tạo hoạt động mới
+                </button>
+              )
             }
           />
         </motion.div>
@@ -197,8 +202,10 @@ export function ModeratorActivitiesPage() {
                           {new Date(activity.startDate).toLocaleDateString("vi-VN")}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <MapPin size={14} className="text-red-400" />
-                          {activity.location}
+                          <MapPin size={14} className="text-red-400 flex-shrink-0" />
+                          <span className="line-clamp-1">
+                            {activity.location}, {activity.ward}, {activity.district}, {activity.city}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Users size={14} className="text-green-400" />
@@ -215,55 +222,63 @@ export function ModeratorActivitiesPage() {
                           <Users size={14} />
                           Xem ĐK ({participants.length})
                         </button>
-                        <button
-                          onClick={() => {
-                            setSelectedActivity(activity);
-                            setShowEditModal(true);
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          <Edit2 size={14} />
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => handleToggleRegistration(activity)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          {activity.registrationOpen ? (
-                            <>
-                              <Lock size={14} />
-                              Đóng ĐK
-                            </>
-                          ) : (
-                            <>
-                              <Unlock size={14} />
-                              Mở ĐK
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleToggleStatus(activity)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          {activity.status === "hidden" ? (
-                            <>
-                              <Eye size={14} />
-                              Hiện
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff size={14} />
-                              Ẩn
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(activity.id)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          <Trash2 size={14} />
-                          Xóa
-                        </button>
+                        {can("activities_mgnt", "update") && (
+                          <button
+                            onClick={() => {
+                              setSelectedActivity(activity);
+                              setShowEditModal(true);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            <Edit2 size={14} />
+                            Sửa
+                          </button>
+                        )}
+                        {can("activities_mgnt", "update") && (
+                          <button
+                            onClick={() => handleToggleRegistration(activity)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            {activity.registrationOpen ? (
+                              <>
+                                <Lock size={14} />
+                                Đóng ĐK
+                              </>
+                            ) : (
+                              <>
+                                <Unlock size={14} />
+                                Mở ĐK
+                              </>
+                            )}
+                          </button>
+                        )}
+                        {can("activities_mgnt", "update") && (
+                          <button
+                            onClick={() => handleToggleStatus(activity)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            {activity.status === "hidden" ? (
+                              <>
+                                <Eye size={14} />
+                                Hiện
+                              </>
+                            ) : (
+                              <>
+                                <EyeOff size={14} />
+                                Ẩn
+                              </>
+                            )}
+                          </button>
+                        )}
+                        {can("activities_mgnt", "delete") && (
+                          <button
+                            onClick={() => handleDelete(activity.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            <Trash2 size={14} />
+                            Xóa
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -300,9 +315,11 @@ export function ModeratorActivitiesPage() {
         onSubmit={(data) => {
           if (selectedActivity) {
             updateActivity(selectedActivity.id, data);
+            console.log("✅ [ACTIVITY UPDATED]", data);
             toast.success("Cập nhật hoạt động thành công");
           } else {
             addActivity(data);
+            console.log("✅ [ACTIVITY CREATED]", data);
             toast.success("Tạo hoạt động thành công");
           }
           setShowCreateModal(false);
@@ -344,6 +361,7 @@ function CreateEditActivityModal({
     content: "",
     location: "",
     district: "",
+    ward: "",
     city: "TP. Hồ Chí Minh",
     lat: 10.7769,
     lng: 106.7009,
@@ -352,17 +370,38 @@ function CreateEditActivityModal({
     maxParticipants: 50,
     imageUrl: "",
     tags: "",
+    // Location codes for selects
+    provinceCode: 0,
+    districtCode: 0,
+    wardCode: 0,
   });
 
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load provinces on mount
+  useEffect(() => {
+    if (show) {
+      fetch("https://provinces.open-api.vn/api/p/")
+        .then((res) => res.json())
+        .then((data) => setProvinces(data))
+        .catch((err) => console.error("Failed to load provinces:", err));
+    }
+  }, [show]);
+
   // Load activity data when editing
-  useState(() => {
-    if (activity) {
+  useEffect(() => {
+    if (show && activity) {
       setFormData({
         title: activity.title,
         description: activity.description,
-        content: activity.content.replace(/<[^>]*>/g, ""), // Remove HTML for simple editing
+        content: activity.content.replace(/<[^>]*>/g, ""),
         location: activity.location,
         district: activity.district,
+        ward: activity.ward || "",
         city: activity.city,
         lat: activity.lat,
         lng: activity.lng,
@@ -371,11 +410,89 @@ function CreateEditActivityModal({
         maxParticipants: activity.maxParticipants,
         imageUrl: activity.imageUrl,
         tags: activity.tags?.join(", ") || "",
+        provinceCode: 0,
+        districtCode: 0,
+        wardCode: 0,
+      });
+    } else if (show && !activity) {
+      // Reset for new
+      setFormData({
+        title: "",
+        description: "",
+        content: "",
+        location: "",
+        district: "",
+        ward: "",
+        city: "TP. Hồ Chí Minh",
+        lat: 10.7769,
+        lng: 106.7009,
+        startDate: "",
+        endDate: "",
+        maxParticipants: 50,
+        imageUrl: "",
+        tags: "",
+        provinceCode: 79, // Default to HCM
+        districtCode: 0,
+        wardCode: 0,
       });
     }
-  });
+  }, [show, activity]);
 
-  const handleSubmit = () => {
+  // Fetch districts when provinceCode changes
+  useEffect(() => {
+    if (formData.provinceCode) {
+      fetch(`https://provinces.open-api.vn/api/p/${formData.provinceCode}?depth=2`)
+        .then((res) => res.json())
+        .then((data) => setDistricts(data.districts || []))
+        .catch((err) => console.error("Failed to load districts:", err));
+    } else {
+      setDistricts([]);
+    }
+    setWards([]);
+  }, [formData.provinceCode]);
+
+  // Fetch wards when districtCode changes
+  useEffect(() => {
+    if (formData.districtCode) {
+      fetch(`https://provinces.open-api.vn/api/d/${formData.districtCode}?depth=2`)
+        .then((res) => res.json())
+        .then((data) => setWards(data.wards || []))
+        .catch((err) => console.error("Failed to load wards:", err));
+    } else {
+      setWards([]);
+    }
+  }, [formData.districtCode]);
+
+  const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const code = parseInt(e.target.value);
+    const name = provinces.find((p) => p.code === code)?.name || "";
+    setFormData({ ...formData, provinceCode: code, city: name, district: "", districtCode: 0, ward: "", wardCode: 0 });
+  };
+
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const code = parseInt(e.target.value);
+    const name = districts.find((d) => d.code === code)?.name || "";
+    setFormData({ ...formData, districtCode: code, district: name, ward: "", wardCode: 0 });
+  };
+
+  const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const code = parseInt(e.target.value);
+    const name = wards.find((w) => w.code === code)?.name || "";
+    setFormData({ ...formData, wardCode: code, ward: name });
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, imageUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!formData.title.trim()) {
       toast.error("Vui lòng nhập tên hoạt động");
       return;
@@ -397,19 +514,56 @@ function CreateEditActivityModal({
       return;
     }
 
+    setIsGeocoding(true);
+    const toastId = toast.loading("Đang xác định tọa độ bản đồ...");
+
+    let finalLat = formData.lat;
+    let finalLng = formData.lng;
+
+    try {
+      const fullAddress = `${formData.location.trim()}, ${formData.ward}, ${formData.district}, ${formData.city}, Việt Nam`;
+      const geoResponse = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          fullAddress
+        )}&limit=1`,
+        {
+          headers: {
+            "User-Agent": "IssueReportingSystem/1.0",
+          },
+        }
+      );
+      const geoData = await geoResponse.json();
+
+      if (geoData && geoData.length > 0) {
+        finalLat = parseFloat(geoData[0].lat);
+        finalLng = parseFloat(geoData[0].lon);
+        console.log("📍 Geocoding success:", { finalLat, finalLng });
+      } else {
+        console.warn("Geocoding failed for address, using default coordinates");
+      }
+    } catch (error) {
+      console.error("Geocoding error:", error);
+    } finally {
+      setIsGeocoding(false);
+      toast.dismiss(toastId);
+    }
+
     const data: any = {
       title: formData.title.trim(),
       description: formData.description.trim(),
       content: `<p>${formData.content.trim()}</p>`,
       location: formData.location.trim(),
-      district: formData.district.trim(),
+      district: formData.district,
+      ward: formData.ward,
       city: formData.city,
-      lat: formData.lat,
-      lng: formData.lng,
+      lat: finalLat,
+      lng: finalLng,
       startDate: new Date(formData.startDate).toISOString(),
       endDate: new Date(formData.endDate).toISOString(),
       maxParticipants: formData.maxParticipants,
-      imageUrl: formData.imageUrl || "https://images.unsplash.com/photo-1559827260-dc66d52bef19?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
+      imageUrl:
+        formData.imageUrl ||
+        "https://images.unsplash.com/photo-1559827260-dc66d52bef19?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=800",
       tags: formData.tags
         .split(",")
         .map((t) => t.trim())
@@ -422,6 +576,9 @@ function CreateEditActivityModal({
       data.registrationOpen = true;
       data.status = "upcoming";
     }
+
+    console.log("%c🚀 [SUBMITTING ACTIVITY]", "color: #10b981; font-weight: bold; font-size: 12px;");
+    console.log("Activity Data:", data);
 
     onSubmit(data);
   };
@@ -497,28 +654,86 @@ function CreateEditActivityModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Địa điểm <span className="text-red-500">*</span>
+                    Địa chỉ cụ thể (Số nhà, tên đường) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="VD: Công viên Tao Đàn"
+                    placeholder="VD: 123 Lê Lợi"
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
                   />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tỉnh / Thành phố <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.provinceCode}
+                    onChange={handleCityChange}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                  >
+                    <option value="0">Chọn Tỉnh / Thành phố</option>
+                    {provinces.map((p) => (
+                      <option key={p.code} value={p.code}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Quận/Huyện
+                    Quận / Huyện <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.districtCode}
+                    onChange={handleDistrictChange}
+                    disabled={!formData.provinceCode}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100 disabled:bg-gray-50 disabled:text-gray-400"
+                  >
+                    <option value="0">Chọn Quận / Huyện</option>
+                    {districts.map((d) => (
+                      <option key={d.code} value={d.code}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Phường / Xã <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.wardCode}
+                    onChange={handleWardChange}
+                    disabled={!formData.districtCode}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100 disabled:bg-gray-50 disabled:text-gray-400"
+                  >
+                    <option value="0">Chọn Phường / Xã</option>
+                    {wards.map((w) => (
+                      <option key={w.code} value={w.code}>
+                        {w.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Số lượng tối đa
                   </label>
                   <input
-                    type="text"
-                    value={formData.district}
-                    onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                    placeholder="VD: Quận 3"
+                    type="number"
+                    value={formData.maxParticipants}
+                    onChange={(e) =>
+                      setFormData({ ...formData, maxParticipants: parseInt(e.target.value) || 0 })
+                    }
+                    min="1"
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
                   />
                 </div>
@@ -552,30 +767,54 @@ function CreateEditActivityModal({
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Số lượng tối đa
+                  Hình ảnh hoạt động
                 </label>
-                <input
-                  type="number"
-                  value={formData.maxParticipants}
-                  onChange={(e) =>
-                    setFormData({ ...formData, maxParticipants: parseInt(e.target.value) || 0 })
-                  }
-                  min="1"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
-                />
-              </div>
+                
+                {formData.imageUrl && (
+                  <div className="mb-4 relative rounded-xl overflow-hidden aspect-video group">
+                    <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    <button 
+                      onClick={() => setFormData({ ...formData, imageUrl: "" })}
+                      className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  URL hình ảnh
-                </label>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
-                />
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 relative">
+                    <input
+                      type="url"
+                      value={formData.imageUrl.startsWith('data:') ? 'Ảnh đã tải lên' : formData.imageUrl}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      readOnly={formData.imageUrl.startsWith('data:')}
+                      placeholder="Nhập URL hình ảnh..."
+                      className="w-full pl-4 pr-10 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100 text-sm"
+                    />
+                    <ImageIcon size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  </div>
+                  
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleImageUpload} 
+                  />
+                  
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+                  >
+                    <Upload size={18} />
+                    <span>Tải lên</span>
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-gray-400 italic">
+                  * Khuyến khích tải lên ảnh thực tế để thu hút người tham gia.
+                </p>
               </div>
 
               <div>
@@ -602,10 +841,11 @@ function CreateEditActivityModal({
               </button>
               <button
                 onClick={handleSubmit}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 flex items-center justify-center gap-2"
+                disabled={isGeocoding}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Save size={18} />
-                {activity ? "Cập nhật" : "Tạo mới"}
+                {isGeocoding ? "Đang định vị..." : (activity ? "Cập nhật" : "Tạo mới")}
               </button>
             </div>
           </div>

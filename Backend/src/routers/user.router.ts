@@ -12,7 +12,7 @@ const upload = multer({
     storage: multer.memoryStorage(),
 })
 
-router.post("/upload", upload.single("file"), isAuthenticated, checkPermission(RESOURCES.USER, ACTIONS.UPLOAD_FILE), uploadFIle);
+router.post("/upload", upload.single("file"), isAuthenticated, uploadFIle);
 router.get("/me", isAuthenticated, getMe);
 
 export default router;

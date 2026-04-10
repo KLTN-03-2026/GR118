@@ -18,6 +18,7 @@ export interface IActivity extends Document {
   content: string;
   location: string;
   district: string;
+  ward: string;
   city: string;
   lat: number;
   lng: number;
@@ -54,6 +55,7 @@ const ActivitySchema: Schema = new Schema({
   content: { type: String, required: true },
   location: { type: String, required: true },
   district: { type: String, required: true },
+  ward: { type: String, required: true },
   city: { type: String, required: true },
   lat: { type: Number, required: true },
   lng: { type: Number, required: true },

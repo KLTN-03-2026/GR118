@@ -40,7 +40,7 @@ function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
 }
 
 export function AdminVerificationsPage() {
-  const { user } = useAuth();
+  const { can } = useAuth();
   const { issues, reviewVerification } = useIssues();
   const { addNotification } = useNotifications();
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,7 +54,7 @@ export function AdminVerificationsPage() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [adminNote, setAdminNote] = useState("");
 
-  if (!user || user.role !== "admin") {
+  if (!can("users_mgnt", "verify")) {
     return <Navigate to="/" replace />;
   }
 
@@ -503,7 +503,7 @@ export function AdminVerificationsPage() {
                       <Eye size={16} />
                       Xem báo cáo
                     </Link>
-                    {!verification.adminReviewed && (
+                    {can("users_mgnt", "verify") && !verification.adminReviewed && (
                       <button
                         onClick={() => {
                           setSelectedVerification({ issueId, verification, issueTitle });

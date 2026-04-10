@@ -14,6 +14,7 @@ export interface PermissionsInfo {
     name: string;
     description?: string;
     is_root: boolean;
+    actions?: ActionInfo[];
 }
 
 export interface PermissionResponse {

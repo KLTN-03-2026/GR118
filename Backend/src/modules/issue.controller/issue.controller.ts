@@ -30,8 +30,8 @@ export const createIssue = async (req: Request, res: Response) => {
     const newIssue = await issueRepo.createIssue(issueData);
     res.status(201).json({ success: true, data: newIssue, message: "Báo cáo thành công" });
   } catch (error) {
-    console.error("Lỗi khi tạo issue:", error);
-    res.status(500).json({ success: false, message: "Lỗi máy chủ nội bộ" });
+    console.error("❌ [CREATE ISSUE ERROR]", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ nội bộ", detail: error instanceof Error ? error.message : error });
   }
 };
 

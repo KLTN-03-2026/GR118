@@ -3,31 +3,17 @@ import { motion } from "motion/react";
 import { Link } from "react-router";
 import { Search, Filter, PlusCircle, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { IssueCard } from "../components/IssueCard";
-import { CATEGORY_LABELS, STATUS_LABELS, IssueCategory, IssueStatus, Issue } from "../data/issues";
+import { CATEGORY_LABELS, STATUS_LABELS, IssueCategory, IssueStatus } from "../data/issues";
 import { PageTitle } from "../components/PageTitle";
-import { api } from "../../utils/api";
+import { useIssues } from "../context/IssuesContext";
 
 export function IssuesPage() {
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const { issues } = useIssues();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<IssueCategory | "all">("all");
   const [statusFilter, setStatusFilter] = useState<IssueStatus | "all">("all");
   const [sortBy, setSortBy] = useState<"date" | "votes" | "comments">("date");
   const [showFilters, setShowFilters] = useState(false);
-
-  useEffect(() => {
-    const fetchIssues = async () => {
-      try {
-        const response = await api.get("/issues");
-        if (response.success && response.data) {
-          setIssues(response.data);
-        }
-      } catch (error) {
-        console.error("Failed to load issues:", error);
-      }
-    };
-    fetchIssues();
-  }, []);
 
   const filtered = useMemo(() => {
     let list = [...issues];
@@ -47,7 +33,7 @@ export function IssuesPage() {
       return new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime();
     });
     return list;
-  }, [search, categoryFilter, statusFilter, sortBy]);
+  }, [issues, search, categoryFilter, statusFilter, sortBy]);
 
   const categories: Array<IssueCategory | "all"> = ["all", "road", "garbage", "lighting", "flood", "noise", "other"];
   const statuses: Array<IssueStatus | "all"> = ["all", "pending", "processing", "resolved", "rejected"];

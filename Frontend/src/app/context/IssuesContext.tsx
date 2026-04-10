@@ -35,7 +35,11 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
       try {
         const res = await api.get("/issues");
         if (res.success && res.data) {
-          setIssues(res.data);
+          const normalizedIssues = res.data.map((i: any) => ({
+            ...i,
+            id: i.id || i._id,
+          }));
+          setIssues(normalizedIssues);
         }
       } catch (error) {
         console.error("Failed to load issues in context:", error);
@@ -45,7 +49,11 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addIssue = (issue: Issue) => {
-    setIssues((prev) => [issue, ...prev]);
+    const normalizedIssue = {
+      ...issue,
+      id: issue.id || (issue as any)._id,
+    };
+    setIssues((prev) => [normalizedIssue, ...prev]);
   };
 
   const updateIssue = (id: string, updatedIssue: Partial<Issue>) => {

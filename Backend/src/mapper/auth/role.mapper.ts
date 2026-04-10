@@ -10,8 +10,10 @@ export class RoleMapper {
             description: role.description,
             is_root: role.is_root,
             is_active: role.is_active,
+            permissions: role.permissions || [],
             created_at: role.createdAt,
-            updated_at: role.updatedAt
+            updated_at: role.updatedAt,
+            userCount: role.userCount || 0
         }
     }
 
@@ -42,7 +44,8 @@ export class RoleMapper {
             is_active: first.is_active,
             created_at: first.created_at,
             updated_at: first.updated_at,
-            permissions: permissions
+            permissions: permissions,
+            userCount: (first as any).userCount || 0
         };
 
     }

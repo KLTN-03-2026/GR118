@@ -30,6 +30,14 @@ const ROLE_CONFIG = {
   user: { label: "Công dân", color: "bg-gray-100 text-gray-600 border-gray-200", dot: "bg-gray-400", icon: Users },
 };
 
+const normalizeRole = (roleStr: string): "admin" | "moderator" | "user" => {
+  if (!roleStr) return "user";
+  const r = roleStr.toLowerCase();
+  if (r.includes("admin")) return "admin";
+  if (r.includes("cán bộ") || r.includes("moderator") || r.includes("staff")) return "moderator";
+  return "user";
+};
+
 // ──────────────────────────────────────────────────────────
 // API helpers
 // ──────────────────────────────────────────────────────────
@@ -45,17 +53,17 @@ async function fetchUsersFromAPI(search?: string): Promise<Array<User & { passwo
     const data = await res.json();
     if (data.success && data.users) {
       return data.users.map((u: any) => ({
-        id: u._id || u.id,
-        name: u.userName || u.name,
+        id: u.user_id || u._id || u.id,
+        name: u.username || u.userName || u.name,
         email: u.email,
         phone: u.phone,
         city: u.city,
-        avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.userName || u.name || 'user')}`,
-        joinedAt: u.createdAt || new Date().toISOString(),
+        avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.username || u.userName || u.name || 'user')}`,
+        joinedAt: u.created_at || u.createdAt || new Date().toISOString(),
         reportsCount: u.reportsCount || 0,
         resolvedCount: u.resolvedCount || 0,
-        role: u.role || "user",
-        roleId: u.roleId,
+        role: normalizeRole(u.role || (Array.isArray(u.roles) && u.roles.length > 0 ? u.roles[0] : "user")),
+        roleId: u.roleId || (Array.isArray(u.roles) && u.roles.length > 0 ? u.roles[0] : undefined),
         banned: u.banned || (u.lockEnd && new Date(u.lockEnd) > new Date()),
         banReason: u.lockReason || u.banReason,
         password: "",
@@ -1050,7 +1058,7 @@ type FilterRole = "all" | "admin" | "moderator" | "user";
 type FilterStatus = "all" | "active" | "banned";
 
 export function AdminUsersPage() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const [users, setUsers] = useState<Array<User & { password: string }>>([]);
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState<FilterRole>("all");
@@ -1072,7 +1080,19 @@ export function AdminUsersPage() {
     loadUsers();
   }, []);
 
-  if (!user || user.role !== "admin") return <Navigate to="/" replace />;
+  // ── Filter ──
+  const filtered = useMemo(() => {
+    return users.filter((u) => {
+      // @ts-ignore
+      if (user && u.id === user.id) return false; // Don't show self
+      const q = search.toLowerCase();
+      const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.phone || "").includes(q);
+      const matchRole = filterRole === "all" || u.role === filterRole;
+      const matchStatus = filterStatus === "all" || (filterStatus === "active" ? !u.banned : u.banned);
+      return matchSearch && matchRole && matchStatus;
+    });
+  }, [users, search, filterRole, filterStatus, user]);
+
 
   // ── Helpers ──
   const updateUser = async (userId: string, updates: Partial<User>) => {
@@ -1082,20 +1102,46 @@ export function AdminUsersPage() {
     if (detailTarget?.id === userId) setDetailTarget((prev) => prev ? { ...prev, ...updates } : null);
     // Gọi API
     try {
+      let res;
       if (updates.banned !== undefined) {
-        await fetch(`${API_BASE}/auth/users/lockOrUnlock/${userId}`, {
+        res = await fetch(`${API_BASE}/auth/users/lockOrUnlock/${userId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ lockReason: updates.banReason }),
         });
       } else {
-        await fetch(`${API_BASE}/auth/users/${userId}`, {
+        res = await fetch(`${API_BASE}/auth/users/${userId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify(updates),
         });
+      }
+
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          const u = data.user;
+          const mappedUser = {
+            id: u.user_id || u._id || u.id,
+            name: u.username || u.userName || u.name,
+            email: u.email,
+            phone: u.phone,
+            city: u.city,
+            avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(u.username || u.userName || u.name || 'user')}`,
+            joinedAt: u.created_at || u.createdAt || new Date().toISOString(),
+            reportsCount: u.reportsCount || 0,
+            resolvedCount: u.resolvedCount || 0,
+            role: normalizeRole(u.role || (Array.isArray(u.roles) && u.roles.length > 0 ? u.roles[0] : "user")),
+            roleId: u.roleId || (Array.isArray(u.roles) && u.roles.length > 0 ? u.roles[0] : undefined),
+            banned: u.banned || (u.lockEnd && new Date(u.lockEnd) > new Date()),
+            banReason: u.lockReason || u.banReason,
+            password: "",
+          };
+          setUsers((prev) => prev.map((item) => (item.id === userId ? mappedUser : item)));
+          if (detailTarget?.id === userId) setDetailTarget(mappedUser);
+        }
       }
     } catch (err) {
       console.error("updateUser API error:", err);
@@ -1138,27 +1184,20 @@ export function AdminUsersPage() {
     }
   };
 
-  // ── Filter ──
-  const filtered = useMemo(() => {
-    return users.filter((u) => {
-      if (u.id === user.id) return false; // Don't show self
-      const q = search.toLowerCase();
-      const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.phone || "").includes(q);
-      const matchRole = filterRole === "all" || u.role === filterRole;
-      const matchStatus = filterStatus === "all" || (filterStatus === "active" ? !u.banned : u.banned);
-      return matchSearch && matchRole && matchStatus;
-    });
-  }, [users, search, filterRole, filterStatus, user.id]);
-
   // ── Stats ──
-  const stats = useMemo(() => ({
-    total: users.filter((u) => u.id !== user.id).length,
-    admins: users.filter((u) => u.role === "admin" && u.id !== user.id).length,
-    moderators: users.filter((u) => u.role === "moderator").length,
-    citizens: users.filter((u) => u.role === "user").length,
-    active: users.filter((u) => !u.banned && u.id !== user.id).length,
-    banned: users.filter((u) => u.banned).length,
-  }), [users, user.id]);
+  const stats = useMemo(() => {
+    if (!user) return { total: 0, admins: 0, moderators: 0, citizens: 0, active: 0, banned: 0 };
+    return {
+      total: users.filter((u) => u.id !== user.id).length,
+      admins: users.filter((u) => u.role === "admin" && u.id !== user.id).length,
+      moderators: users.filter((u) => u.role === "moderator").length,
+      citizens: users.filter((u) => u.role === "user").length,
+      active: users.filter((u) => !u.banned && u.id !== user.id).length,
+      banned: users.filter((u) => u.banned).length,
+    };
+  }, [users, user?.id]);
+
+  if (!user || user.role !== "admin") return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen pt-20 pb-16 bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-50">
@@ -1195,15 +1234,15 @@ export function AdminUsersPage() {
           className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6"
         >
           {[
-            { label: "Tổng", value: stats.total, color: "text-gray-800", bg: "bg-white", border: "border-gray-100" },
-            { label: "Admin", value: stats.admins, color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-100" },
-            { label: "Cán bộ", value: stats.moderators, color: "text-indigo-700", bg: "bg-indigo-50", border: "border-indigo-100" },
-            { label: "Công dân", value: stats.citizens, color: "text-gray-700", bg: "bg-gray-50", border: "border-gray-100" },
-            { label: "Hoạt động", value: stats.active, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-100" },
-            { label: "Đã khóa", value: stats.banned, color: "text-red-700", bg: "bg-red-50", border: "border-red-100" },
-          ].map((s, i) => (
+            { id: "total", label: "Tổng", value: stats.total, color: "text-gray-800", bg: "bg-white", border: "border-gray-100" },
+            { id: "admin", label: "Admin", value: stats.admins, color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-100" },
+            { id: "moderator", label: "Cán bộ", value: stats.moderators, color: "text-indigo-700", bg: "bg-indigo-50", border: "border-indigo-100" },
+            { id: "citizen", label: "Công dân", value: stats.citizens, color: "text-gray-700", bg: "bg-gray-50", border: "border-gray-100" },
+            { id: "active", label: "Hoạt động", value: stats.active, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-100" },
+            { id: "banned", label: "Đã khóa", value: stats.banned, color: "text-red-700", bg: "bg-red-50", border: "border-red-100" },
+          ].map((s) => (
             <motion.div
-              key={i}
+              key={s.id}
               whileHover={{ scale: 1.04 }}
               className={`${s.bg} border ${s.border} rounded-2xl p-3 text-center shadow-sm`}
             >
@@ -1310,10 +1349,11 @@ export function AdminUsersPage() {
         ) : (
           <div className="space-y-3">
             {filtered.map((u, i) => {
-              const RoleIcon = ROLE_CONFIG[u.role].icon;
+              const cfg = ROLE_CONFIG[u.role as keyof typeof ROLE_CONFIG] || ROLE_CONFIG.user;
+              const RoleIcon = cfg.icon;
               return (
                 <motion.div
-                  key={u.id}
+                  key={u.id || i}
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
@@ -1389,24 +1429,28 @@ export function AdminUsersPage() {
                         </button>
 
                         {/* Change Password */}
-                        <button
-                          onClick={() => setEditPasswordTarget(u)}
-                          title="Đổi mật khẩu"
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold transition-colors"
-                        >
-                          <Key size={13} />
-                          <span className="hidden sm:inline">Đổi MK</span>
-                        </button>
+                        {can("users_mgnt", "update") && (
+                          <button
+                            onClick={() => setEditPasswordTarget(u)}
+                            title="Đổi mật khẩu"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <Key size={13} />
+                            <span className="hidden sm:inline">Đổi MK</span>
+                          </button>
+                        )}
 
                         {/* Change Role */}
-                        <button
-                          onClick={() => setChangeRoleTarget(u)}
-                          title="Phân quyền"
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-xs font-semibold transition-colors"
-                        >
-                          <UserCog size={13} />
-                          <span className="hidden sm:inline">Phân quyền</span>
-                        </button>
+                        {can("users_mgnt", "assign") && (
+                          <button
+                            onClick={() => setChangeRoleTarget(u)}
+                            title="Phân quyền"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl text-xs font-semibold transition-colors"
+                          >
+                            <UserCog size={13} />
+                            <span className="hidden sm:inline">Phân quyền</span>
+                          </button>
+                        )}
 
                         {/* Lock / Unlock */}
                         {u.banned ? (
@@ -1459,7 +1503,7 @@ export function AdminUsersPage() {
             currentAdminId={user.id}
             onClose={() => setChangeRoleTarget(null)}
             onSaved={(newRoleId) => {
-              updateUser(changeRoleTarget.id, { roleId: newRoleId });
+              updateUser(changeRoleTarget.id, { roleIds: [newRoleId] });
             }}
           />
         )}

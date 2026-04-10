@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import {
@@ -8,6 +8,7 @@ import {
   MapPin,
   CheckCircle2,
   AlertCircle,
+  Check,
   Loader2,
   X,
   ChevronRight,
@@ -28,118 +29,426 @@ import { useAuth } from "../context/AuthContext";
 import { useIssues } from "../context/IssuesContext";
 import { AuthModal } from "../components/AuthModal";
 import { PageTitle } from "../components/PageTitle";
+import { api } from "../../utils/api";
 
 const STEPS = ["Hình ảnh & AI", "Thông tin vấn đề", "Vị trí", "Xác nhận"];
 
-const DISTRICTS_HCM = [
-  "Quận 1", "Quận 2", "Quận 3", "Quận 4", "Quận 5",
-  "Quận 6", "Quận 7", "Quận 8", "Quận 9", "Quận 10",
-  "Quận 11", "Quận 12", "Bình Thạnh", "Gò Vấp", "Phú Nhuận",
-  "Tân Bình", "Tân Phú", "Bình Tân", "Thủ Đức",
-];
+interface Province {
+  name: string;
+  code: number;
+}
 
-const CITIES = ["TP. Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Cần Thơ", "Hải Phòng"];
+interface District {
+  name: string;
+  code: number;
+}
+
+interface Ward {
+  name: string;
+  code: number;
+}
 
 interface FormData {
-  mediaFiles: Array<{ file: File; preview: string; type: "image" | "video" }>;
+  mediaFiles: Array<{ 
+    file: File; 
+    preview: string; 
+    type: "image" | "video";
+    aiStatus?: 'pending' | 'analyzing' | 'done' | 'error';
+    aiResult?: {
+      is_valid: boolean;
+      label: string;
+      category: string;
+      confidence: number;
+      source: string;
+    }
+  }>;
   aiCategory: IssueCategory | null;
   aiLabel: string;
   aiConfidence: number;
+  aiSource?: string;
   title: string;
   description: string;
   category: IssueCategory | null;
   location: string;
+  ward: string;
   district: string;
   city: string;
   reporterName: string;
   reporterPhone: string;
   anonymous: boolean;
+  aiVerified?: boolean;
 }
+
+// Helper to map AI Microservice categories to Frontend categories
+const mapAICategoryToFrontend = (aiCategory: string): IssueCategory => {
+  const mapping: Record<string, IssueCategory> = {
+    'trash': 'garbage',
+    'infrastructure': 'road',
+    'signs': 'lighting',
+    'electric': 'lighting',
+    'flood': 'flood',
+    'trees': 'other',
+    'construction': 'road',
+    'encroachment': 'road',
+    'other': 'other'
+  };
+  return mapping[aiCategory] || 'other';
+};
 
 export function ReportPage() {
   const navigate = useNavigate();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, can } = useAuth();
   const { addIssue } = useIssues();
   const [step, setStep] = useState(0);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [aiDone, setAiDone] = useState(false);
+  const [moderating, setModerating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [descriptionStatus, setDescriptionStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [descriptionReason, setDescriptionReason] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [form, setForm] = useState<FormData>({
     mediaFiles: [],
     aiCategory: null,
     aiLabel: "",
     aiConfidence: 0,
+    aiSource: "",
+    aiVerified: false,
     title: "",
     description: "",
     category: null,
     location: "",
+    ward: "",
     district: "",
-    city: "TP. Hồ Chí Minh",
+    city: "",
     reporterName: "",
     reporterPhone: "",
     anonymous: false,
   });
 
-  const simulateAI = async (imagePreview: string) => {
-    setAiAnalyzing(true);
-    setAiDone(false);
-    await new Promise((r) => setTimeout(r, 2800));
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
 
-    const mockResults: Array<{ category: IssueCategory; label: string; confidence: number }> = [
-      { category: "road", label: "Ổ gà - Hư hỏng mặt đường", confidence: 94 },
-      { category: "garbage", label: "Rác thải - Ô nhiễm môi trường", confidence: 88 },
-      { category: "lighting", label: "Đèn đường hỏng", confidence: 91 },
-      { category: "flood", label: "Ngập úng - Tắc cống", confidence: 86 },
-    ];
-    const result = mockResults[Math.floor(Math.random() * mockResults.length)];
-
-    setForm((f) => ({
-      ...f,
-      aiCategory: result.category,
-      aiLabel: result.label,
-      aiConfidence: result.confidence,
-      category: result.category,
-    }));
-    setAiAnalyzing(false);
-    setAiDone(true);
-    toast.success(`AI phân tích thành công: ${result.label}`, { icon: "🤖" });
-  };
-
-  const handleFile = useCallback(async (file: File) => {
-    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-      toast.error("Vui lòng chọn file hình ảnh hoặc video!");
-      return;
-    }
-    
-    if (form.mediaFiles.length >= 10) {
-      toast.error("Tối đa 10 file media!");
-      return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const preview = e.target?.result as string;
-      const newFile = { file, preview, type: file.type.startsWith("image/") ? "image" as const : "video" as const };
-      
-      setForm((f) => ({ ...f, mediaFiles: [...f.mediaFiles, newFile] }));
-      
-      // Only run AI on first file
-      if (form.mediaFiles.length === 0) {
-        await simulateAI(preview);
+  // Fetch all provinces on mount
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      setLoadingProvinces(true);
+      try {
+        const res = await fetch("https://provinces.open-api.vn/api/p/");
+        const data = await res.json();
+        setProvinces(data);
+      } catch (error) {
+        console.error("Failed to fetch provinces:", error);
+        toast.error("Không thể tải danh sách tỉnh/thành phố");
+      } finally {
+        setLoadingProvinces(false);
       }
     };
-    reader.readAsDataURL(file);
+    fetchProvinces();
+  }, []);
+
+  const handleCityChange = async (cityCode: number, cityName: string) => {
+    setForm(f => ({ ...f, city: cityName, district: "", ward: "" }));
+    setDistricts([]);
+    setWards([]);
+    
+    if (!cityCode) return;
+    
+    setLoadingDistricts(true);
+    try {
+      const res = await fetch(`https://provinces.open-api.vn/api/p/${cityCode}?depth=2`);
+      const data = await res.json();
+      setDistricts(data.districts || []);
+    } catch (error) {
+      console.error("Failed to fetch districts:", error);
+      toast.error("Không thể tải danh sách quận/huyện");
+    } finally {
+      setLoadingDistricts(false);
+    }
+  };
+
+  const handleDistrictChange = async (districtCode: number, districtName: string) => {
+    setForm(f => ({ ...f, district: districtName, ward: "" }));
+    setWards([]);
+    
+    if (!districtCode) return;
+    
+    setLoadingWards(true);
+    try {
+      const res = await fetch(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`);
+      const data = await res.json();
+      setWards(data.wards || []);
+    } catch (error) {
+      console.error("Failed to fetch wards:", error);
+      toast.error("Không thể tải danh sách phường/xã");
+    } finally {
+      setLoadingWards(false);
+    }
+  };
+
+  const simulateAI = async (file: File, index: number, total: number, retryCount = 0): Promise<void> => {
+    // 1. Set individual status to 'analyzing'
+    setForm(f => {
+      const newMedia = [...f.mediaFiles];
+      if (newMedia[index]) newMedia[index].aiStatus = 'analyzing';
+      return { ...f, mediaFiles: newMedia };
+    });
+
+    const toastId = toast.loading(`Đang phân tích file ${index + 1}/${total}... ${retryCount > 0 ? `(Thử lại lần ${retryCount})` : ''}`, {
+      description: "Hệ thống AI đang kiểm tra nội dung hình ảnh."
+    });
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch("http://localhost:8000/analyze", {
+        method: "POST",
+        body: formData,
+      });
+
+      // Handle 429 Too Many Requests (Rate Limit)
+      if (response.status === 429 && retryCount < 2) {
+        toast.info("AI đang nghỉ ngơi một lát...", {
+          id: toastId,
+          description: "Sẽ tự động thử lại sau 5 giây."
+        });
+        await new Promise(r => setTimeout(r, 5000));
+        return simulateAI(file, index, total, retryCount + 1);
+      }
+
+      if (!response.ok) throw new Error("AI Service error");
+      const result = await response.json();
+      
+      // 2. Update individual status with the result
+      setForm(f => {
+        const newMedia = [...f.mediaFiles];
+        if (newMedia[index]) {
+          newMedia[index].aiStatus = 'done';
+          newMedia[index].aiResult = result;
+        }
+        
+        if (result.is_valid) {
+          const mappedCategory = mapAICategoryToFrontend(result.category);
+          return { 
+            ...f, 
+            mediaFiles: newMedia,
+            aiCategory: mappedCategory,
+            aiLabel: result.label,
+            aiConfidence: result.confidence,
+            aiSource: result.source,
+            category: mappedCategory,
+            aiVerified: true
+          };
+        }
+        
+        return { ...f, mediaFiles: newMedia };
+      });
+
+      if (!result.is_valid) {
+        toast.error(`File ${index + 1}: Không phải vấn đề dân sinh`, {
+          id: toastId,
+          description: result.label || "Vui lòng chọn ảnh khác!",
+          duration: 3000
+        });
+      } else {
+        toast.success(`File ${index + 1}: ${result.label}`, {
+          id: toastId,
+          description: `Độ tin cậy: ${Math.round(result.confidence)}%`
+        });
+      }
+    } catch (error) {
+      console.error("AI Analysis failed:", error);
+      setForm(f => {
+        const newMedia = [...f.mediaFiles];
+        if (newMedia[index]) newMedia[index].aiStatus = 'error';
+        return { ...f, mediaFiles: newMedia };
+      });
+      toast.error(`File ${index + 1}: Lỗi phân tích`, {
+        id: toastId,
+        description: "Vui lòng kiểm tra lại kết nối hoặc thử lại sau."
+      });
+    }
+  };
+
+  const handleFiles = useCallback((files: FileList | null) => {
+    if (!files) return;
+    const filesArray = Array.from(files).filter(f => f.type.startsWith("image/") || f.type.startsWith("video/"));
+    
+    if (form.mediaFiles.length + filesArray.length > 10) {
+      toast.warning("Vượt quá giới hạn 10 file", {
+        description: "Chỉ một số file đầu tiên sẽ được tải lên."
+      });
+    }
+
+    const allowedFiles = filesArray.slice(0, 10 - form.mediaFiles.length);
+    if (allowedFiles.length === 0) return;
+
+    const processSequentially = async () => {
+      setAiAnalyzing(true);
+      setAiDone(false);
+
+      // 1. Batch add all previews first
+      const newMediaItems: Array<{ file: File; preview: string; type: "image" | "video"; aiStatus: 'pending' }> = [];
+      
+      for (const file of allowedFiles) {
+        const preview = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        newMediaItems.push({
+          file,
+          preview,
+          type: file.type.startsWith("image/") ? "image" as const : "video" as const,
+          aiStatus: 'pending'
+        });
+      }
+
+      // Update state with all new files
+      const startIndex = form.mediaFiles.length;
+      setForm(f => ({ ...f, mediaFiles: [...f.mediaFiles, ...newMediaItems] }));
+
+      // 2. Loop through and analyze
+      for (let i = 0; i < newMediaItems.length; i++) {
+        // Add a small delay between requests to avoid 429 errors from Gemini Free Tier
+        if (i > 0) await new Promise(r => setTimeout(r, 2500));
+        await simulateAI(newMediaItems[i].file, startIndex + i, startIndex + newMediaItems.length);
+      }
+
+      setAiAnalyzing(false);
+      setAiDone(true);
+    };
+
+    processSequentially();
   }, [form.mediaFiles.length]);
+
+  // Handle Description Moderation (Debounced)
+  useEffect(() => {
+    if (step !== 1 || !form.description || form.description.length < 10) {
+      setDescriptionStatus('idle');
+      setDescriptionReason(null);
+      return;
+    }
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+    setDescriptionStatus('checking');
+    
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch("http://localhost:8000/moderate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: form.title,
+            description: form.description,
+            category: form.category,
+            aiLabel: form.aiLabel
+          }),
+        });
+
+        if (!response.ok) throw new Error("Moderation service error");
+        const result = await response.json();
+
+        if (result.is_flagged) {
+          setDescriptionStatus('invalid');
+          setDescriptionReason(result.reason);
+        } else {
+          setDescriptionStatus('valid');
+          setDescriptionReason(null);
+        }
+      } catch (error) {
+        console.error("Moderation failed:", error);
+        setDescriptionStatus('idle'); // Fallback to idle if error
+      }
+    }, 2000); // 2 second debounce
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [form.description, form.title, step, form.category, form.aiLabel]);
+
+  const handleNext = async () => {
+    // Only moderate if moving from Step 1 (Info) to Step 2 (Location)
+    if (step === 1) {
+      // If we already have a status and it's invalid, stop
+      if (descriptionStatus === 'invalid') {
+        toast.error("Nội dung không hợp lệ", {
+          description: descriptionReason || "Vui lòng kiểm tra lại tiêu đề và mô tả.",
+          duration: 5000
+        });
+        return;
+      }
+
+      // If still checking, wait
+      if (descriptionStatus === 'checking') {
+        toast.info("Đang chờ AI kiểm duyệt...");
+        return;
+      }
+      
+      // Traditional check if for some reason debouncing didn't run or was idle
+      if (descriptionStatus === 'idle') {
+        setModerating(true);
+        const toastId = toast.loading("Đang kiểm duyệt nội dung...", {
+          description: "AI đang kiểm tra tính xác thực của thông tin."
+        });
+
+        try {
+          const response = await fetch("http://localhost:8000/moderate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: form.title,
+              description: form.description,
+              category: form.category,
+              aiLabel: form.aiLabel
+            }),
+          });
+
+          if (!response.ok) throw new Error("Moderation service error");
+          const result = await response.json();
+
+          if (result.is_flagged) {
+            toast.error("Nội dung không hợp lệ", {
+              id: toastId,
+              description: result.reason || "Vui lòng kiểm tra lại tiêu đề và mô tả.",
+              duration: 5000
+            });
+            setDescriptionStatus('invalid');
+            setDescriptionReason(result.reason);
+            setModerating(false);
+            return;
+          }
+
+          toast.success("Nội dung hợp lệ", { id: toastId });
+          setDescriptionStatus('valid');
+        } catch (error) {
+          console.error("Moderation failed:", error);
+          toast.dismiss(toastId);
+        } finally {
+          setModerating(false);
+        }
+      }
+    }
+
+    setStep((s) => s + 1);
+  };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    if (e.dataTransfer.files) {
+      handleFiles(e.dataTransfer.files);
+    }
   };
 
   const handleSubmit = async () => {
@@ -148,62 +457,81 @@ export function ReportPage() {
     setSubmitting(true);
     await new Promise((r) => setTimeout(r, 2000));
     
-    // Create mediaFiles array for the issue
-    const mediaFiles: MediaFile[] = form.mediaFiles.map(f => ({
-      type: f.type,
-      url: f.preview,
-    }));
-    
-    // Create new issue
-    const newIssue = {
-      id: String(Date.now()),
-      title: form.title,
-      description: form.description,
-      category: form.category!,
-      status: "pending" as const,
-      location: form.location,
-      district: form.district,
-      city: form.city,
-      lat: 10.7769 + (Math.random() - 0.5) * 0.1, // Mock coordinates
-      lng: 106.7009 + (Math.random() - 0.5) * 0.1,
-      imageUrl: form.mediaFiles[0]?.preview,
-      mediaFiles: mediaFiles,
-      reporterName: form.anonymous ? "Người dùng ẩn danh" : (form.reporterName || user.name),
-      reporterId: user.id,
-      reportedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      votes: 0,
-      comments: 0,
-      aiConfidence: form.aiConfidence,
-      aiLabel: form.aiLabel,
-      aiVerified: form.aiConfidence >= 85,
-      aiScore: form.aiConfidence,
-      aiAnalysis: form.aiConfidence >= 85 ? {
-        isAuthentic: true,
-        confidenceScore: form.aiConfidence,
-        reasons: [
-          "Hình ảnh rõ nét, không có dấu hiệu chỉnh sửa",
-          "Vị trí GPS khớp với mô tả",
-          "Vấn đề phù hợp với danh mục báo cáo",
-        ],
-        tags: ["mới gửi", "chờ xác minh"],
-        severity: form.aiConfidence >= 90 ? "high" as const : "medium" as const,
-      } : undefined,
-    };
-    
-    addIssue(newIssue);
-    
-    setSubmitting(false);
-    toast.success("Báo cáo đã được gửi thành công! Chúng tôi sẽ xử lý sớm nhất.", {
-      duration: 5000,
-    });
-    navigate("/my-reports");
+    try {
+      // Create mediaFiles array for the issue
+      const mediaFiles: MediaFile[] = form.mediaFiles.map(f => ({
+        type: f.type,
+        url: f.preview,
+      }));
+      
+      // Create new issue data for API
+      const issueData = {
+        title: form.title,
+        description: form.description,
+        category: form.category!,
+        status: "pending" as const,
+        location: form.location,
+        district: form.district,
+        ward: form.ward,
+        city: form.city,
+        lat: 10.7769 + (Math.random() - 0.5) * 0.1, // Mock coordinates
+        lng: 106.7009 + (Math.random() - 0.5) * 0.1,
+        imageUrl: form.mediaFiles[0]?.preview,
+        mediaFiles: mediaFiles,
+        reporterName: form.anonymous ? "Người dùng ẩn danh" : (form.reporterName || user.name),
+        reporterId: user.id,
+        reportedAt: new Date().toISOString(),
+        votes: 0,
+        comments: 0,
+        aiConfidence: form.aiConfidence,
+        aiLabel: form.aiLabel,
+        aiVerified: form.aiConfidence >= 85,
+        aiScore: form.aiConfidence,
+        aiAnalysis: form.aiConfidence >= 85 ? {
+          isAuthentic: true,
+          confidenceScore: form.aiConfidence,
+          reasons: [
+            "Hình ảnh rõ nét, không có dấu hiệu chỉnh sửa",
+            "Vị trí GPS khớp với mô tả",
+            "Vấn đề phù hợp với danh mục báo cáo",
+          ],
+          tags: ["mới gửi", "chờ xác minh"],
+          severity: form.aiConfidence >= 90 ? "high" as const : "medium" as const,
+        } : undefined,
+      };
+
+      // Save to database via API
+      console.log("%c🚀 [SUBMITTING REPORT]", "color: #ef4444; font-weight: bold; font-size: 12px;");
+      console.log("Report Data:", issueData);
+      
+      const response = await api.post("/issues", issueData);
+      
+      if (response.success && response.data) {
+        console.log("%c✅ [REPORT SUBMITTED SUCCESS]", "color: #10b981; font-weight: bold; font-size: 12px;");
+        console.log("Server Response:", response.data);
+        // Add the saved issue (with database ID) to the context
+        addIssue(response.data);
+        
+        setSubmitting(false);
+        toast.success("Báo cáo đã được gửi thành công! Chúng tôi sẽ xử lý sớm nhất.", {
+          duration: 5000,
+        });
+        navigate("/my-reports");
+      } else {
+        throw new Error(response.message || "Không thể gửi báo cáo");
+      }
+    } catch (error) {
+      console.error("%c❌ [REPORT SUBMISSION FAILED]", "color: #ef4444; font-weight: bold; font-size: 12px;");
+      console.error("Error Detail:", error);
+      setSubmitting(false);
+      toast.error("Gửi báo cáo thất bại. Vui lòng thử lại.");
+    }
   };
 
   const canNext = () => {
-    if (step === 0) return !!form.mediaFiles.length && aiDone;
-    if (step === 1) return !!form.title && !!form.description && !!form.category;
-    if (step === 2) return !!form.location && !!form.district;
+    if (step === 0) return !!form.mediaFiles.length && aiDone && form.aiVerified;
+    if (step === 1) return !!form.title && !!form.description && !!form.category && descriptionStatus !== 'invalid' && descriptionStatus !== 'checking';
+    if (step === 2) return !!form.location && !!form.district && !!form.ward && !!form.city;
     return true;
   };
 
@@ -216,7 +544,9 @@ export function ReportPage() {
     );
   }
 
-  if (!user) {
+  const canCreate = can("issues_vande", "create");
+
+  if (!user || !canCreate) {
     return (
       <div className="min-h-screen pt-20 pb-16 bg-gray-50">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-16">
@@ -236,11 +566,12 @@ export function ReportPage() {
             </motion.div>
 
             <h1 className="text-3xl font-black text-gray-900 mb-3">
-              Cần đăng nhập để báo cáo
+              {!user ? "Cần đăng nhập để báo cáo" : "Không có quyền báo cáo"}
             </h1>
             <p className="text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
-              Để đảm bảo tính xác thực và trách nhiệm của mỗi báo cáo, 
-              bạn cần đăng nhập tài khoản trước khi sử dụng chức năng báo cáo vấn đề công cộng.
+              {!user 
+                ? "Để đảm bảo tính xác thực và trách nhiệm của mỗi báo cáo, bạn cần đăng nhập tài khoản trước khi sử dụng chức năng báo cáo vấn đề công cộng."
+                : "Tài khoản của bạn hiện không có thẩm quyền tạo báo cáo mới. Vui lòng liên hệ quản trị viên nếu bạn tin rằng đây là một lỗi."}
             </p>
 
             {/* Benefits */}
@@ -391,9 +722,7 @@ export function ReportPage() {
                       multiple
                       className="hidden"
                       onChange={(e) => {
-                        if (e.target.files) {
-                          Array.from(e.target.files).forEach(file => handleFile(file));
-                        }
+                        handleFiles(e.target.files);
                       }}
                     />
                   </div>
@@ -433,7 +762,8 @@ export function ReportPage() {
                           >
                             <X size={14} />
                           </button>
-                          {idx === 0 && aiAnalyzing && (
+                          {/* Individual AI Analyzing Overlay */}
+                          {media.aiStatus === 'analyzing' && (
                             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
                               <motion.div
                                 animate={{ rotate: 360 }}
@@ -443,6 +773,23 @@ export function ReportPage() {
                               </motion.div>
                             </div>
                           )}
+
+                          {/* AI Status Badges */}
+                          {media.aiStatus === 'done' && (
+                            <div className="absolute top-2 left-2 flex gap-1">
+                              {media.aiResult?.is_valid ? (
+                                <div className="bg-green-500 text-white p-1 rounded-full shadow-lg border border-white">
+                                  <Check size={10} strokeWidth={4} />
+                                </div>
+                              ) : (
+                                <div className="bg-orange-500 text-white p-1 rounded-full shadow-lg border border-white">
+                                  <AlertCircle size={10} strokeWidth={4} />
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+
                           <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/50 backdrop-blur-sm rounded text-white text-xs">
                             {idx + 1}/{form.mediaFiles.length}
                           </div>
@@ -480,7 +827,13 @@ export function ReportPage() {
                                 <span className="text-sm font-bold text-purple-700">AI phân tích kết quả</span>
                                 <CheckCircle2 size={14} className="text-green-500" />
                               </div>
-                              <p className="font-semibold text-gray-900">{form.aiLabel}</p>
+                              <p className="font-semibold text-gray-900">
+                                {form.aiLabel}
+
+                                {form.aiSource === 'local_ai' && (
+                                  <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-md uppercase">AI Cục bộ</span>
+                                )}
+                              </p>
                               <div className="flex items-center gap-3 mt-2">
                                 <div className="flex-1 h-2 bg-purple-100 rounded-full overflow-hidden">
                                   <motion.div
@@ -506,9 +859,7 @@ export function ReportPage() {
                       multiple
                       className="hidden"
                       onChange={(e) => {
-                        if (e.target.files) {
-                          Array.from(e.target.files).forEach(file => handleFile(file));
-                        }
+                        handleFiles(e.target.files);
                       }}
                     />
                   </div>
@@ -535,14 +886,54 @@ export function ReportPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả chi tiết *</label>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                    placeholder="Mô tả vấn đề một cách chi tiết, bao gồm kích thước, mức độ nguy hiểm..."
-                    rows={4}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition-all duration-200 text-sm resize-none"
-                  />
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-semibold text-gray-700">Mô tả chi tiết *</label>
+                    <div className="flex items-center gap-2">
+                      {descriptionStatus === 'checking' && (
+                        <span className="flex items-center gap-1.5 text-xs text-blue-500 font-medium">
+                          <Loader2 size={12} className="animate-spin" />
+                          AI đang kiểm duyệt...
+                        </span>
+                      )}
+                      {descriptionStatus === 'valid' && (
+                        <span className="flex items-center gap-1.5 text-xs text-green-600 font-medium">
+                          <Check size={12} />
+                          Nội dung hợp lệ
+                        </span>
+                      )}
+                      {descriptionStatus === 'invalid' && (
+                        <span className="flex items-center gap-1.5 text-xs text-red-500 font-medium">
+                          <AlertCircle size={12} />
+                          Phát hiện bất thường
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <textarea
+                      value={form.description}
+                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="Mô tả vấn đề một cách chi tiết, bao gồm kích thước, mức độ nguy hiểm..."
+                      rows={4}
+                      className={`w-full px-4 py-3 rounded-xl border transition-all duration-200 text-sm resize-none focus:outline-none focus:ring-2 ${
+                        descriptionStatus === 'invalid' 
+                          ? "border-red-300 ring-red-100 bg-red-50/30" 
+                          : descriptionStatus === 'valid'
+                          ? "border-green-300 ring-green-50"
+                          : "border-gray-200 focus:ring-red-300 focus:border-red-400"
+                      }`}
+                    />
+                    {descriptionStatus === 'invalid' && descriptionReason && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-2 text-xs text-red-600 font-medium flex items-center gap-1.5 bg-red-50 p-2 rounded-lg border border-red-100"
+                      >
+                        <AlertCircle size={12} />
+                        {descriptionReason}
+                      </motion.p>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -596,25 +987,61 @@ export function ReportPage() {
                 </h2>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Thành phố / Tỉnh *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Thành phố / Tỉnh *
+                    {loadingProvinces && <Loader2 size={14} className="inline ml-2 animate-spin text-red-500" />}
+                  </label>
                   <select
-                    value={form.city}
-                    onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                    value={provinces.find(p => p.name === form.city)?.code || ""}
+                    onChange={(e) => {
+                      const code = Number(e.target.value);
+                      const name = provinces.find(p => p.code === code)?.name || "";
+                      handleCityChange(code, name);
+                    }}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white"
                   >
-                    {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    <option value="">-- Chọn tỉnh/thành phố --</option>
+                    {provinces.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Quận / Huyện *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Quận / Huyện *
+                    {loadingDistricts && <Loader2 size={14} className="inline ml-2 animate-spin text-red-500" />}
+                  </label>
                   <select
-                    value={form.district}
-                    onChange={(e) => setForm((f) => ({ ...f, district: e.target.value }))}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white"
+                    value={districts.find(d => d.name === form.district)?.code || ""}
+                    onChange={(e) => {
+                      const code = Number(e.target.value);
+                      const name = districts.find(d => d.code === code)?.name || "";
+                      handleDistrictChange(code, name);
+                    }}
+                    disabled={!form.city || loadingDistricts}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white disabled:bg-gray-50 disabled:cursor-not-allowed"
                   >
                     <option value="">-- Chọn quận/huyện --</option>
-                    {DISTRICTS_HCM.map((d) => <option key={d} value={d}>{d}</option>)}
+                    {districts.map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Phường / Xã *
+                    {loadingWards && <Loader2 size={14} className="inline ml-2 animate-spin text-red-500" />}
+                  </label>
+                  <select
+                    value={wards.find(w => w.name === form.ward)?.code || ""}
+                    onChange={(e) => {
+                      const code = Number(e.target.value);
+                      const name = wards.find(w => w.code === code)?.name || "";
+                      setForm(f => ({ ...f, ward: name }));
+                    }}
+                    disabled={!form.district || loadingWards}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">-- Chọn phường/xã --</option>
+                    {wards.map((w) => <option key={w.code} value={w.code}>{w.name}</option>)}
                   </select>
                 </div>
 
@@ -623,7 +1050,7 @@ export function ReportPage() {
                   <input
                     value={form.location}
                     onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                    placeholder="VD: 123 Đường Nguyễn Huệ, Phường Bến Nghé"
+                    placeholder="VD: 123 Đường Nguyễn Huệ"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm"
                   />
                 </div>
@@ -669,7 +1096,7 @@ export function ReportPage() {
                   </div>
                   <div className="flex items-center gap-2 text-gray-500 pt-1 border-t border-gray-200 mt-2">
                     <MapPin size={13} className="text-red-400" />
-                    {form.location}, {form.district}, {form.city}
+                    {form.location}, {form.ward}, {form.district}, {form.city}
                   </div>
                 </div>
 
@@ -737,16 +1164,25 @@ export function ReportPage() {
 
               {step < STEPS.length - 1 ? (
                 <button
-                  onClick={() => setStep((s) => s + 1)}
-                  disabled={!canNext()}
+                  onClick={handleNext}
+                  disabled={!canNext() || moderating}
                   className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                    canNext()
+                    canNext() && !moderating
                       ? "bg-gradient-to-r from-red-500 to-red-600 text-white hover:scale-[1.02] shadow-lg shadow-red-200"
                       : "bg-gray-100 text-gray-400 cursor-not-allowed"
                   }`}
                 >
-                  Tiếp theo
-                  <ChevronRight size={18} />
+                  {moderating ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Đang kiểm tra...
+                    </>
+                  ) : (
+                    <>
+                      Tiếp theo
+                      <ChevronRight size={18} />
+                    </>
+                  )}
                 </button>
               ) : (
                 <button

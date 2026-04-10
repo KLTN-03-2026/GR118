@@ -1,33 +1,61 @@
-import userRoleScheme from "../../models/auth/user_role";
 import { GetMeInterface } from "../aggregation/user";
 import authSchema from "../../models/auth.model";
 import userRoleSchema from "../../models/auth/user_role";
 import roleSchema from "../../models/auth/roles";
+import { ROLES } from "../../constant/role";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 
 export const GetRoleIDsByUserID = async (userId: string) => {
-    const roles = await userRoleScheme
+    const roles = await userRoleSchema
         .find({ user_id: userId })
         .select("role_id -_id");
 
     return roles.map(r => r.role_id);
 }
 
+export const syncUserPrimaryRole = async (userId: string, session?: mongoose.ClientSession) => {
+    // Tìm các role của user
+    const userRoles = await userRoleSchema.find({ user_id: userId }).session(session || null).lean();
+    if (userRoles.length === 0) {
+        await authSchema.findByIdAndUpdate(userId, { role: null }, { session: session || null });
+        return;
+    }
+
+    // Lấy tên của role đầu tiên (ưu tiên)
+    const roleId = userRoles[0].role_id;
+    
+    // Tìm kiếm thông minh: hỗ trợ cả _id và role_id
+    const query: any = { $or: [{ role_id: roleId }] };
+    if (mongoose.Types.ObjectId.isValid(roleId)) {
+        query.$or.push({ _id: new mongoose.Types.ObjectId(roleId) });
+    }
+    
+    const roleDoc = await roleSchema.findOne(query).session(session || null).lean();
+    
+    if (roleDoc) {
+        await authSchema.findByIdAndUpdate(userId, { role: roleDoc.name }, { session: session || null });
+    }
+}
+
 export const AddNewRolesToNewUser = async (
     userId: string,
-    roleId: string
+    roleId: string,
+    session?: mongoose.ClientSession
 ) => {
-    return await userRoleScheme.create({
+    const result = await userRoleSchema.create([{
         user_id: userId,
         role_id: roleId
-    });
+    }], { session: session || null });
 
+    await syncUserPrimaryRole(userId, session);
+    return result;
 };
 
 export const assignRoleToUser = async (
     userId: string,
-    roleIds: string[]
+    roleIds: string[],
+    session?: mongoose.ClientSession
 ) => {
 
     if (!Array.isArray(roleIds)) {
@@ -49,19 +77,21 @@ export const assignRoleToUser = async (
             role_id: roleId
         }));
 
-        await userRoleScheme.insertMany(data);
+        await userRoleSchema.insertMany(data, { session: session || null });
     }
 
     if (toRemove.length > 0) {
-        await userRoleScheme.deleteMany({
+        await userRoleSchema.deleteMany({
             user_id: userId,
             role_id: { $in: toRemove }
-        });
+        }, { session: session || null });
     }
 
-    return await userRoleScheme.find({
+    await syncUserPrimaryRole(userId, session);
+
+    return await userRoleSchema.find({
         user_id: userId
-    }).lean();
+    }).session(session || null).lean();
 };
 
 export const CountUsersByRoles = async (roleIds: string[]) => {
@@ -158,6 +188,9 @@ export const GetMe = async (userId: string): Promise<GetMeInterface | null> => {
         user_id: user?._id.toString() || "",
         username: user?.userName || "",
         email: user?.email || "",
+        avatar: user?.avatar || null,
+        phone: user?.phone || null,
+        city: user?.city || null,
         lockEnd: user?.lockEnd || null,
         lockReason: user?.lockReason || null,
         permissions: aggregate.map(a => ({
@@ -198,11 +231,15 @@ export const getUser = async (userId: string) => {
         return null;
     }
 
-    const roles = await userRoleSchema.find({ user_id: userId }).lean();
-
     const roleIds = roles.map(r => r.role_id);
+    const validRoleObjectIds = roleIds.filter(id => id && mongoose.Types.ObjectId.isValid(id));
 
-    const roleRes = await roleSchema.find({ _id: { $in: roleIds } }).lean();
+    const roleRes = await roleSchema.find({ 
+        $or: [
+            { role_id: { $in: roleIds } },
+            { _id: { $in: validRoleObjectIds } }
+        ]
+    }).lean();
 
     const roleName = roleRes.map(r => r.name);
 
@@ -320,8 +357,17 @@ export const createNewUserByAdmin = async (
         types: "login"
     });
 
-    if (roleIds && roleIds.length > 0) {
-        await assignRoleToUser(newUser._id.toString(), roleIds);
+    // Nếu Admin không chọn role, mặc định gán role "công dân"
+    let finalRoleIds = roleIds;
+    if (!finalRoleIds || finalRoleIds.length === 0) {
+        const defaultRole = await roleSchema.findOne({ name: ROLES.USERROLE });
+        if (defaultRole) {
+            finalRoleIds = [defaultRole._id.toString()];
+        }
+    }
+
+    if (finalRoleIds && finalRoleIds.length > 0) {
+        await assignRoleToUser(newUser._id.toString(), finalRoleIds);
     }
 
     const user = await getUser(newUser._id.toString());

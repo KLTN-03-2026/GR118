@@ -41,5 +41,18 @@ export const activityRepo = {
       },
       { new: true }
     ).exec();
+  },
+
+  async updateActivity(id: string, activityData: Partial<IActivity>): Promise<IActivity | null> {
+    return await Activity.findByIdAndUpdate(
+      id,
+      { ...activityData, updatedAt: new Date() },
+      { new: true }
+    ).exec();
+  },
+
+  async deleteActivity(id: string): Promise<boolean> {
+    const result = await Activity.findByIdAndDelete(id).exec();
+    return !!result;
   }
 };

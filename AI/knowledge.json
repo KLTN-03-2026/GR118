@@ -1,0 +1,47 @@
+[
+  {
+    "hash": "01ff01ff01ff01e13fc91f807f8037d017c017d247fb03f107ff03fb03f101e1",
+    "result": {
+      "is_valid": true,
+      "label": "Ngập lụt",
+      "category": "flood",
+      "confidence": 27
+    }
+  },
+  {
+    "hash": "1dff1def0c8301703e70ff00ff81d281e4009ff81bfc1372437e01cf47c23fe0",
+    "result": {
+      "is_valid": true,
+      "label": "Rác thải",
+      "category": "trash",
+      "confidence": 35
+    }
+  },
+  {
+    "hash": "ffc83fc81fc81c087f6ce283f3cae010933c47865c437cae4030f400f768f3ff",
+    "result": {
+      "is_valid": true,
+      "label": "Ngập lụt",
+      "category": "flood",
+      "confidence": 57
+    }
+  },
+  {
+    "hash": "007f00ff00ff01ff80f881e823e8e7ef271e07f81fe07f8008000fe00fff0fff",
+    "result": {
+      "is_valid": true,
+      "label": "Ngập lụt",
+      "category": "flood",
+      "confidence": 33
+    }
+  },
+  {
+    "hash": "b1c4ffd007c21ce61c0e7e007f42ffc26013481bff949f870660067903ff43ff",
+    "result": {
+      "is_valid": true,
+      "label": "Lấn chiếm vỉa hè",
+      "category": "encroachment",
+      "confidence": 27
+    }
+  }
+]

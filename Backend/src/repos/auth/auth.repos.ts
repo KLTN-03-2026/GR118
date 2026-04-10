@@ -6,12 +6,18 @@ import { ROLES } from "../../constant/role";
 import crypto from "crypto";
 import { userRepo } from "..";
 import { generateTokens } from "../../utils/jwt";
+import mongoose from "mongoose";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 
 const client = new OAuth2Client(googleClientId);
 
-export const CreateNewUser = async (userName: string, email: string, password: string): Promise<ServiceResponse<IAuth>> => {
+export const CreateNewUser = async (
+    userName: string, 
+    email: string, 
+    password: string,
+    session?: mongoose.ClientSession
+): Promise<ServiceResponse<IAuth>> => {
     userName = userName?.trim();
     email = email?.trim().toLowerCase();
     password = password?.trim();
@@ -48,11 +54,12 @@ export const CreateNewUser = async (userName: string, email: string, password: s
         }
     }
     const hashedPassword = await bcrypt.hash(password, 12)
-    const newUser = await authModel.create({
+    const [newUser] = await authModel.create([{
         userName,
         email,
         password: hashedPassword,
-    })
+    }], { session });
+    
     return {
         success: true,
         data: newUser
@@ -136,26 +143,38 @@ export const loginWithGoogleService = async (idToken: string): Promise<ServiceRe
     let user = await authModel.findOne({ email });
 
     if (!user) {
-        const randomPassword = crypto.randomBytes(32).toString("hex");
-        const hashedPassword = await bcrypt.hash(randomPassword, 12);
+        const session = await mongoose.startSession();
+        try {
+            await session.withTransaction(async () => {
+                const randomPassword = crypto.randomBytes(32).toString("hex");
+                const hashedPassword = await bcrypt.hash(randomPassword, 12);
 
-        user = await authModel.create({
-            userName,
-            email,
-            password: hashedPassword,
-            types: "login-google"
-        });
+                const [newUser] = await authModel.create([{
+                    userName,
+                    email,
+                    password: hashedPassword,
+                    types: "login-google"
+                }], { session });
 
-        const userRole = await roleSchema.findOne({ name: ROLES.USERROLE });
+                user = newUser;
 
-        if (!userRole) {
+                const userRole = await roleSchema.findOne({ name: ROLES.USERROLE }).session(session);
+
+                if (!userRole) {
+                    throw new Error("Initial user role not found");
+                }
+
+                await userRepo.AddNewRolesToNewUser(user._id.toString(), userRole._id.toString(), session);
+            });
+        } catch (error) {
+            console.error("Google login transaction error:", error);
             return {
                 success: false,
-                message: "Initial user role not found"
+                message: "Failed to create account via Google"
             };
+        } finally {
+            await session.endSession();
         }
-
-        await userRepo.AddNewRolesToNewUser(user._id.toString(), userRole._id.toString());
     }
 
     const roleIds = await userRepo.GetRoleIDsByUserID(user._id.toString());

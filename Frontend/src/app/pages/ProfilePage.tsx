@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import {
@@ -357,16 +357,45 @@ function ChangePasswordModal({ open, onClose, email }: { open: boolean; onClose:
 
 // ─── Profile Page ─────────────────────────────────────────────────────────────
 export function ProfilePage() {
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout, updateProfile, uploadAvatar } = useAuth();
+  const { issues } = useIssues();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [showAuth, setShowAuth] = useState(!user);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [form, setForm] = useState({
     name: user?.name || "",
     phone: user?.phone || "",
     city: user?.city || "",
   });
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Kiểm tra định dạng và kích thước
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn tệp hình ảnh");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Kích thước ảnh không được vượt quá 5MB");
+      return;
+    }
+
+    setUploading(true);
+    const res = await uploadAvatar(file);
+    setUploading(false);
+
+    if (res.success) {
+      toast.success("Cập nhật ảnh đại diện thành công!");
+    } else {
+      toast.error(res.error || "Không thể tải ảnh lên");
+    }
+  };
 
   if (!user) {
     return (
@@ -401,7 +430,6 @@ export function ProfilePage() {
     navigate("/");
   };
 
-  const { issues } = useIssues();
   const userIssues = issues.slice(0, 2);
 
   const stats = [
@@ -415,7 +443,7 @@ export function ProfilePage() {
     day: "2-digit", month: "long", year: "numeric",
   });
 
-  const roleLabel = user.role === "admin" ? "Quản trị viên" : user.role === "moderator" ? "Cán bộ" : "Công dân";
+  const roleLabel = user.roleName || (user.role === "admin" ? "Quản trị viên" : user.role === "moderator" ? "Cán bộ" : "Công dân");
   const roleColor = user.role === "admin" ? "#ef4444" : user.role === "moderator" ? "#3b82f6" : "#10b981";
 
   return (
@@ -439,16 +467,34 @@ export function ProfilePage() {
               <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 -mt-12 mb-4">
                 {/* Avatar */}
                 <div className="relative w-fit">
-                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-red-100 ring-4 ring-white shadow-lg">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden bg-red-100 ring-4 ring-white shadow-lg relative group">
                     {user.avatar ? (
-                      <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                      <img src={user.avatar} alt={user.name} className={`w-full h-full object-cover transition-opacity ${uploading ? "opacity-30" : "opacity-100"}`} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-red-600 text-3xl font-black">
                         {user.name.charAt(0).toUpperCase()}
                       </div>
                     )}
+                    {uploading && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <RefreshCw size={24} className="text-red-600 animate-spin" />
+                      </div>
+                    )}
                   </div>
-                  <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors">
+                  
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleAvatarChange}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                  >
                     <Camera size={13} />
                   </button>
                 </div>

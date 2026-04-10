@@ -20,14 +20,18 @@ export function RolesProvider({ children }: { children: ReactNode }) {
 
   const fetchRoles = async () => {
     try {
-      const res = await api.get("/auth/role");
+      const res = await api.get("/auth/role?limit=200");
       if (res.success && (res.roles || res.data)) {
         const rawRoles = res.roles || res.data;
         const mappedRoles = rawRoles.map((r: any) => ({
           id: r.role_id || r.id,
           name: r.name,
           description: r.description || "",
-          permissionIds: r.permissions ? r.permissions.map((p: any) => p.perm_id) : (r.permissionIds || []),
+          permissionIds: r.permissions ? (
+            typeof r.permissions[0] === 'string' 
+              ? r.permissions 
+              : r.permissions.map((p: any) => p.perm_id || p)
+          ) : (r.permissionIds || []),
           isActive: r.is_active !== undefined ? r.is_active : (r.isActive !== undefined ? r.isActive : true),
           isSystem: r.is_root !== undefined ? r.is_root : (r.isSystem || false),
           createdAt: r.created_at || r.createdAt || new Date().toISOString(),
@@ -51,7 +55,13 @@ export function RolesProvider({ children }: { children: ReactNode }) {
     roleData: Omit<Role, "id" | "createdAt">
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const res = await api.post("/auth/role", roleData);
+      // Map frontend Role → backend UpsertRole payload
+      const payload = {
+        name: roleData.name,
+        description: roleData.description,
+        permIds: roleData.permissionIds,   // backend expects permIds
+      };
+      const res = await api.post("/auth/role", payload);
       if (res.success) {
         await fetchRoles();
         return { success: true };

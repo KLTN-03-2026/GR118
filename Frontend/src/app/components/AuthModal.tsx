@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X, Mail, Lock, User, Phone, MapPin, Eye, EyeOff,
@@ -46,6 +46,41 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
   const [forgotErrors, setForgotErrors] = useState<Record<string, string>>({});
   const [generatedCode, setGeneratedCode] = useState("");
 
+  // Resend OTP logic
+  const [resendTimer, setResendTimer] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+
+  useEffect(() => {
+    let interval: any;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const handleResendOTP = async () => {
+    if (resendTimer > 0 || isResending) return;
+    
+    setIsResending(true);
+    let res;
+    if (tab === "register") {
+      res = await sendRegisterCode(regData.email);
+    } else {
+      res = await sendResetCode(forgotData.email);
+      if (res.success && res.code) setGeneratedCode(res.code);
+    }
+
+    setIsResending(false);
+    if (res?.success) {
+      setResendTimer(60);
+      toast.success("Mã xác thực mới đã được gửi!");
+    } else {
+      toast.error(res?.error || "Gửi lại mã thất bại");
+    }
+  };
+
   const resetAll = () => {
     setLoginData({ email: "", password: "" });
     setRegData({ name: "", email: "", password: "", confirmPassword: "", phone: "", city: "" });
@@ -60,6 +95,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     setRegStep(1);
     setRegCode("");
     setGeneratedCode("");
+    setResendTimer(0);
   };
 
   const handleClose = () => {
@@ -115,6 +151,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     
     if (res.success) {
       setRegStep(2);
+      setResendTimer(60); // Khởi động bộ đếm
       toast.success(`Mã xác thực đã được gửi đến ${regData.email}`);
     } else {
       setRegErrors({ general: res.error || "Không thể gửi OTP" });
@@ -167,6 +204,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     if (res.success) {
       setGeneratedCode(res.code || "");
       setForgotStep(2);
+      setResendTimer(60); // Khởi động bộ đếm
       toast.success(`Mã xác thực đã được gửi đến ${forgotData.email}. Mã của bạn là: ${res.code}`);
     } else {
       setForgotErrors({ general: res.error || "Gửi mã thất bại" });
@@ -465,6 +503,17 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
                               </div>
 
                               <InputField icon={KeyRound} type="text" placeholder="Nhập mã 6 chữ số" value={regCode} onChange={(v) => setRegCode(v)} error={regErrors.code} />
+                               
+                              <div className="flex justify-between items-center text-xs px-1">
+                                <span className="text-gray-500">Chưa nhận được mã?</span>
+                                <button 
+                                  onClick={handleResendOTP}
+                                  disabled={resendTimer > 0 || isResending}
+                                  className={`font-semibold transition-colors ${resendTimer > 0 || isResending ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-700'}`}
+                                >
+                                  {isResending ? "Đang gửi..." : resendTimer > 0 ? `Gửi lại sau ${resendTimer}s` : "Gửi lại mã"}
+                                </button>
+                              </div>
 
                               <button
                                 onClick={handleRegisterStep2} disabled={loading}
@@ -586,6 +635,17 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
                                   onChange={(v) => setForgotData((d) => ({ ...d, code: v }))}
                                   error={forgotErrors.code}
                                 />
+
+                                <div className="flex justify-between items-center text-xs px-1">
+                                  <span className="text-gray-500">Chưa nhận được mã?</span>
+                                  <button 
+                                    onClick={handleResendOTP}
+                                    disabled={resendTimer > 0 || isResending}
+                                    className={`font-semibold transition-colors ${resendTimer > 0 || isResending ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-700'}`}
+                                  >
+                                    {isResending ? "Đang gửi..." : resendTimer > 0 ? `Gửi lại sau ${resendTimer}s` : "Gửi lại mã"}
+                                  </button>
+                                </div>
 
                                 <div className="flex gap-2">
                                   <button

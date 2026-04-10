@@ -54,6 +54,7 @@ export interface IIssue extends Document {
   status: "pending" | "received" | "processing" | "need_info" | "resolved" | "rejected";
   location: string;
   district: string;
+  ward: string;
   city: string;
   lat: number;
   lng: number;
@@ -137,6 +138,7 @@ const IssueSchema: Schema = new Schema({
   status: { type: String, enum: ["pending", "received", "processing", "need_info", "resolved", "rejected"], default: "pending" },
   location: { type: String, required: true },
   district: { type: String, required: true },
+  ward: { type: String, required: true },
   city: { type: String, required: true },
   lat: { type: Number, required: true },
   lng: { type: Number, required: true },

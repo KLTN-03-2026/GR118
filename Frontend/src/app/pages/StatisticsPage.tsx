@@ -12,10 +12,10 @@ import { PageTitle } from "../components/PageTitle";
 
 export function StatisticsPage() {
   const { issues } = useIssues();
-  const { user } = useAuth();
-
-  // Chỉ admin và moderator mới có quyền truy cập
-  if (!user || (user.role !== "admin" && user.role !== "moderator")) {
+  const { can } = useAuth();
+  
+  // Chỉ những ai có quyền xem báo cáo đơn vị mới được truy cập
+  if (!can("reports_stats", "read")) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">
@@ -25,7 +25,7 @@ export function StatisticsPage() {
           <div className="text-center py-16">
             <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl mb-2">Không có quyền truy cập</h2>
-            <p className="text-gray-600">Bạn cần có quyền cán bộ hoặc quản trị viên để xem trang này.</p>
+            <p className="text-gray-600">Bạn không có quyền xem thống kê báo cáo đơn vị.</p>
           </div>
         </div>
       </div>
@@ -195,10 +195,12 @@ export function StatisticsPage() {
               subtitle="Tổng hợp và phân tích dữ liệu báo cáo"
             />
           </div>
-          <Button onClick={handleExport} className="bg-green-600 hover:bg-green-700">
-            <Download className="h-4 w-4 mr-2" />
-            Xuất báo cáo
-          </Button>
+          {can("reports_stats", "export") && (
+            <Button onClick={handleExport} className="bg-green-600 hover:bg-green-700">
+              <Download className="h-4 w-4 mr-2" />
+              Xuất báo cáo
+            </Button>
+          )}
         </div>
 
         {/* Bộ lọc */}

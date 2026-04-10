@@ -17,22 +17,50 @@ export const getActions = async (resource_id: string) => {
 };
 
 export const getPermissions = async (search: string) => {
-    const query: any = {};
+    const pipe: any[] = [];
 
     if (search) {
-        query.name = { $regex: search, $options: 'i' };
+        pipe.push({
+            $match: {
+                name: { $regex: search, $options: 'i' }
+            }
+        });
     }
-    const perm = await permissionSchema.find(query).lean();
+
+    // Lookup permission_actions
+    pipe.push({
+        $lookup: {
+            from: "permission_actions",
+            localField: "perm_id",
+            foreignField: "perm_id",
+            as: "pa"
+        }
+    });
+
+    // Lookup action details
+    pipe.push({
+        $lookup: {
+            from: "actions",
+            localField: "pa.action_id",
+            foreignField: "action_id",
+            as: "actions_joined"
+        }
+    });
+
+    const permissions = await permissionSchema.aggregate(pipe);
   
-    const total = await permissionSchema.countDocuments(query);
- 
+    const queryCount: any = {};
+    if (search) {
+        queryCount.name = { $regex: search, $options: 'i' };
+    }
+    const total = await permissionSchema.countDocuments(queryCount);
     const rootCount = await permissionSchema.countDocuments({
-        ...query,
+        ...queryCount,
         is_root: true
     });
 
     return {
-        permissions: perm,
+        permissions: permissions,
         total,
         rootCount
     };
@@ -69,6 +97,7 @@ export const getPermission = async (permId: string): Promise<PermissionRow[] | n
         updated_at: permission.updatedAt,
         action_id: action.action_id,
         action_name: action.name,
+        raw_actions: permission.actions // Thêm trường này để mapper fallback
     }));
 
     if (result.length === 0 && permission) {
@@ -83,6 +112,7 @@ export const getPermission = async (permId: string): Promise<PermissionRow[] | n
             updated_at: permission.updatedAt,
             action_id: null,
             action_name: null,
+            raw_actions: permission.actions
         }];
     }
 
@@ -112,13 +142,28 @@ export const upsertPermission = async (data: any) => {
 };
 
 export const deletePermission = async (permID: string) => {
+    // Support both custom perm_id and MongoDB _id
+    const filter: any = { perm_id: permID };
+    let perm = await permissionSchema.findOne(filter);
+    if (!perm) {
+        // Fallback: try by MongoDB _id
+        perm = await permissionSchema.findById(permID).catch(() => null);
+        if (perm) {
+            // Use the actual perm_id for cascading deletes
+            await permissionSchema.deleteOne({ _id: permID });
+            await permissionActionSchema.deleteMany({ perm_id: perm.perm_id });
+            return true;
+        }
+        return false;
+    }
+
     await permissionSchema.deleteOne({ perm_id: permID });
 
     const permResult = await permissionActionSchema.deleteMany({
         perm_id: permID
     });
 
-    return permResult.deletedCount > 0
+    return true;
 };
 
 
@@ -182,6 +227,13 @@ export const updateActionsToPermission = async (
             await permissionActionSchema.bulkWrite(operations, { session });
         }
 
+        // Đồng bộ trường 'actions' vào bảng 'permissions' để dễ dàng xem trong DB
+        await permissionSchema.updateOne(
+            { perm_id: permId },
+            { $set: { actions: actionIds } },
+            { session }
+        );
+
         await session.commitTransaction();
         return { message: "Updated successfully" };
 
@@ -234,3 +286,49 @@ export const getPermIDsByRoleID = async (roleId: string[]) => {
         perm_id: { $in: permIds }
     }).lean();
 }
+
+/**
+ * Resolves all permissions for a list of roles into a structured object for the UI.
+ * Returns: { [resource_name]: action_names[] }
+ */
+export const getUserPermissions = async (roleIds: string[]) => {
+    // 1. Get all permission documents for these roles
+    const perms = await getPermIDsByRoleID(roleIds);
+    const result: Record<string, string[]> = {};
+
+    // 2. Map of resource_id -> resource_name
+    const resourceIds = [...new Set(perms.map(p => p.resource_id))];
+    const resources = await resourceSchema.find({ resource_id: { $in: resourceIds } }).lean();
+    const resourceMap: Record<string, string> = {};
+    resources.forEach(r => {
+        resourceMap[r.resource_id] = r.name;
+    });
+
+    // 3. For each permission, get action names
+    for (const p of perms) {
+        const resourceName = resourceMap[p.resource_id] || p.resource_id;
+        if (!result[resourceName]) result[resourceName] = [];
+
+        // Check if actions are already denormalized in the permission document
+        if (p.actions && Array.isArray(p.actions) && p.actions.length > 0) {
+            // These might be action_ids or action_names depending on seed/sync state
+            // Let's resolve them to names for the UI
+            const actions = await actionSchema.find({ 
+                $or: [
+                    { action_id: { $in: p.actions } },
+                    { name: { $in: p.actions } }
+                ] 
+            }).lean();
+            
+            const names = actions.map(a => a.name);
+            result[resourceName] = [...new Set([...result[resourceName], ...names])];
+        } else {
+            // Fallback to permission_actions link table
+            const pActions = await GetActionsByPermissionId(p.perm_id);
+            const names = pActions.map(a => a.name);
+            result[resourceName] = [...new Set([...result[resourceName], ...names])];
+        }
+    }
+
+    return result;
+};

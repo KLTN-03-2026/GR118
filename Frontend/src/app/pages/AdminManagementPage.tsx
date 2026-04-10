@@ -56,7 +56,7 @@ const SEVERITY_LABELS = {
 };
 
 export function AdminManagementPage() {
-  const { user } = useAuth();
+  const { can } = useAuth();
   const { issues, updateIssue } = useIssues();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<IssueStatus | "all">("all");
@@ -65,8 +65,7 @@ export function AdminManagementPage() {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showAiAnalysis, setShowAiAnalysis] = useState<string | null>(null);
 
-  // Redirect if not admin
-  if (!user || user.role !== "admin") {
+  if (!can("issues_mgnt", "read")) {
     return <Navigate to="/" replace />;
   }
 
@@ -307,46 +306,56 @@ export function AdminManagementPage() {
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <Link
-                to="/statistics"
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-              >
-                <BarChart3 size={18} />
-                <span className="hidden sm:inline">Thống kê BC</span>
-                <ArrowRight size={16} />
-              </Link>
-              <Link
-                to="/admin/verifications"
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-              >
-                <ShieldCheck size={18} />
-                <span className="hidden sm:inline">Xem xét xác minh</span>
-                <ArrowRight size={16} />
-              </Link>
-              <Link
-                to="/admin/users"
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all shadow-lg shadow-indigo-200"
-              >
-                <Users size={18} />
-                <span className="hidden sm:inline">Quản lý người dùng & phân quyền</span>
-                <ArrowRight size={16} />
-              </Link>
-              <Link
-                to="/admin/permissions"
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all shadow-lg shadow-emerald-200"
-              >
-                <Shield size={18} />
-                <span className="hidden sm:inline">Quản lý quyền</span>
-                <ArrowRight size={16} />
-              </Link>
-              <Link
-                to="/admin/roles"
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all shadow-lg shadow-blue-200"
-              >
-                <UserCog size={18} />
-                <span className="hidden sm:inline">Quản lý vai trò</span>
-                <ArrowRight size={16} />
-              </Link>
+              {can("reports_stats", "read") && (
+                <Link
+                  to="/statistics"
+                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                >
+                  <BarChart3 size={18} />
+                  <span className="hidden sm:inline">Thống kê BC</span>
+                  <ArrowRight size={16} />
+                </Link>
+              )}
+              {can("users_mgnt", "read") && (
+                <Link
+                  to="/admin/verifications"
+                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                >
+                  <ShieldCheck size={18} />
+                  <span className="hidden sm:inline">Xem xét xác minh</span>
+                  <ArrowRight size={16} />
+                </Link>
+              )}
+              {can("users_mgnt", "read") && (
+                <Link
+                  to="/admin/users"
+                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all shadow-lg shadow-indigo-200"
+                >
+                  <Users size={18} />
+                  <span className="hidden sm:inline">Quản lý người dùng & phân quyền</span>
+                  <ArrowRight size={16} />
+                </Link>
+              )}
+              {can("perms_mgnt", "read") && (
+                <Link
+                  to="/admin/permissions"
+                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all shadow-lg shadow-emerald-200"
+                >
+                  <Shield size={18} />
+                  <span className="hidden sm:inline">Quản lý quyền</span>
+                  <ArrowRight size={16} />
+                </Link>
+              )}
+              {can("roles_mgnt", "read") && (
+                <Link
+                  to="/admin/roles"
+                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all shadow-lg shadow-blue-200"
+                >
+                  <UserCog size={18} />
+                  <span className="hidden sm:inline">Quản lý vai trò</span>
+                  <ArrowRight size={16} />
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -599,16 +608,18 @@ export function AdminManagementPage() {
                             >
                               <Eye size={16} />
                             </Link>
-                            <button
-                              onClick={() => {
-                                setSelectedIssue(issue.id);
-                                setShowStatusModal(true);
-                              }}
-                              className="p-2 hover:bg-orange-50 rounded-lg text-orange-600 transition-colors"
-                              title="Cập nhật trạng thái"
-                            >
-                              <Edit3 size={16} />
-                            </button>
+                            {can("issues_mgnt", "update") && (
+                              <button
+                                onClick={() => {
+                                  setSelectedIssue(issue.id);
+                                  setShowStatusModal(true);
+                                }}
+                                className="p-2 hover:bg-orange-50 rounded-lg text-orange-600 transition-colors"
+                                title="Cập nhật trạng thái"
+                              >
+                                <Edit3 size={16} />
+                              </button>
+                            )}
                             {issue.aiAnalysis && (
                               <button
                                 onClick={() => setShowAiAnalysis(issue.id)}

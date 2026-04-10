@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "scripts": {
-    "build": "echo 'Use render.yaml for build configuration'"
+    "build": "cd Frontend && npm install --legacy-peer-deps && npm run build",
+    "dev": "cd Frontend && npm run dev"
   }
 }

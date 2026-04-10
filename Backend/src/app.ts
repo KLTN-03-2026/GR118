@@ -10,10 +10,28 @@ import { generalLimiter } from "./middlewares/rate-limit.middleware";
 
 const app = express();
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+// Allow multiple frontend URLs for development and production
+const getAllowedOrigins = () => {
+  const origins = [
+    'http://localhost:5173',      // Local development
+    'http://localhost:3000',      // Alternative local dev
+    process.env.FRONTEND_URL,     // Production frontend URL from env
+  ].filter(Boolean);
+  
+  return origins;
+};
 
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: (origin, callback) => {
+    const allowedOrigins = getAllowedOrigins();
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed'));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"]

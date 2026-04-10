@@ -54,7 +54,7 @@ interface RegisterData {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const CURRENT_USER_KEY = "baocaovn_current_user";
-const API_BASE_URL = "http://localhost:8081/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? "https://backend-cfgb.onrender.com/api/v1" : "http://localhost:8081/api/v1");
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);

@@ -2,8 +2,5 @@
   "buildCommand": "npm run build:frontend",
   "outputDirectory": "Frontend/dist",
   "installCommand": "npm install --no-optional --legacy-peer-deps",
-  "framework": "vite",
-  "env": {
-    "VITE_API_URL": "@vite_api_url"
-  }
+  "framework": "vite"
 }

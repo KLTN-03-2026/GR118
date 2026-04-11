@@ -31,6 +31,8 @@ import { AuthModal } from "../components/AuthModal";
 import { PageTitle } from "../components/PageTitle";
 import { api } from "../../utils/api";
 
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || (import.meta.env.PROD ? "https://ai-0nhv.onrender.com" : "http://localhost:8000");
+
 const STEPS = ["Hình ảnh & AI", "Thông tin vấn đề", "Vị trí", "Xác nhận"];
 
 interface Province {
@@ -210,7 +212,7 @@ export function ReportPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch("http://localhost:8000/analyze", {
+      const response = await fetch(`${AI_BASE_URL}/analyze`, {
         method: "POST",
         body: formData,
       });
@@ -345,7 +347,7 @@ export function ReportPage() {
     
     debounceTimerRef.current = setTimeout(async () => {
       try {
-        const response = await fetch("http://localhost:8000/moderate", {
+        const response = await fetch(`${AI_BASE_URL}/moderate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -403,7 +405,7 @@ export function ReportPage() {
         });
 
         try {
-          const response = await fetch("http://localhost:8000/moderate", {
+          const response = await fetch(`${AI_BASE_URL}/moderate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

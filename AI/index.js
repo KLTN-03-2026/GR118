@@ -156,6 +156,10 @@ app.get('/', (req, res) => {
   res.json({ status: 'AI Service is running' });
 });
 
+app.get('/ping', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // NEW: Content Moderation & Relevancy Validation Endpoint
 app.post('/moderate', async (req, res) => {
   try {

@@ -9,13 +9,14 @@ FRONTEND_URL=https://your-vercel-app-url.vercel.app
 ```
 
 ### Step 2: Frontend Environment (Vercel)
-Set this environment variable in Vercel project settings:
+Set these environment variables in Vercel project settings:
 ```
 VITE_API_BASE_URL=https://backend-cfgb.onrender.com/api/v1
+VITE_AI_BASE_URL=https://ai-0nhv.onrender.com
 ```
 
 ### Step 3: Verify URLs
-- **Frontend on Vercel**: `https://your-vercel-app-url.vercel.app`
+- **Frontend on Vercel**: `https://issue-reporting-system-olive.vercel.app/`
 - **Backend on Render**: `https://backend-cfgb.onrender.com`
 - **AI on Render**: `https://ai-0nhv.onrender.com`
 

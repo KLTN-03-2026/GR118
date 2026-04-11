@@ -4,3 +4,13 @@ Email: user@baocaovn.com — Role: user
 Mật khẩu mặc định cho tất cả: 123456
 Email: admin@baocaovn.com
 Mật khẩu: admin123456
+Vấn đề(admin, công dân, cán bộ)
+Tình nguyện(admin, công dân, cán bộ)
+Thống kê tổng quan(admin)
+Quản lý báo cáo(admin, cán bộ)
+Xử lý báo cáo(admin, cán bộ)
+Quản lý người dùng(admin)
+Thống kê báo cáo(admin, cán bộ)
+Quản lý hoạt động tình nguyện(admin, cán bộ)
+Quản lý quyền(admin)
+Quản lý vai trò(admin)

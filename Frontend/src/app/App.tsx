@@ -6,6 +6,7 @@ import { NotificationProvider } from "./context/NotificationContext";
 import { ActivitiesProvider } from "./context/ActivitiesContext";
 import { PermissionsProvider } from "./context/PermissionsContext";
 import { RolesProvider } from "./context/RolesContext";
+import { ServerKeepAlive } from "./components/ServerKeepAlive";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <ActivitiesProvider>
             <PermissionsProvider>
               <RolesProvider>
+                <ServerKeepAlive />
                 <RouterProvider router={router} />
               </RolesProvider>
             </PermissionsProvider>

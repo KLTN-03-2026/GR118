@@ -47,6 +47,10 @@ app.get("/", (req, res) => {
   res.send("API running...");
 });
 
+app.get("/api/v1/ping", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/issues", issueRouter);

@@ -7,6 +7,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import errorHandler from "./middlewares/error-handing";
 import { generalLimiter } from "./middlewares/rate-limit.middleware";
+import { AppError } from "./utils/app-error";
 
 const app = express();
 
@@ -27,10 +28,22 @@ app.use(cors({
   origin: (origin, callback) => {
     const allowedOrigins = getAllowedOrigins();
 
-    if (!origin || allowedOrigins.includes(origin)) {
+    // If no origin (like mobile apps or curl requests), allow it
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    // Check against authorized origins
+    const isAllowed = allowedOrigins.includes(origin) || 
+                     origin.endsWith('.vercel.app') ||
+                     origin.endsWith('.onrender.com');
+
+    if (isAllowed) {
       callback(null, true);
     } else {
-      callback(new Error('CORS not allowed'));
+      console.warn(`[CORS] Rejected origin: ${origin}`);
+      // Throw AppError to be caught by express error handler with 403 status
+      callback(new AppError(403, 'CORS_REJECTED', `Origin ${origin} is not allowed by CORS policy`));
     }
   },
   credentials: true,

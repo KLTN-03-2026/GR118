@@ -5,7 +5,7 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       success: false,
-      statuscoded: err.statusCode,
+      statusCode: err.statusCode,
       code: err.code,
       message: err.message,
       details: err.details || null,

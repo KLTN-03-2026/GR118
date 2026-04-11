@@ -16,20 +16,17 @@ const getAllowedOrigins = () => {
     ? process.env.FRONTEND_URL.split(",").map(origin => origin.trim()).filter(Boolean)
     : [];
 
-  const origins = [
+  return [
     'http://localhost:5173',      // Local development
     'http://localhost:3000',      // Alternative local dev
     ...envOrigins,                // Production frontend URLs from env
   ];
-  
-  return origins;
 };
 
 app.use(cors({
   origin: (origin, callback) => {
     const allowedOrigins = getAllowedOrigins();
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
+
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {

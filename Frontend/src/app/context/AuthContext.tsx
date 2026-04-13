@@ -54,6 +54,7 @@ interface RegisterData {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const CURRENT_USER_KEY = "baocaovn_current_user";
+const ACCESS_TOKEN_KEY = "baocaovn_access_token";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? "https://backend-cfgb.onrender.com/api/v1" : "http://localhost:8081/api/v1");
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -108,6 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUser(userData);
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
+        if (result.accessToken) {
+          localStorage.setItem(ACCESS_TOKEN_KEY, result.accessToken);
+        }
         return { success: true };
       }
       
@@ -142,6 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem(CURRENT_USER_KEY);
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
   };
 
   const updateProfile = (data: Partial<User>) => {
@@ -244,9 +249,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const formData = new FormData();
       formData.append("file", file);
 
+      const token = localStorage.getItem(ACCESS_TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/users/upload`, {
         method: "POST",
         credentials: "include",
+        headers: token ? { "Authorization": `Bearer ${token}` } : {},
         body: formData,
       });
       const data = await res.json();

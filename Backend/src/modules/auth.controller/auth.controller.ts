@@ -138,22 +138,18 @@ export const login = async (req: Request, res: Response) => {
         user.refreshToken = refreshToken;
         await user.save();
         const isProduction = process.env.NODE_ENV === 'production';
+        const cookieOptions: any = {
+            httpOnly: true,
+            sameSite: isProduction ? "none" : "lax",
+            secure: isProduction,
+            maxAge: 24 * 60 * 60 * 1000
+        };
 
         const permissions = await permissionRepo.getUserPermissions(roleIds);
 
         return res.status(200)
-            .cookie("accessToken", accessToken, {
-                httpOnly: true,
-                sameSite: "lax",
-                secure: isProduction,
-                maxAge: 24 * 60 * 60 * 1000
-            })
-            .cookie("refreshToken", refreshToken, {
-                httpOnly: true,
-                sameSite: "lax",
-                secure: isProduction,
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            })
+            .cookie("accessToken", accessToken, cookieOptions)
+            .cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 })
             .json({
                 success: true,
                 message: `Welcome back ${user.userName}`,
@@ -220,22 +216,18 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
         const primaryRoleId = roleIds.length > 0 ? roleIds[0] : null;
 
         const isProduction = process.env.NODE_ENV === 'production';
+        const cookieOptions: any = {
+            httpOnly: true,
+            sameSite: isProduction ? "none" : "lax",
+            secure: isProduction,
+            maxAge: 24 * 60 * 60 * 1000
+        };
 
         const permissions = await permissionRepo.getUserPermissions(roleIds);
 
         return res.status(200)
-            .cookie("accessToken", accessToken, {
-                httpOnly: true,
-                sameSite: "lax",
-                secure: isProduction,
-                maxAge: 15 * 60 * 1000
-            })
-            .cookie("refreshToken", refreshToken, {
-                httpOnly: true,
-                sameSite: "lax",
-                secure: isProduction,
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            })
+            .cookie("accessToken", accessToken, cookieOptions)
+            .cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 * 1000 })
             .json({
                 success: true,
                 message: `Welcome back ${user.userName}`,
@@ -284,7 +276,11 @@ export const refreshToken = async (req: Request, res: Response) => {
         await user.save();
 
         const isProduction = process.env.NODE_ENV === 'production';
-        const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: isProduction };
+        const cookieOptions = { 
+            httpOnly: true, 
+            sameSite: (isProduction ? "none" : "lax") as "none" | "lax", 
+            secure: isProduction 
+        };
 
         return res.status(200)
             .cookie("accessToken", newAccessToken, { ...cookieOptions, maxAge: 15 * 60 * 1000 })
@@ -313,7 +309,11 @@ export const logout = async (req: Request, res: Response) => {
         }
 
         const isProduction = process.env.NODE_ENV === 'production';
-        const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: isProduction };
+        const cookieOptions = { 
+            httpOnly: true, 
+            sameSite: (isProduction ? "none" : "lax") as "none" | "lax", 
+            secure: isProduction 
+        };
 
         return res.status(200)
             .clearCookie("accessToken", cookieOptions)

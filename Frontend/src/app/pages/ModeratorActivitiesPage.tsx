@@ -28,6 +28,7 @@ import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
 import { PageTitle } from "../components/PageTitle";
 import { Activity, Participant } from "../data/activities";
+import { LocationPicker } from "../components/LocationPicker";
 
 export function ModeratorActivitiesPage() {
   const { user, can } = useAuth();
@@ -735,6 +736,50 @@ function CreateEditActivityModal({
                     }
                     min="1"
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Vị trí trên bản đồ
+                  </label>
+                  <LocationPicker
+                    lat={formData.lat}
+                    lng={formData.lng}
+                    onChange={(lat, lng, addressData) => {
+                      setFormData(prev => ({ ...prev, lat, lng }));
+                      
+                      if (addressData) {
+                        const addr = addressData.address;
+                        const city = addr.city || addr.state || addr.province || "";
+                        const district = addr.suburb || addr.district || addr.town || addr.city_district || "";
+                        const ward = addr.suburb || addr.ward || addr.village || addr.subdistrict || "";
+                        const road = addr.road || addr.amenity || addr.building || "";
+                        const houseNumber = addr.house_number || "";
+                        
+                        const locationStr = [houseNumber, road].filter(Boolean).join(" ");
+                        
+                        // Try to match city
+                        if (city) {
+                          const matchedCity = provinces.find(p => 
+                            p.name.toLowerCase().includes(city.toLowerCase()) || 
+                            city.toLowerCase().includes(p.name.toLowerCase())
+                          );
+                          if (matchedCity) {
+                            setFormData(prev => ({
+                              ...prev,
+                              provinceCode: matchedCity.code,
+                              city: matchedCity.name
+                            }));
+                          }
+                        }
+
+                        setFormData(prev => ({
+                          ...prev,
+                          location: locationStr || prev.location
+                        }));
+                      }
+                    }}
                   />
                 </div>
               </div>

@@ -30,6 +30,7 @@ import { useIssues } from "../context/IssuesContext";
 import { AuthModal } from "../components/AuthModal";
 import { PageTitle } from "../components/PageTitle";
 import { api } from "../../utils/api";
+import { LocationPicker } from "../components/LocationPicker";
 
 const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || (import.meta.env.PROD ? "https://ai-0nhv.onrender.com" : "http://localhost:8000");
 
@@ -79,6 +80,8 @@ interface FormData {
   reporterPhone: string;
   anonymous: boolean;
   aiVerified?: boolean;
+  lat: number;
+  lng: number;
 }
 
 // Helper to map AI Microservice categories to Frontend categories
@@ -130,6 +133,8 @@ export function ReportPage() {
     reporterName: "",
     reporterPhone: "",
     anonymous: false,
+    lat: 10.7769, // Default to HCM city coordinates
+    lng: 106.7009,
   });
 
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -476,8 +481,8 @@ export function ReportPage() {
         district: form.district,
         ward: form.ward,
         city: form.city,
-        lat: 10.7769 + (Math.random() - 0.5) * 0.1, // Mock coordinates
-        lng: 106.7009 + (Math.random() - 0.5) * 0.1,
+        lat: form.lat,
+        lng: form.lng,
         imageUrl: form.mediaFiles[0]?.preview,
         mediaFiles: mediaFiles,
         reporterName: form.anonymous ? "Người dùng ẩn danh" : (form.reporterName || user.name),
@@ -1057,11 +1062,40 @@ export function ReportPage() {
                   />
                 </div>
 
-                {/* Map placeholder */}
-                <div className="h-40 bg-gradient-to-br from-blue-50 to-green-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-2 text-gray-400">
-                  <MapPin size={28} />
-                  <span className="text-sm">Bản đồ tương tác (sẽ tích hợp Google Maps)</span>
-                </div>
+                <LocationPicker
+                  lat={form.lat}
+                  lng={form.lng}
+                  onChange={(lat, lng, addressData) => {
+                    setForm(f => ({ ...f, lat, lng }));
+                    
+                    if (addressData) {
+                      const addr = addressData.address;
+                      const city = addr.city || addr.state || addr.province || "";
+                      const district = addr.suburb || addr.district || addr.town || addr.city_district || "";
+                      const ward = addr.suburb || addr.ward || addr.village || addr.subdistrict || "";
+                      const road = addr.road || addr.amenity || addr.building || "";
+                      const houseNumber = addr.house_number || "";
+                      
+                      const locationStr = [houseNumber, road].filter(Boolean).join(" ");
+                      
+                      // Try to match city from provinces list
+                      if (city) {
+                        const matchedCity = provinces.find(p => 
+                          p.name.toLowerCase().includes(city.toLowerCase()) || 
+                          city.toLowerCase().includes(p.name.toLowerCase())
+                        );
+                        if (matchedCity) {
+                          handleCityChange(matchedCity.code, matchedCity.name);
+                        }
+                      }
+
+                      setForm(f => ({
+                        ...f,
+                        location: locationStr || f.location
+                      }));
+                    }
+                  }}
+                />
               </div>
             )}
 

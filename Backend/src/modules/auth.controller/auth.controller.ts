@@ -371,8 +371,8 @@ export const getProfile = async (req: Request, res: Response) => {
                 city: user.city,
                 avatar: user.avatar,
                 createdAt: user.createdAt,
-                reportsCount: user.reportsCount,
-                resolvedCount: user.resolvedCount,
+                reportsCount: (user as any).reportsCount || 0,
+                resolvedCount: (user as any).resolvedCount || 0,
                 lockEnd: user.lockEnd,
                 lockReason: user.lockReason
             }

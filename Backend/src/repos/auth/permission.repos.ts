@@ -3,6 +3,7 @@ import actionSchema from "../../models/auth/actions";
 import permissionSchema from "../../models/auth/permissions";
 import permissionActionSchema from "../../models/auth/permission_actions";
 import rolePermissionSchema from "../../models/auth/role_permissions";
+import roleModel from "../../models/auth/roles";
 import mongoose from "mongoose";
 import { PermissionRow } from "../aggregation/permission";
 
@@ -280,12 +281,12 @@ export const getPermIDsByRoleID = async (roleIds: string[]) => {
 
     // 1. Tìm tất cả các document role tương ứng để lấy ra danh sách role_id chuẩn (string)
     const validObjectIds = roleIds.filter(id => mongoose.Types.ObjectId.isValid(id));
-    const roles = await mongoose.model("roles").find({
+    const roles = await roleModel.find({
         $or: [
             { role_id: { $in: roleIds } },
             { _id: { $in: validObjectIds } }
         ]
-    }).lean();
+    }).lean() as any[];
 
     const normalizedRoleIds = [...new Set(roles.map(r => r.role_id))];
 

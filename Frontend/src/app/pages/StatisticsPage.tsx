@@ -54,50 +54,6 @@ function StatCard({ label, value, change, subtext, icon: Icon, color }: any) {
   );
 }
 
-// Helper component for Stat Cards
-function StatCard({ label, value, change, subtext, icon: Icon, color }: any) {
-  const colorMap: any = {
-    indigo: "from-indigo-500 to-purple-600",
-    emerald: "from-green-500 to-emerald-600",
-    orange: "from-orange-500 to-amber-600",
-    red: "from-red-500 to-rose-600",
-    blue: "from-blue-500 to-cyan-600",
-    purple: "from-purple-500 to-pink-600",
-  };
-
-  const isPositive = change.startsWith("+");
-  const isNegative = change.startsWith("-");
-
-  return (
-    <Card className={`p-5 shadow-lg border-0 bg-white hover:shadow-xl transition-all border-l-4 ${
-      color === 'indigo' ? 'border-indigo-500' : 
-      color === 'emerald' ? 'border-emerald-500' :
-      color === 'orange' ? 'border-orange-500' :
-      color === 'red' ? 'border-red-500' :
-      color === 'blue' ? 'border-blue-500' : 'border-purple-500'
-    }`}>
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{label}</p>
-          <p className="text-2xl font-black text-gray-900">{value}</p>
-        </div>
-        <div className={`p-2 rounded-lg bg-gradient-to-br ${colorMap[color]} text-white shadow-md`}>
-          <Icon size={18} />
-        </div>
-      </div>
-      <div className="mt-4 flex items-center gap-2">
-        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-          isPositive ? "bg-green-100 text-green-700" : 
-          isNegative ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"
-        }`}>
-          {change}
-        </span>
-        <span className="text-[10px] text-gray-400 font-medium">{subtext}</span>
-      </div>
-    </Card>
-  );
-}
-
 export function StatisticsPage() {
   const { issues, refreshIssues } = useIssues();
   const { can, user } = useAuth();

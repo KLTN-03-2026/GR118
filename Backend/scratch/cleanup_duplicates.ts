@@ -19,34 +19,41 @@ async function cleanup() {
     console.log(`Found ${issues.length} issues to check`);
     
     for (const issue of issues) {
+      let changed = false;
+
+      // Reconcile comment count
+      const actualCommentCount = issue.commentsList?.length || 0;
+      if (issue.comments !== actualCommentCount) {
+        console.log(`Reconciling comments for ${issue.title}: ${issue.comments} -> ${actualCommentCount}`);
+        issue.comments = actualCommentCount;
+        changed = true;
+      }
+
+      // Cleanup duplicate verifications
       if (issue.verifications && issue.verifications.length > 1) {
         const seenUsers = new Set();
         const uniqueVerifications = [];
-        let changed = false;
+        let verifChanged = false;
 
-        // Keep the latest one by reversing or just keep the first one
-        // User wants to delete 2 out of 3, so keeping the first one is fine.
         for (const v of issue.verifications) {
           if (!seenUsers.has(v.userId)) {
             seenUsers.add(v.userId);
             uniqueVerifications.push(v);
           } else {
-            changed = true;
+            verifChanged = true;
           }
         }
 
-        if (changed) {
+        if (verifChanged) {
           const removedCount = issue.verifications.length - uniqueVerifications.length;
           issue.verifications = uniqueVerifications;
-          // Also update the comments count if it was incremented per verification
-          // In addVerification we had $inc: { comments: 1 }
-          if (issue.comments !== undefined) {
-              issue.comments = Math.max(0, issue.comments - removedCount);
-          }
-          
-          await issue.save();
-          console.log(`Cleaned ${removedCount} duplicates for issue: ${issue.title}`);
+          changed = true;
+          console.log(`Cleaned ${removedCount} duplicate verifications for issue: ${issue.title}`);
         }
+      }
+
+      if (changed) {
+        await issue.save();
       }
     }
 

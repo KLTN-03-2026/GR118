@@ -32,7 +32,7 @@ export const issueRepo = {
 
     return await Issue.findByIdAndUpdate(
       id,
-      { $push: { verifications: verification }, $inc: { comments: 1 } },
+      { $push: { verifications: verification } },
       { new: true }
     ).exec();
   },

@@ -912,6 +912,11 @@ export function ModeratorIssuesPage() {
   const [sortBy, setSortBy] = useState<"date" | "severity" | "status">("date");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const { refreshIssues } = useIssues();
+
+  useEffect(() => {
+    refreshIssues();
+  }, [refreshIssues]);
 
   // Access control
   if (!user || (user.role !== "moderator" && user.role !== "admin")) {

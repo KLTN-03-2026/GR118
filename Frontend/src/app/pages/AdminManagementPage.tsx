@@ -64,6 +64,11 @@ export function AdminManagementPage() {
   const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showAiAnalysis, setShowAiAnalysis] = useState<string | null>(null);
+  const { refreshIssues } = useIssues();
+
+  useEffect(() => {
+    refreshIssues();
+  }, [refreshIssues]);
 
   if (!can("issues_mgnt", "read")) {
     return <Navigate to="/" replace />;

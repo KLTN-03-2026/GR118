@@ -18,6 +18,7 @@ interface IssuesContextType {
   rejectIssue: (id: string, note: string, moderatorId: string, moderatorName: string) => void;
   voteIssue: (id: string, userId: string) => Promise<boolean>;
   addComment: (id: string, comment: any) => Promise<boolean>;
+  refreshIssues: () => Promise<void>;
 }
 
 const IssuesContext = createContext<IssuesContextType | null>(null);
@@ -33,21 +34,22 @@ function addProcessingStep(issue: Issue, step: Omit<ProcessingStep, "id">): Proc
 export function IssuesProvider({ children }: { children: ReactNode }) {
   const [issues, setIssues] = useState<Issue[]>([]);
 
-  useEffect(() => {
-    const fetchIssues = async () => {
-      try {
-        const res = await api.get("/issues");
-        if (res.success && res.data) {
-          const normalizedIssues = res.data.map((i: any) => ({
-            ...i,
-            id: i.id || i._id,
-          }));
-          setIssues(normalizedIssues);
-        }
-      } catch (error) {
-        console.error("Failed to load issues in context:", error);
+  const fetchIssues = async () => {
+    try {
+      const res = await api.get("/issues");
+      if (res.success && res.data) {
+        const normalizedIssues = res.data.map((i: any) => ({
+          ...i,
+          id: i.id || i._id,
+        }));
+        setIssues(normalizedIssues);
       }
-    };
+    } catch (error) {
+      console.error("Failed to load issues in context:", error);
+    }
+  };
+
+  useEffect(() => {
     fetchIssues();
   }, []);
 
@@ -282,7 +284,7 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
     <IssuesContext.Provider value={{
       issues, addIssue, updateIssue, deleteIssue, addVerification, reviewVerification,
       receiveIssue, assignIssue, startProcessing, requestAdditionalInfo, completeIssue, rejectIssue,
-      voteIssue, addComment
+      voteIssue, addComment, refreshIssues: fetchIssues
     }}>
       {children}
     </IssuesContext.Provider>
@@ -308,6 +310,7 @@ export function useIssues() {
       rejectIssue: () => {},
       voteIssue: async () => false,
       addComment: async () => false,
+      refreshIssues: async () => {},
     };
   }
   return context;

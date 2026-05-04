@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useIssues } from "../context/IssuesContext";
 import { useAuth } from "../context/AuthContext";
 import { Card } from "../components/ui/card";
@@ -7,12 +7,16 @@ import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Calendar, TrendingUp, CheckCircle, Clock, AlertCircle, FileText, Filter, Download, BarChart3 } from "lucide-react";
-import { CATEGORY_LABELS, IssueCategory } from "../data/issues";
+import { CATEGORY_LABELS, IssueCategory, STATUS_LABELS, STATUS_COLORS } from "../data/issues";
 import { PageTitle } from "../components/PageTitle";
 
 export function StatisticsPage() {
-  const { issues } = useIssues();
-  const { can } = useAuth();
+  const { issues, refreshIssues } = useIssues();
+  const { can, user } = useAuth();
+
+  useEffect(() => {
+    refreshIssues();
+  }, [refreshIssues]);
   
   // Chỉ những ai có quyền xem báo cáo đơn vị mới được truy cập
   if (!can("reports_stats", "read")) {
@@ -557,6 +561,88 @@ export function StatisticsPage() {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </Card>
+
+        {/* Bảng danh sách báo cáo chi tiết */}
+        <Card className="p-6 shadow-lg border-0 bg-white/80 backdrop-blur">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-indigo-600" />
+              Dữ liệu báo cáo chi tiết ({filteredIssues.length})
+            </h3>
+            <span className="text-xs text-gray-400 italic">* Dữ liệu thực tế từ hệ thống</span>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Mã số</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Tiêu đề</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Ngày báo</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Bình chọn</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Bình luận</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Đánh giá</th>
+                  <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredIssues.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8 text-gray-400">Không có dữ liệu trong khoảng thời gian này</td>
+                  </tr>
+                ) : (
+                  filteredIssues.slice(0, 20).map((issue) => {
+                    const avgRating = issue.verifications && issue.verifications.length > 0
+                      ? issue.verifications.reduce((sum, v) => sum + v.rating, 0) / issue.verifications.length
+                      : 0;
+                    
+                    return (
+                      <tr key={issue.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className="font-mono text-xs font-bold text-indigo-600">
+                            #{issue.issueCode || issue.id.slice(-6).toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm font-medium text-gray-900 line-clamp-1">{issue.title}</div>
+                          <div className="text-[10px] text-gray-400">{issue.district}</div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-500">
+                          {new Date(issue.reportedAt).toLocaleDateString("vi-VN")}
+                        </td>
+                        <td className="px-4 py-4 text-center text-sm text-gray-600 font-medium">
+                          {issue.votes}
+                        </td>
+                        <td className="px-4 py-4 text-center text-sm text-gray-600 font-medium">
+                          {issue.comments}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          {avgRating > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-amber-600 font-bold text-xs">
+                              ⭐ {avgRating.toFixed(1)}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">--</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold text-white`} style={{ backgroundColor: STATUS_COLORS[issue.status] }}>
+                            {STATUS_LABELS[issue.status]}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+            {filteredIssues.length > 20 && (
+              <div className="p-4 text-center border-t border-gray-50 bg-gray-50/30">
+                <p className="text-xs text-gray-500 italic">Hiển thị 20 báo cáo mới nhất. Sử dụng bộ lọc để xem các báo cáo khác.</p>
+              </div>
+            )}
           </div>
         </Card>
       </div>

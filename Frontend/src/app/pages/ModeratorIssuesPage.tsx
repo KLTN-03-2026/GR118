@@ -1224,6 +1224,7 @@ export function ModeratorIssuesPage() {
                   <tr>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Mã số</th>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Báo cáo</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Vấn đề</th>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Vị trí</th>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Đánh giá</th>
                     <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Trạng thái</th>
@@ -1250,7 +1251,7 @@ export function ModeratorIssuesPage() {
                       >
                         <td className="px-4 py-4 whitespace-nowrap">
                           <span className="font-mono text-sm font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded-lg">
-                            #{issue.issueCode || issue.id.slice(-6).toUpperCase()}
+                            #VN{issue.issueCode ? issue.issueCode.replace("#VN", "").slice(-3) : issue.id.slice(-3).toUpperCase()}
                           </span>
                         </td>
                         <td className="px-4 py-4">
@@ -1274,6 +1275,14 @@ export function ModeratorIssuesPage() {
                               </div>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span 
+                            className="px-2 py-1 rounded-lg text-[11px] font-bold text-white shadow-sm"
+                            style={{ backgroundColor: CATEGORY_COLORS[issue.category] }}
+                          >
+                            {CATEGORY_LABELS[issue.category]}
+                          </span>
                         </td>
                         <td className="px-4 py-4">
                           <div className="text-sm text-gray-600 flex items-start gap-1">

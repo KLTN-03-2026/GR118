@@ -115,7 +115,7 @@ export const CATEGORY_LABELS: Record<IssueCategory, string> = {
   road: "Đường - Vỉa hè",
   garbage: "Rác thải - Môi trường",
   lighting: "Chiếu sáng công cộng",
-  flood: "Ngập lụt - Thoát nước",
+  flood: "Ngập lụt lớn",
   noise: "Tiếng ồn - Ô nhiễm",
   other: "Khác",
 };

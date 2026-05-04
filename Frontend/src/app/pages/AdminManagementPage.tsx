@@ -506,7 +506,7 @@ export function AdminManagementPage() {
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="font-mono text-sm font-semibold text-gray-900">
-                            #{issue.issueCode || issue.id.slice(-6).toUpperCase()}
+                            #VN{issue.issueCode ? issue.issueCode.replace("#VN", "").slice(-3) : issue.id.slice(-3).toUpperCase()}
                           </span>
                         </td>
                         <td className="px-6 py-4">

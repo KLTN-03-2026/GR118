@@ -312,56 +312,7 @@ export function AdminManagementPage() {
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {can("reports_stats", "read") && (
-                <Link
-                  to="/statistics"
-                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-                >
-                  <BarChart3 size={18} />
-                  <span className="hidden sm:inline">Thống kê BC</span>
-                  <ArrowRight size={16} />
-                </Link>
-              )}
-              {can("users_mgnt", "read") && (
-                <Link
-                  to="/admin/verifications"
-                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-                >
-                  <ShieldCheck size={18} />
-                  <span className="hidden sm:inline">Xem xét xác minh</span>
-                  <ArrowRight size={16} />
-                </Link>
-              )}
-              {can("users_mgnt", "read") && (
-                <Link
-                  to="/admin/users"
-                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all shadow-lg shadow-indigo-200"
-                >
-                  <Users size={18} />
-                  <span className="hidden sm:inline">Quản lý người dùng & phân quyền</span>
-                  <ArrowRight size={16} />
-                </Link>
-              )}
-              {can("perms_mgnt", "read") && (
-                <Link
-                  to="/admin/permissions"
-                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all shadow-lg shadow-emerald-200"
-                >
-                  <Shield size={18} />
-                  <span className="hidden sm:inline">Quản lý quyền</span>
-                  <ArrowRight size={16} />
-                </Link>
-              )}
-              {can("roles_mgnt", "read") && (
-                <Link
-                  to="/admin/roles"
-                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all shadow-lg shadow-blue-200"
-                >
-                  <UserCog size={18} />
-                  <span className="hidden sm:inline">Quản lý vai trò</span>
-                  <ArrowRight size={16} />
-                </Link>
-              )}
+              {/* Buttons removed as per user request */}
             </div>
           </div>
         </div>
@@ -569,12 +520,6 @@ export function AdminManagementPage() {
                               <p className="font-semibold text-gray-900 line-clamp-1">
                                 {issue.title}
                               </p>
-                              <span
-                                className="text-xs px-2 py-0.5 rounded-full text-white"
-                                style={{ backgroundColor: CATEGORY_COLORS[issue.category] }}
-                              >
-                                {CATEGORY_LABELS[issue.category]}
-                              </span>
                             </div>
                           </div>
                         </td>

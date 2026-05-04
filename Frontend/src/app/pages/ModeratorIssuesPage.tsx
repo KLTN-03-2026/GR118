@@ -122,12 +122,6 @@ function IssueRowCard({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap mb-1">
                 <span
-                  className="px-2 py-0.5 rounded-full text-white text-xs font-medium"
-                  style={{ backgroundColor: CATEGORY_COLORS[issue.category] }}
-                >
-                  {CATEGORY_LABELS[issue.category]}
-                </span>
-                <span
                   className={`px-2 py-0.5 rounded-full text-xs font-semibold ${SEVERITY_COLORS[severity]}`}
                 >
                   {SEVERITY_LABELS[severity]}
@@ -1012,13 +1006,6 @@ export function ModeratorIssuesPage() {
             subtitle="Hệ thống quản lý quy trình xử lý báo cáo từ người dân"
             action={
               <div className="flex items-center gap-2">
-                <Link
-                  to="/statistics"
-                  className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2"
-                >
-                  <span className="hidden sm:inline">📊 Thống kê BC</span>
-                  <span className="sm:hidden">📊</span>
-                </Link>
                 <span className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 shadow-sm">
                   👮 {user.name}
                 </span>

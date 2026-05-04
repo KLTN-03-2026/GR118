@@ -12,6 +12,8 @@ import { useAuth, User } from "../context/AuthContext";
 import { useRoles } from "../context/RolesContext";
 import { toast } from "sonner";
 import { PageTitle } from "../components/PageTitle";
+import { Skeleton, SkeletonCircle, SkeletonText } from "../components/ui/skeleton";
+import { Card } from "../components/ui/card";
 
 // ──────────────────────────────────────────────────────────
 // Constants
@@ -1060,6 +1062,7 @@ type FilterStatus = "all" | "active" | "banned";
 export function AdminUsersPage() {
   const { user, can } = useAuth();
   const [users, setUsers] = useState<Array<User & { password: string }>>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState<FilterRole>("all");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
@@ -1072,10 +1075,12 @@ export function AdminUsersPage() {
 
   useEffect(() => {
     const loadUsers = async () => {
+      setIsLoadingUsers(true);
       const apiUsers = await fetchUsersFromAPI();
       if (apiUsers.length > 0) {
         setUsers(apiUsers);
       }
+      setIsLoadingUsers(false);
     };
     loadUsers();
   }, []);
@@ -1235,23 +1240,32 @@ export function AdminUsersPage() {
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6"
         >
-          {[
-            { id: "total", label: "Tổng", value: stats.total, color: "text-gray-800", bg: "bg-white", border: "border-gray-100" },
-            { id: "admin", label: "Admin", value: stats.admins, color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-100" },
-            { id: "moderator", label: "Cán bộ", value: stats.moderators, color: "text-indigo-700", bg: "bg-indigo-50", border: "border-indigo-100" },
-            { id: "citizen", label: "Công dân", value: stats.citizens, color: "text-gray-700", bg: "bg-gray-50", border: "border-gray-100" },
-            { id: "active", label: "Hoạt động", value: stats.active, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-100" },
-            { id: "banned", label: "Đã khóa", value: stats.banned, color: "text-red-700", bg: "bg-red-50", border: "border-red-100" },
-          ].map((s) => (
-            <motion.div
-              key={s.id}
-              whileHover={{ scale: 1.04 }}
-              className={`${s.bg} border ${s.border} rounded-2xl p-3 text-center shadow-sm`}
-            >
-              <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-            </motion.div>
-          ))}
+          {isLoadingUsers ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white border border-gray-100 rounded-2xl p-3 text-center shadow-sm">
+                <Skeleton width="40px" height="24px" className="mx-auto mb-1.5" />
+                <Skeleton width="60px" height="12px" className="mx-auto" />
+              </div>
+            ))
+          ) : (
+            [
+              { id: "total", label: "Tổng", value: stats.total, color: "text-gray-800", bg: "bg-white", border: "border-gray-100" },
+              { id: "admin", label: "Admin", value: stats.admins, color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-100" },
+              { id: "moderator", label: "Cán bộ", value: stats.moderators, color: "text-indigo-700", bg: "bg-indigo-50", border: "border-indigo-100" },
+              { id: "citizen", label: "Công dân", value: stats.citizens, color: "text-gray-700", bg: "bg-gray-50", border: "border-gray-100" },
+              { id: "active", label: "Hoạt động", value: stats.active, color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-100" },
+              { id: "banned", label: "Đã khóa", value: stats.banned, color: "text-red-700", bg: "bg-red-50", border: "border-red-100" },
+            ].map((s) => (
+              <motion.div
+                key={s.id}
+                whileHover={{ scale: 1.04 }}
+                className={`${s.bg} border ${s.border} rounded-2xl p-3 text-center shadow-sm`}
+              >
+                <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+              </motion.div>
+            ))
+          )}
         </motion.div>
 
         {/* ── Filter Bar ── */}
@@ -1336,7 +1350,27 @@ export function AdminUsersPage() {
         </div>
 
         {/* ── User List ── */}
-        {filtered.length === 0 ? (
+        {isLoadingUsers ? (
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4">
+                <Skeleton width="56px" height="56px" borderRadius="16px" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton width="150px" height="20px" />
+                  <div className="flex gap-2">
+                    <Skeleton width="80px" height="16px" borderRadius="12px" />
+                    <Skeleton width="80px" height="16px" borderRadius="12px" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <SkeletonCircle size="32px" />
+                  <SkeletonCircle size="32px" />
+                  <SkeletonCircle size="32px" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
             <Users size={48} className="mx-auto text-gray-200 mb-3" />
             <p className="text-gray-500 font-medium">Không tìm thấy người dùng</p>

@@ -909,7 +909,7 @@ export function ModeratorIssuesPage() {
   const [filterCategory, setFilterCategory] = useState<IssueCategory | "all">("all");
   const [filterSeverity, setFilterSeverity] = useState<string>("all");
   const [filterAssigned, setFilterAssigned] = useState<"all" | "mine">("all");
-  const [sortBy, setSortBy] = useState<"date" | "severity" | "status">("date");
+  const [sortBy, setSortBy] = useState<"date" | "severity" | "status" | "rating">("rating");
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const { refreshIssues } = useIssues();
@@ -948,6 +948,14 @@ export function ModeratorIssuesPage() {
       if (sortBy === "status") {
         const order: Record<IssueStatus, number> = { pending: 6, received: 5, processing: 4, need_info: 3, resolved: 2, rejected: 1 };
         return (order[b.status] ?? 0) - (order[a.status] ?? 0);
+      }
+      if (sortBy === "rating") {
+        const getAvg = (issue: Issue) => {
+          const vs = issue.verifications || [];
+          if (vs.length === 0) return 0;
+          return vs.reduce((sum, v) => sum + v.rating, 0) / vs.length;
+        };
+        return getAvg(b) - getAvg(a);
       }
       return 0;
     });
@@ -1076,6 +1084,7 @@ export function ModeratorIssuesPage() {
               onChange={(e) => setSortBy(e.target.value as any)}
               className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-200 bg-gray-50 cursor-pointer"
             >
+              <option value="rating">Đánh giá cao nhất</option>
               <option value="date">Mới nhất</option>
               <option value="severity">Mức độ</option>
               <option value="status">Trạng thái</option>
@@ -1208,15 +1217,99 @@ export function ModeratorIssuesPage() {
             <p className="text-gray-400 text-sm mt-1">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
           </motion.div>
         ) : (
-          <div className="space-y-3">
-            {filtered.map((issue, i) => (
-              <IssueRowCard
-                key={issue.id}
-                issue={issue}
-                index={i}
-                onClick={() => setSelectedIssue(issue)}
-              />
-            ))}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-gray-50 border-b border-gray-100">
+                  <tr>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Mã số</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Báo cáo</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Vị trí</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Đánh giá</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">Trạng thái</th>
+                    <th className="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filtered.map((issue, i) => {
+                    const severity = issue.aiAnalysis?.severity ?? "medium";
+                    const statusColor = STATUS_COLORS[issue.status] ?? "#6b7280";
+                    const verifications = issue.verifications ?? [];
+                    const avgRating = verifications.length > 0
+                      ? verifications.reduce((sum, v) => sum + v.rating, 0) / verifications.length
+                      : 0;
+
+                    return (
+                      <motion.tr
+                        key={issue.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.03 }}
+                        className="hover:bg-indigo-50/30 transition-colors group cursor-pointer"
+                        onClick={() => setSelectedIssue(issue)}
+                      >
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className="font-mono text-sm font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded-lg">
+                            #{issue.issueCode || issue.id.slice(-6).toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={issue.imageUrl}
+                              alt={issue.title}
+                              className="w-10 h-10 rounded-lg object-cover flex-shrink-0 shadow-sm"
+                            />
+                            <div className="min-w-0">
+                              <p className="font-bold text-gray-900 line-clamp-1 group-hover:text-indigo-600 transition-colors">
+                                {issue.title}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase ${SEVERITY_COLORS[severity]}`}>
+                                  {SEVERITY_LABELS[severity]}
+                                </span>
+                                <span className="text-[10px] text-gray-400 font-medium">
+                                  {formatDateShort(issue.reportedAt)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm text-gray-600 flex items-start gap-1">
+                            <MapPin size={14} className="text-red-400 mt-0.5 flex-shrink-0" />
+                            <span className="line-clamp-1">{issue.location}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          {avgRating > 0 ? (
+                            <div className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-1 rounded-full font-bold text-xs border border-amber-100">
+                              <Star size={12} className="fill-amber-400 text-amber-400" />
+                              {avgRating.toFixed(1)}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-300">--</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span
+                            className="px-2.5 py-1 rounded-full text-white text-[11px] font-bold shadow-sm"
+                            style={{ backgroundColor: statusColor }}
+                          >
+                            {STATUS_LABELS[issue.status]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex justify-end">
+                            <ArrowRight size={16} className="text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

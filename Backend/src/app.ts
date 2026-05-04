@@ -11,6 +11,9 @@ import { AppError } from "./utils/app-error";
 
 const app = express();
 
+// Trust proxy for correct IP detection on platforms like Vercel/Render
+app.set('trust proxy', 1);
+
 // Allow multiple frontend URLs for development and production
 const getAllowedOrigins = () => {
   const envOrigins = process.env.FRONTEND_URL

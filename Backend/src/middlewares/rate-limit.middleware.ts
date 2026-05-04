@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 // General rate limiter for all routes
 export const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 1000, // Tăng lên 1000 để tránh bị chặn khi load nhiều data trên Dashboard
     message: {
         success: false,
         message: 'Too many requests from this IP, please try again later.'
@@ -15,7 +15,7 @@ export const generalLimiter = rateLimit({
 // Strict rate limiter for auth routes (login, register)
 export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 20, // Tăng lên 20 lần để thuận tiện test
+    max: 50, // Tăng lên 50 lần
     message: {
         success: false,
         message: 'Too many authentication attempts, please try again after 15 minutes.'

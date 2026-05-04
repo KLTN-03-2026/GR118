@@ -42,6 +42,15 @@ export interface SpamReport {
   moderatorNote?: string;
 }
 
+export interface Comment {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface Issue {
   id: string;
   title: string;
@@ -61,7 +70,9 @@ export interface Issue {
   reportedAt: string;
   updatedAt: string;
   votes: number;
+  votedUserIds?: string[];
   comments: number;
+  commentsList?: Comment[];
   verifications?: Verification[]; // Danh sách xác minh/tố cáo
   spamReports?: SpamReport[]; // Danh sách báo cáo spam/sai
   aiConfidence?: number;

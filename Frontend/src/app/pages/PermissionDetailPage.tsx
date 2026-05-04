@@ -20,13 +20,14 @@ import {
   RESOURCE_LABELS,
   ACTION_LABELS,
   RESOURCE_COLORS,
+  RESOURCE_ACTIONS,
 } from "../data/permissions";
 import { toast } from "sonner";
 
 export function PermissionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { getPermissionById, updatePermission } = usePermissions();
 
   const permission = getPermissionById(id || "");
@@ -40,8 +41,8 @@ export function PermissionDetailPage() {
     actions: [] as PermissionAction[],
   });
 
-  // Redirect if not admin
-  if (!user || user.role !== "admin") {
+  // Permission guard
+  if (!user || !can("perms_mgnt", "read")) {
     return <Navigate to="/" replace />;
   }
 
@@ -61,8 +62,20 @@ export function PermissionDetailPage() {
       });
     }
   }, [permission]);
+  // Khi đổi tài nguyên, lọc bỏ các hành động không còn khả dụng
+  useEffect(() => {
+    if (formData.resource) {
+      const validActions = RESOURCE_ACTIONS[formData.resource as PermissionResource] || [];
+      setFormData(prev => ({
+        ...prev,
+        actions: prev.actions.filter(a => validActions.includes(a))
+      }));
+    }
+  }, [formData.resource]);
 
-  const allActions: PermissionAction[] = ["create", "read", "update", "delete", "approve", "export", "assign"];
+  const allActions: PermissionAction[] = formData.resource 
+    ? RESOURCE_ACTIONS[formData.resource as PermissionResource] || []
+    : [];
 
   const toggleAction = (action: PermissionAction) => {
     setFormData((prev) => ({
@@ -157,7 +170,7 @@ export function PermissionDetailPage() {
               </div>
             </div>
 
-            {!isEditing && (
+            {!isEditing && can("perms_mgnt", "update") && (
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={permission.isSystem}

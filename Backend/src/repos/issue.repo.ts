@@ -36,10 +36,33 @@ export const issueRepo = {
     ).exec();
   },
 
-  async voteIssue(id: string): Promise<IIssue | null> {
+  async voteIssue(id: string, userId: string): Promise<IIssue | null> {
+    const issue = await Issue.findById(id);
+    if (!issue) return null;
+
+    // Toggle vote
+    const userIds = issue.votedUserIds || [];
+    const hasVoted = userIds.includes(userId);
+
+    if (hasVoted) {
+      return await Issue.findByIdAndUpdate(
+        id,
+        { $pull: { votedUserIds: userId }, $inc: { votes: -1 } },
+        { new: true }
+      ).exec();
+    } else {
+      return await Issue.findByIdAndUpdate(
+        id,
+        { $addToSet: { votedUserIds: userId }, $inc: { votes: 1 } },
+        { new: true }
+      ).exec();
+    }
+  },
+
+  async addComment(id: string, comment: any): Promise<IIssue | null> {
     return await Issue.findByIdAndUpdate(
       id,
-      { $inc: { votes: 1 } },
+      { $push: { commentsList: comment }, $inc: { comments: 1 } },
       { new: true }
     ).exec();
   }

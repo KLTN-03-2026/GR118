@@ -3,7 +3,15 @@
  * Định nghĩa kiểu dữ liệu và dữ liệu mẫu cho hệ thống quản lý quyền
  */
 
-export type PermissionAction = "create" | "read" | "update" | "delete" | "approve" | "export" | "assign";
+export type PermissionAction =
+  | "create"
+  | "read"
+  | "update"
+  | "delete"
+  | "approve"
+  | "export"
+  | "assign"
+  | "verify";
 
 export type PermissionResource =
   | "issues_vande"              // Vấn đề
@@ -48,9 +56,10 @@ export const ACTION_LABELS: Record<PermissionAction, string> = {
   read: "Xem",
   update: "Cập nhật",
   delete: "Xóa",
-  approve: "Phê duyệt",
+  approve: "Phê duyệt / Hoàn thành",
   export: "Xuất dữ liệu",
-  assign: "Phân công",
+  assign: "Phân công / Phân quyền",
+  verify: "Xác minh",
 };
 
 // Màu sắc cho resource badges
@@ -65,4 +74,18 @@ export const RESOURCE_COLORS: Record<PermissionResource, string> = {
   activities_mgnt: "#059669",
   perms_mgnt: "#ef4444",
   roles_mgnt: "#d946ef",
+};
+
+// Định nghĩa các hành động khả dụng cho từng loại tài nguyên
+export const RESOURCE_ACTIONS: Record<PermissionResource, PermissionAction[]> = {
+  issues_vande: ["read", "create"],
+  activities_volunteer: ["read", "create"],
+  stats_overview: ["read"],
+  issues_mgnt: ["read", "update", "delete", "export"],
+  issues_process: ["read", "update", "assign", "approve"],
+  users_mgnt: ["read", "create", "update", "delete", "assign", "verify"],
+  reports_stats: ["read", "export"],
+  activities_mgnt: ["read", "create", "update", "delete"],
+  perms_mgnt: ["read", "create", "update", "delete"],
+  roles_mgnt: ["read", "create", "update", "delete"],
 };

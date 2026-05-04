@@ -73,11 +73,29 @@ export const verifyIssue = async (req: Request, res: Response) => {
 export const upvoteIssue = async (req: Request, res: Response) => {
   try {
     const id = normalizeParam(req.params.id);
-    const updatedIssue = await issueRepo.voteIssue(id);
+    const { userId } = req.body; // In a real app, get from auth middleware
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Thiếu userId" });
+    }
+    const updatedIssue = await issueRepo.voteIssue(id, userId);
     if (!updatedIssue) {
       return res.status(404).json({ success: false, message: "Không tìm thấy báo cáo" });
     }
-    res.status(200).json({ success: true, data: updatedIssue, message: "Vote thành công" });
+    res.status(200).json({ success: true, data: updatedIssue, message: "Vote cập nhật thành công" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Lỗi máy chủ nội bộ" });
+  }
+};
+
+export const addComment = async (req: Request, res: Response) => {
+  try {
+    const id = normalizeParam(req.params.id);
+    const commentData = req.body;
+    const updatedIssue = await issueRepo.addComment(id, commentData);
+    if (!updatedIssue) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy báo cáo" });
+    }
+    res.status(200).json({ success: true, data: updatedIssue, message: "Bình luận thành công" });
   } catch (error) {
     res.status(500).json({ success: false, message: "Lỗi máy chủ nội bộ" });
   }

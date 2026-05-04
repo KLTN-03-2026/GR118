@@ -110,7 +110,7 @@ export function VerificationSection({ issueId, issueTitle, reporterId, verificat
     setEvidencePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập để đánh giá");
       return;
@@ -133,27 +133,31 @@ export function VerificationSection({ issueId, issueTitle, reporterId, verificat
       adminReviewed: false,
     };
 
-    addVerification(issueId, newRating);
+    const success = await addVerification(issueId, newRating);
 
-    toast.success("Đã gửi đánh giá thành công!");
+    if (success) {
+      toast.success("Đã gửi đánh giá thành công!");
 
-    // Reset form
-    setMessage("");
-    setEvidenceFiles([]);
-    setEvidencePreviews([]);
-    setSelectedRating(5);
-    setShowModal(false);
+      // Reset form
+      setMessage("");
+      setEvidenceFiles([]);
+      setEvidencePreviews([]);
+      setSelectedRating(5);
+      setShowModal(false);
 
-    // Add notification to reporter
-    if (user.id !== reporterId) {
-      addNotification({
-        type: "verification",
-        title: "Đánh giá mới",
-        message: `${user.name} đã đánh giá ${selectedRating} sao báo cáo: "${issueTitle}"`,
-        link: `/issues/${issueId}`,
-        issueId: issueId,
-        fromUser: user.name,
-      });
+      // Add notification to reporter
+      if (user.id !== reporterId) {
+        addNotification({
+          type: "verification",
+          title: "Đánh giá mới",
+          message: `${user.name} đã đánh giá ${selectedRating} sao báo cáo: "${issueTitle}"`,
+          link: `/issues/${issueId}`,
+          issueId: issueId,
+          fromUser: user.name,
+        });
+      }
+    } else {
+      toast.error("Không thể gửi đánh giá. Vui lòng thử lại.");
     }
   };
 

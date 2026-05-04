@@ -29,7 +29,7 @@ import { toast } from "sonner";
 export function RoleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { roles, updateRole, toggleRoleStatus } = useRoles();
   const { permissions } = usePermissions();
   const [isEditing, setIsEditing] = useState(false);
@@ -55,8 +55,8 @@ export function RoleDetailPage() {
     }
   }, [role]);
 
-  // Redirect if not admin
-  if (!user || user.role !== "admin") {
+  // Permission guard
+  if (!user || !can("roles_mgnt", "read")) {
     return <Navigate to="/" replace />;
   }
 
@@ -258,69 +258,73 @@ export function RoleDetailPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowToggleModal(true)}
-                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all ${
-                  role.isActive
-                    ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
-                    : "bg-green-100 text-green-700 hover:bg-green-200"
-                }`}
-              >
-                {role.isActive ? (
+              {can("roles_mgnt", "update") && (
+                <button
+                  onClick={() => setShowToggleModal(true)}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all ${
+                    role.isActive
+                      ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                      : "bg-green-100 text-green-700 hover:bg-green-200"
+                  }`}
+                >
+                  {role.isActive ? (
+                    <>
+                      <ToggleRight size={18} />
+                      Vô hiệu hóa
+                    </>
+                  ) : (
+                    <>
+                      <ToggleLeft size={18} />
+                      Kích hoạt
+                    </>
+                  )}
+                </button>
+              )}
+              {can("roles_mgnt", "update") && (
+                isEditing ? (
                   <>
-                    <ToggleRight size={18} />
-                    Vô hiệu hóa
+                    <button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setFormData({
+                          name: role.name,
+                          description: role.description,
+                          permissionIds: role.permissionIds,
+                        });
+                      }}
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-5 py-3 border border-gray-200 bg-white rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50"
+                    >
+                      <X size={18} />
+                      Hủy
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-5 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-all disabled:opacity-50"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 size={18} className="animate-spin" />
+                          Đang lưu...
+                        </>
+                      ) : (
+                        <>
+                          <Save size={18} />
+                          Lưu thay đổi
+                        </>
+                      )}
+                    </button>
                   </>
                 ) : (
-                  <>
-                    <ToggleLeft size={18} />
-                    Kích hoạt
-                  </>
-                )}
-              </button>
-              {isEditing ? (
-                <>
                   <button
-                    onClick={() => {
-                      setIsEditing(false);
-                      setFormData({
-                        name: role.name,
-                        description: role.description,
-                        permissionIds: role.permissionIds,
-                      });
-                    }}
-                    disabled={isSaving}
-                    className="flex items-center gap-2 px-5 py-3 border border-gray-200 bg-white rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50"
+                    onClick={() => setIsEditing(true)}
+                    className="flex items-center gap-2 px-5 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-all"
                   >
-                    <X size={18} />
-                    Hủy
+                    <Edit3 size={18} />
+                    Chỉnh sửa
                   </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex items-center gap-2 px-5 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-all disabled:opacity-50"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 size={18} className="animate-spin" />
-                        Đang lưu...
-                      </>
-                    ) : (
-                      <>
-                        <Save size={18} />
-                        Lưu thay đổi
-                      </>
-                    )}
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-5 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-all"
-                >
-                  <Edit3 size={18} />
-                  Chỉnh sửa
-                </button>
+                )
               )}
             </div>
           </div>

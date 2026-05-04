@@ -9,5 +9,6 @@ router.post("/", issueController.createIssue);
 router.put("/:id/status", issueController.updateIssueStatus);
 router.post("/:id/verifications", issueController.verifyIssue);
 router.post("/:id/vote", issueController.upvoteIssue);
+router.post("/:id/comments", issueController.addComment);
 
 export default router;

@@ -29,6 +29,15 @@ export interface SpamReport {
   moderatorNote?: string;
 }
 
+export interface Comment {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  content: string;
+  createdAt: Date;
+}
+
 export interface AIAnalysis {
   isAuthentic: boolean;
   confidenceScore: number;
@@ -65,7 +74,9 @@ export interface IIssue extends Document {
   reportedAt: Date;
   updatedAt: Date;
   votes: number;
+  votedUserIds?: string[];
   comments: number;
+  commentsList?: Comment[];
   verifications?: Verification[];
   spamReports?: SpamReport[];
   aiConfidence?: number;
@@ -112,6 +123,13 @@ const SpamReportSchema = new Schema<SpamReport>({
   moderatorReviewed: { type: Boolean },
   moderatorNote: { type: String }
 });
+const CommentSchema = new Schema<Comment>({
+  userId: { type: String, required: true },
+  userName: { type: String, required: true },
+  userAvatar: { type: String },
+  content: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
 
 const AIAnalysisSchema = new Schema<AIAnalysis>({
   isAuthentic: { type: Boolean, required: true },
@@ -149,7 +167,9 @@ const IssueSchema: Schema = new Schema({
   reportedAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   votes: { type: Number, default: 0 },
+  votedUserIds: [{ type: String }],
   comments: { type: Number, default: 0 },
+  commentsList: [CommentSchema],
   verifications: [VerificationSchema],
   spamReports: [SpamReportSchema],
   aiConfidence: { type: Number },

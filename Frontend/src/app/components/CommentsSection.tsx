@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MessageSquare, Send, User, Clock, X, ThumbsUp, Image as ImageIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useIssues } from "../context/IssuesContext";
 import { toast } from "sonner";
 
 interface Comment {
@@ -20,115 +21,15 @@ interface CommentsSectionProps {
   onClose: () => void;
 }
 
-// Mock comments data
-const MOCK_COMMENTS: Record<string, Comment[]> = {
-  "1": [
-    {
-      id: "c1",
-      userName: "Trần Văn B",
-      content: "Tôi cũng đi qua đây hàng ngày và gặp vấn đề này. Rất nguy hiểm khi trời mưa!",
-      timestamp: "2026-02-28T10:30:00",
-      likes: 12,
-    },
-    {
-      id: "c2",
-      userName: "Nguyễn Thị C",
-      content: "Cảm ơn bạn đã báo cáo. Hi vọng sớm được xử lý.",
-      timestamp: "2026-03-01T08:15:00",
-      likes: 5,
-    },
-    {
-      id: "c3",
-      userName: "Lê Minh D",
-      content: "Đã gần 1 tuần rồi vẫn chưa thấy ai đến sửa chữa.",
-      timestamp: "2026-03-02T14:20:00",
-      likes: 8,
-    },
-    {
-      id: "c4",
-      userName: "Phạm Thu H",
-      content: "Tôi vừa đi qua và chụp thêm ảnh. Tình trạng đang tệ hơn!",
-      timestamp: "2026-03-02T16:45:00",
-      likes: 15,
-      imageUrl: "https://images.unsplash.com/photo-1615200473481-d0f2b3c2b999?w=800&q=80",
-    },
-    {
-      id: "c5",
-      userName: "Hoàng Văn K",
-      content: "Cảm ơn mọi người đã quan tâm. Hy vọng chính quyền sẽ sớm khắc phục.",
-      timestamp: "2026-03-03T09:20:00",
-      likes: 3,
-    },
-  ],
-  "2": [
-    {
-      id: "c6",
-      userName: "Phạm Văn E",
-      content: "Công viên này cần được dọn dẹp thường xuyên hơn.",
-      timestamp: "2026-03-01T16:00:00",
-      likes: 7,
-    },
-    {
-      id: "c7",
-      userName: "Nguyễn Minh T",
-      content: "Mình đã gọi điện cho phường nhưng chưa thấy phản hồi.",
-      timestamp: "2026-03-02T10:30:00",
-      likes: 4,
-    },
-    {
-      id: "c8",
-      userName: "Lê Thị M",
-      content: "Rác thải ở đây thật sự quá nhiều. Đây là hình ảnh hôm nay:",
-      timestamp: "2026-03-03T07:15:00",
-      likes: 11,
-      imageUrl: "https://images.unsplash.com/photo-1604187351574-c75ca79f5807?w=800&q=80",
-    },
-  ],
-  "3": [
-    {
-      id: "c9",
-      userName: "Đỗ Văn A",
-      content: "Đèn đường này đã hỏng từ tuần trước rồi, rất mất an toàn!",
-      timestamp: "2026-03-01T19:00:00",
-      likes: 18,
-    },
-    {
-      id: "c10",
-      userName: "Mai Thị B",
-      content: "Tôi cũng phát hiện vấn đề này. Tối đi qua rất sợ.",
-      timestamp: "2026-03-02T08:00:00",
-      likes: 9,
-    },
-    {
-      id: "c11",
-      userName: "Trần Công C",
-      content: "Đã báo điện lực nhưng họ nói không phải do họ quản lý.",
-      timestamp: "2026-03-02T15:30:00",
-      likes: 6,
-      imageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
-    },
-  ],
-  "4": [
-    {
-      id: "c12",
-      userName: "Nguyễn Văn D",
-      content: "Sao lại xây dựng không phép như vậy được? Ảnh hưởng đến mọi người quá!",
-      timestamp: "2026-03-01T11:00:00",
-      likes: 22,
-    },
-    {
-      id: "c13",
-      userName: "Lê Thị E",
-      content: "Tôi đã gửi đơn khiếu nại nhưng chưa thấy ai xử lý.",
-      timestamp: "2026-03-02T14:00:00",
-      likes: 13,
-    },
-  ],
-};
+// Comments interface handled in data/issues.ts
 
 export function CommentsSection({ issueId, isOpen, onClose }: CommentsSectionProps) {
   const { user } = useAuth();
-  const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS[issueId] || []);
+  const { issues, addComment } = useIssues();
+  
+  const issue = issues.find(i => i.id === issueId);
+  const comments = issue?.commentsList || [];
+  
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
@@ -183,24 +84,25 @@ export function CommentsSection({ issueId, isOpen, onClose }: CommentsSectionPro
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      const comment: Comment = {
-        id: `c${Date.now()}`,
-        userName: user.name,
-        content: newComment,
-        timestamp: new Date().toISOString(),
-        likes: 0,
-        imageUrl: selectedImage || undefined,
-      };
+    const commentData = {
+      userId: user.id,
+      userName: user.name,
+      userAvatar: user.avatar,
+      content: newComment,
+      imageUrl: selectedImage || undefined,
+    };
 
-      setComments([...comments, comment]);
+    const success = await addComment(issueId, commentData);
+
+    if (success) {
       setNewComment("");
       setImagePreview(null);
       setSelectedImage(null);
-      setIsSubmitting(false);
       toast.success("Đã thêm bình luận!");
-    }, 500);
+    } else {
+      toast.error("Không thể thêm bình luận. Vui lòng thử lại.");
+    }
+    setIsSubmitting(false);
   };
 
   const formatTime = (timestamp: string) => {
@@ -291,7 +193,7 @@ export function CommentsSection({ issueId, isOpen, onClose }: CommentsSectionPro
                       </div>
                       <div className="flex items-center gap-1 mt-1 ml-4 text-xs text-gray-400">
                         <Clock size={12} />
-                        {formatTime(comment.timestamp)}
+                        {formatTime(comment.createdAt)}
                       </div>
                       <div className="flex items-center gap-2 mt-1 ml-4">
                         <button

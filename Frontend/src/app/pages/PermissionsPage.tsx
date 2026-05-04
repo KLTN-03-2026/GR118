@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Shield,
@@ -24,6 +24,7 @@ import {
   RESOURCE_LABELS,
   ACTION_LABELS,
   RESOURCE_COLORS,
+  RESOURCE_ACTIONS,
 } from "../data/permissions";
 import { toast } from "sonner";
 import {
@@ -145,6 +146,17 @@ export function PermissionsPage() {
     actions: [] as PermissionAction[],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Khi đổi tài nguyên, lọc bỏ các hành động không còn khả dụng
+  useEffect(() => {
+    if (formData.resource) {
+      const validActions = RESOURCE_ACTIONS[formData.resource as PermissionResource] || [];
+      setFormData(prev => ({
+        ...prev,
+        actions: prev.actions.filter(a => validActions.includes(a))
+      }));
+    }
+  }, [formData.resource]);
 
   if (!can("perms_mgnt", "read")) {
     return <Navigate to="/" replace />;
@@ -181,7 +193,9 @@ export function PermissionsPage() {
     },
   ];
 
-  const allActions: PermissionAction[] = ["create", "read", "update", "delete", "approve", "export", "assign"];
+  const allActions: PermissionAction[] = formData.resource 
+    ? RESOURCE_ACTIONS[formData.resource as PermissionResource] || []
+    : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -349,13 +363,15 @@ export function PermissionsPage() {
                     >
                       <Eye size={16} />
                     </Link>
-                    <Link
-                      to={`/admin/permissions/${permission.id}`}
-                      className="p-2 hover:bg-orange-50 rounded-lg text-orange-600 transition-colors"
-                      title="Chỉnh sửa"
-                    >
-                      <Edit3 size={16} />
-                    </Link>
+                    {can("perms_mgnt", "update") && (
+                      <Link
+                        to={`/admin/permissions/${permission.id}`}
+                        className="p-2 hover:bg-orange-50 rounded-lg text-orange-600 transition-colors"
+                        title="Chỉnh sửa"
+                      >
+                        <Edit3 size={16} />
+                      </Link>
+                    )}
                     {can("perms_mgnt", "delete") && (
                       <button
                         onClick={() => setShowDeleteModal(permission.id)}

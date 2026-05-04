@@ -7,7 +7,7 @@ interface IssuesContextType {
   addIssue: (issue: Issue) => void;
   updateIssue: (id: string, updatedIssue: Partial<Issue>) => void;
   deleteIssue: (id: string) => void;
-  addVerification: (issueId: string, verification: Verification) => void;
+  addVerification: (issueId: string, verification: Verification) => Promise<boolean>;
   reviewVerification: (issueId: string, verificationId: string, adminNote: string) => void;
   receiveIssue: (id: string, moderatorId: string, moderatorName: string) => void;
   assignIssue: (id: string, assignedTo: string, moderatorId: string, moderatorName: string) => void;
@@ -15,6 +15,8 @@ interface IssuesContextType {
   requestAdditionalInfo: (id: string, request: string, moderatorId: string, moderatorName: string) => void;
   completeIssue: (id: string, note: string, evidence: string[], moderatorId: string, moderatorName: string) => void;
   rejectIssue: (id: string, note: string, moderatorId: string, moderatorName: string) => void;
+  voteIssue: (id: string, userId: string) => Promise<boolean>;
+  addComment: (id: string, comment: any) => Promise<boolean>;
 }
 
 const IssuesContext = createContext<IssuesContextType | null>(null);
@@ -70,18 +72,20 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
     setIssues((prev) => prev.filter((issue) => issue.id !== id));
   };
 
-  const addVerification = (issueId: string, verification: Verification) => {
-    setIssues((prev) =>
-      prev.map((issue) =>
-        issue.id === issueId
-          ? {
-              ...issue,
-              verifications: [...(issue.verifications || []), verification],
-              updatedAt: new Date().toISOString(),
-            }
-          : issue
-      )
-    );
+  const addVerification = async (issueId: string, verification: Verification) => {
+    try {
+      const res = await api.post(`/issues/${issueId}/verifications`, verification);
+      if (res.success && res.data) {
+        setIssues((prev) =>
+          prev.map((i) => (i.id === issueId ? { ...i, ...res.data, id: res.data._id || res.data.id } : i))
+        );
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Lỗi khi thêm đánh giá:", error);
+      return false;
+    }
   };
 
   const reviewVerification = (issueId: string, verificationId: string, adminNote: string) => {
@@ -238,10 +242,43 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const voteIssue = async (id: string, userId: string): Promise<boolean> => {
+    try {
+      const res = await api.post(`/issues/${id}/vote`, { userId });
+      if (res.success && res.data) {
+        setIssues((prev) =>
+          prev.map((i) => (i.id === id ? { ...i, ...res.data, id: res.data._id || res.data.id } : i))
+        );
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Lỗi khi vote:", error);
+      return false;
+    }
+  };
+
+  const addComment = async (id: string, comment: any): Promise<boolean> => {
+    try {
+      const res = await api.post(`/issues/${id}/comments`, comment);
+      if (res.success && res.data) {
+        setIssues((prev) =>
+          prev.map((i) => (i.id === id ? { ...i, ...res.data, id: res.data._id || res.data.id } : i))
+        );
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Lỗi khi add comment:", error);
+      return false;
+    }
+  };
+
   return (
     <IssuesContext.Provider value={{
       issues, addIssue, updateIssue, deleteIssue, addVerification, reviewVerification,
       receiveIssue, assignIssue, startProcessing, requestAdditionalInfo, completeIssue, rejectIssue,
+      voteIssue, addComment
     }}>
       {children}
     </IssuesContext.Provider>
@@ -265,6 +302,8 @@ export function useIssues() {
       requestAdditionalInfo: () => {},
       completeIssue: () => {},
       rejectIssue: () => {},
+      voteIssue: async () => false,
+      addComment: async () => false,
     };
   }
   return context;

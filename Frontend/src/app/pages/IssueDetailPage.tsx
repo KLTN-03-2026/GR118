@@ -19,8 +19,9 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { CATEGORY_LABELS, CATEGORY_COLORS, STATUS_LABELS, STATUS_COLORS } from "../data/issues";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
 import { IssueMap } from "../components/IssueMap";
 import { CommentsSection } from "../components/CommentsSection";
 import { ShareModal } from "../components/ShareModal";
@@ -45,13 +46,17 @@ const TIMELINE = [
 
 export function IssueDetailPage() {
   const { id } = useParams();
-  const { issues } = useIssues();
+  const { user } = useAuth();
+  const { issues, voteIssue } = useIssues();
   const issue = issues.find((i) => i.id === id);
-  const [voted, setVoted] = useState(false);
-  const [votes, setVotes] = useState(issue?.votes ?? 0);
+  
   const [showComments, setShowComments] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [isVoting, setIsVoting] = useState(false);
+
+  const voted = user && issue?.votedUserIds?.includes(user.id);
+  const votes = issue?.votes ?? 0;
   
   const mediaFiles = issue?.mediaFiles || (issue?.imageUrl ? [{ type: "image" as const, url: issue.imageUrl }] : []);
 
@@ -69,15 +74,25 @@ export function IssueDetailPage() {
   const catColor = CATEGORY_COLORS[issue.category];
   const statusColor = STATUS_COLORS[issue.status];
 
-  const handleVote = () => {
-    if (voted) {
-      setVoted(false);
-      setVotes((v) => v - 1);
-    } else {
-      setVoted(true);
-      setVotes((v) => v + 1);
-      toast.success("Cảm ơn bạn đã bình chọn!");
+  const handleVote = async () => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để bình chọn");
+      return;
     }
+    if (!issue) return;
+
+    setIsVoting(true);
+    const success = await voteIssue(issue.id, user.id);
+    if (success) {
+      if (voted) {
+        toast.success("Đã bỏ bình chọn");
+      } else {
+        toast.success("Cảm ơn bạn đã bình chọn!");
+      }
+    } else {
+      toast.error("Không thể thực hiện bình chọn. Vui lòng thử lại.");
+    }
+    setIsVoting(false);
   };
 
   const formatDate = (s: string) =>
@@ -205,13 +220,14 @@ export function IssueDetailPage() {
                 <div className="flex items-center gap-3 mt-5 pt-5 border-t border-gray-100">
                   <button
                     onClick={handleVote}
+                    disabled={isVoting}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                       voted
                         ? "bg-blue-500 text-white shadow-lg shadow-blue-200"
                         : "bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600"
                     }`}
                   >
-                    <ThumbsUp size={16} />
+                    {isVoting ? <Loader2 size={16} className="animate-spin" /> : <ThumbsUp size={16} />}
                     {votes} Bình chọn
                   </button>
                   <button

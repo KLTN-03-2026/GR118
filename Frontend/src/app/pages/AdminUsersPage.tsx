@@ -1217,13 +1217,15 @@ export function AdminUsersPage() {
             backTo=""
             subtitle="Tạo tài khoản cán bộ, phân quyền và kiểm soát truy cập"
             action={
-              <button
-                onClick={() => setShowCreate(true)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 hover:from-indigo-600 hover:to-purple-700 hover:scale-105 transition-all duration-200 text-sm"
-              >
-                <Plus size={16} />
-                Tạo tài khoản mới
-              </button>
+              can("users_mgnt", "create") && (
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 hover:from-indigo-600 hover:to-purple-700 hover:scale-105 transition-all duration-200 text-sm"
+                >
+                  <Plus size={16} />
+                  Tạo tài khoản mới
+                </button>
+              )
             }
           />
         </motion.div>
@@ -1453,32 +1455,36 @@ export function AdminUsersPage() {
                         )}
 
                         {/* Lock / Unlock */}
-                        {u.banned ? (
-                          <button
-                            onClick={() => handleUnban(u.id, u.name)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-colors"
-                          >
-                            <Unlock size={13} />
-                            <span className="hidden sm:inline">Mở khóa</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setBanTarget(u)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
-                          >
-                            <LockKeyhole size={13} />
-                            <span className="hidden sm:inline">Khóa</span>
-                          </button>
+                        {can("users_mgnt", "update") && (
+                          u.banned ? (
+                            <button
+                              onClick={() => handleUnban(u.id, u.name)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-colors"
+                            >
+                              <Unlock size={13} />
+                              <span className="hidden sm:inline">Mở khóa</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setBanTarget(u)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl text-xs font-semibold transition-colors"
+                            >
+                              <LockKeyhole size={13} />
+                              <span className="hidden sm:inline">Khóa</span>
+                            </button>
+                          )
                         )}
 
                         {/* Delete Account */}
-                        <button
-                          onClick={() => setDeleteTarget(u)}
-                          title="Xóa tài khoản"
-                          className="p-2 hover:bg-red-100 rounded-xl text-red-600 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {can("users_mgnt", "delete") && (
+                          <button
+                            onClick={() => setDeleteTarget(u)}
+                            title="Xóa tài khoản"
+                            className="p-2 hover:bg-red-100 rounded-xl text-red-600 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

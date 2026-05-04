@@ -7,22 +7,27 @@ import { ActivitiesProvider } from "./context/ActivitiesContext";
 import { PermissionsProvider } from "./context/PermissionsContext";
 import { RolesProvider } from "./context/RolesContext";
 import { ServerKeepAlive } from "./components/ServerKeepAlive";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 export default function App() {
   return (
-    <AuthProvider>
-      <IssuesProvider>
-        <NotificationProvider>
-          <ActivitiesProvider>
-            <PermissionsProvider>
-              <RolesProvider>
-                <ServerKeepAlive />
-                <RouterProvider router={router} />
-              </RolesProvider>
-            </PermissionsProvider>
-          </ActivitiesProvider>
-        </NotificationProvider>
-      </IssuesProvider>
-    </AuthProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <AuthProvider>
+        <IssuesProvider>
+          <NotificationProvider>
+            <ActivitiesProvider>
+              <PermissionsProvider>
+                <RolesProvider>
+                  <ServerKeepAlive />
+                  <RouterProvider router={router} />
+                </RolesProvider>
+              </PermissionsProvider>
+            </ActivitiesProvider>
+          </NotificationProvider>
+        </IssuesProvider>
+      </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }

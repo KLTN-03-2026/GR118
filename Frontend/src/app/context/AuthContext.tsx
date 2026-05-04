@@ -23,6 +23,7 @@ export interface User {
     createdAt: string;
     adminName: string;
   }>;
+  permissions?: Record<string, string[]>;
 }
 
 interface AuthContextType {
@@ -40,6 +41,7 @@ interface AuthContextType {
   sendRegisterCode: (email: string) => Promise<{ success: boolean; error?: string; code?: string }>;
   verifyRegisterCode: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   uploadAvatar: (file: File) => Promise<{ success: boolean; url?: string; error?: string }>;
+  loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>;
   can: (resource: string, action: string) => boolean;
 }
 
@@ -55,7 +57,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 const CURRENT_USER_KEY = "baocaovn_current_user";
 const ACCESS_TOKEN_KEY = "baocaovn_access_token";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? "https://backend-cfgb.onrender.com/api/v1" : "http://localhost:8081/api/v1");
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -109,6 +111,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUser(userData);
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
+
+        // Log permissions summary
+        console.group(`%c🔐 QUYỀN HẠN TÀI KHOẢN: ${userData.name}`, "color: #3b82f6; font-weight: bold; font-size: 12px;");
+        console.log("Vai trò:", userData.role);
+        if (userData.permissions) {
+          Object.entries(userData.permissions).forEach(([resource, actions]) => {
+            console.log(`- %c${resource}%c: [${actions.join(", ")}]`, "color: #ef4444; font-weight: bold;", "color: inherit;");
+          });
+        } else {
+          console.log("Không có quyền hạn nào được gán.");
+        }
+        console.groupEnd();
         if (result.accessToken) {
           localStorage.setItem(ACCESS_TOKEN_KEY, result.accessToken);
         }
@@ -116,6 +130,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       return { success: false, error: result.message || "Email hoặc mật khẩu không đúng" };
+    } catch (error) {
+      return { success: false, error: "Không thể kết nối đến máy chủ. Vui lòng thử lại sau." };
+    }
+  };
+
+  const loginWithGoogle = async (idToken: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/loginGoogle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ idToken }),
+      });
+      const result = await res.json();
+      
+      if (res.ok && result.success) {
+        const beUser = result.user;
+        const userData: User = {
+          id: beUser._id,
+          name: beUser.userName,
+          email: beUser.email,
+          phone: beUser.phone,
+          city: beUser.city,
+          avatar: beUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(beUser.userName)}`,
+          joinedAt: beUser.createdAt || new Date().toISOString(),
+          reportsCount: beUser.reportsCount || 0,
+          resolvedCount: beUser.resolvedCount || 0,
+          role: beUser.role || "user",
+          roleId: beUser.roleId,
+          permissions: beUser.permissions || {},
+          banned: beUser.lockEnd && new Date(beUser.lockEnd) > new Date() ? true : false,
+          banReason: beUser.lockReason
+        };
+
+        if (userData.banned) {
+          return { success: false, error: `Tài khoản của bạn đã bị khóa. Lý do: ${userData.banReason || "Vi phạm quy định"}` };
+        }
+
+        setUser(userData);
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
+
+        // Log permissions summary
+        console.group(`%c🔐 QUYỀN HẠN TÀI KHOẢN GOOGLE: ${userData.name}`, "color: #3b82f6; font-weight: bold; font-size: 12px;");
+        console.log("Vai trò:", userData.role);
+        if (userData.permissions) {
+          Object.entries(userData.permissions).forEach(([resource, actions]) => {
+            console.log(`- %c${resource}%c: [${actions.join(", ")}]`, "color: #ef4444; font-weight: bold;", "color: inherit;");
+          });
+        } else {
+          console.log("Không có quyền hạn nào được gán.");
+        }
+        console.groupEnd();
+        if (result.accessToken) {
+          localStorage.setItem(ACCESS_TOKEN_KEY, result.accessToken);
+        }
+        return { success: true };
+      }
+      
+      return { success: false, error: result.message || "Đăng nhập bằng Google thất bại" };
     } catch (error) {
       return { success: false, error: "Không thể kết nối đến máy chủ. Vui lòng thử lại sau." };
     }
@@ -274,11 +347,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user.role === "admin") return true; 
     
     // Check specific permissions mapping
-    if (!user.permissions) return false;
+    if (!user.permissions) {
+      console.warn("[AuthContext] User has no permissions object", user);
+      return false;
+    }
     const resourcePerms = user.permissions[resource];
-    if (!resourcePerms) return false;
+    if (!resourcePerms) {
+      console.log(`[AuthContext] No permissions found for resource: ${resource}`);
+      return false;
+    }
     
-    return resourcePerms.includes(action);
+    const hasPermission = resourcePerms.includes(action);
+    if (!hasPermission) {
+      console.log(`[AuthContext] Permission denied: ${resource} -> ${action}. Available actions:`, resourcePerms);
+    }
+    return hasPermission;
   };
 
   return (
@@ -288,6 +371,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sendChangePasswordOTP, changePassword, 
       sendRegisterCode, verifyRegisterCode,
       uploadAvatar,
+      loginWithGoogle,
       can
     }}>
       {children}
@@ -314,6 +398,7 @@ export function useAuth() {
       sendRegisterCode: async () => ({ success: false, error: "Auth not initialized" }),
       verifyRegisterCode: async () => ({ success: false, error: "Auth not initialized" }),
       uploadAvatar: async () => ({ success: false, error: "Auth not initialized" }),
+      loginWithGoogle: async () => ({ success: false, error: "Auth not initialized" }),
       can: () => false,
     };
   }

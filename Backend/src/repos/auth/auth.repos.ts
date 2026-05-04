@@ -164,7 +164,7 @@ export const loginWithGoogleService = async (idToken: string): Promise<ServiceRe
                     throw new Error("Initial user role not found");
                 }
 
-                await userRepo.AddNewRolesToNewUser(user._id.toString(), userRole._id.toString(), session);
+                await userRepo.AddNewRolesToNewUser(user._id.toString(), userRole.role_id, session);
             });
         } catch (error) {
             console.error("Google login transaction error:", error);

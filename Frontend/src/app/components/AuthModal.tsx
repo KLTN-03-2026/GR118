@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
+import { GoogleLogin } from "@react-oauth/google";
 
 interface AuthModalProps {
   open: boolean;
@@ -16,7 +17,7 @@ interface AuthModalProps {
 const CITIES = ["TP. Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Cần Thơ", "Hải Phòng", "Biên Hòa", "Huế", "Nha Trang"];
 
 export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProps) {
-  const { login, register, sendResetCode, verifyResetCode, resetPassword, sendRegisterCode, verifyRegisterCode } = useAuth();
+  const { login, register, sendResetCode, verifyResetCode, resetPassword, sendRegisterCode, verifyRegisterCode, loginWithGoogle } = useAuth();
   const [tab, setTab] = useState<"login" | "register" | "forgot-password">(defaultTab);
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -140,6 +141,23 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
       setTimeout(handleClose, 1200);
     } else {
       setLoginErrors({ general: res.error || "Đăng nhập thất bại" });
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    if (!credentialResponse.credential) {
+      toast.error("Đăng nhập Google thất bại: Không có credential");
+      return;
+    }
+    setLoading(true);
+    const res = await loginWithGoogle(credentialResponse.credential);
+    setLoading(false);
+    if (res.success) {
+      setSuccess(true);
+      toast.success("Đăng nhập Google thành công! 👋");
+      setTimeout(handleClose, 1200);
+    } else {
+      toast.error(res.error || "Đăng nhập Google thất bại");
     }
   };
 
@@ -402,12 +420,16 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
                             <div className="flex-1 h-px bg-gray-200" />
                           </div>
 
-                          <button
-                            onClick={() => toast.info("Đăng nhập với Google sẽ sớm ra mắt!")}
-                            className="w-full flex items-center justify-center gap-2 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition-colors font-medium"
-                          >
-                            🔵 Google
-                          </button>
+                          <div className="flex justify-center">
+                            <GoogleLogin
+                              onSuccess={handleGoogleSuccess}
+                              onError={() => toast.error("Đăng nhập Google thất bại")}
+                              useOneTap
+                              theme="outline"
+                              shape="pill"
+                              text="signin_with"
+                            />
+                          </div>
 
                           <p className="text-center text-sm text-gray-500">
                             Chưa có tài khoản?{" "}
@@ -472,6 +494,23 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
                                 {loading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
                                 {loading ? "Đang gửi..." : "Tiếp tục"}
                               </button>
+
+                              <div className="relative flex items-center gap-3 py-2">
+                                <div className="flex-1 h-px bg-gray-200" />
+                                <span className="text-xs text-gray-400">hoặc đăng ký nhanh với</span>
+                                <div className="flex-1 h-px bg-gray-200" />
+                              </div>
+
+                              <div className="flex justify-center">
+                                <GoogleLogin
+                                  onSuccess={handleGoogleSuccess}
+                                  onError={() => toast.error("Đăng ký Google thất bại")}
+                                  useOneTap
+                                  theme="outline"
+                                  shape="pill"
+                                  text="signup_with"
+                                />
+                              </div>
 
                               <p className="text-center text-sm text-gray-500">
                                 Đã có tài khoản?{" "}

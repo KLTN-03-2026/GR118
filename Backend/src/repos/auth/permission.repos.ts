@@ -275,9 +275,25 @@ export const FindOrCreateResource = async (name: string) => {
 }
 
 
-export const getPermIDsByRoleID = async (roleId: string[]) => {
+export const getPermIDsByRoleID = async (roleIds: string[]) => {
+    if (!roleIds || roleIds.length === 0) return [];
+
+    // 1. Tìm tất cả các document role tương ứng để lấy ra danh sách role_id chuẩn (string)
+    const validObjectIds = roleIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+    const roles = await mongoose.model("roles").find({
+        $or: [
+            { role_id: { $in: roleIds } },
+            { _id: { $in: validObjectIds } }
+        ]
+    }).lean();
+
+    const normalizedRoleIds = [...new Set(roles.map(r => r.role_id))];
+
+    if (normalizedRoleIds.length === 0) return [];
+
+    // 2. Tìm các liên kết quyền dựa trên danh sách role_id đã chuẩn hóa
     const links = await rolePermissionSchema.find({
-        role_id: { $in: roleId }
+        role_id: { $in: normalizedRoleIds }
     }).lean();
 
     const permIds = links.map(a => a.perm_id);

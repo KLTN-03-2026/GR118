@@ -54,7 +54,7 @@ export const register = async (req: Request, res: Response) => {
                 throw new Error("Không tìm thấy vai trò người dùng mặc định. Vui lòng liên hệ quản trị viên.");
             }
             
-            await userRepo.AddNewRolesToNewUser(newUser._id.toString(), userRole._id.toString(), session);
+            await userRepo.AddNewRolesToNewUser(newUser._id.toString(), userRole.role_id, session);
             
             await otpModel.deleteMany({ email: email?.trim().toLowerCase(), type: "register" }, { session });
 

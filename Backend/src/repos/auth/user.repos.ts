@@ -363,7 +363,7 @@ export const createNewUserByAdmin = async (
     if (!finalRoleIds || finalRoleIds.length === 0) {
         const defaultRole = await roleSchema.findOne({ name: ROLES.USERROLE });
         if (defaultRole) {
-            finalRoleIds = [defaultRole._id.toString()];
+            finalRoleIds = [defaultRole.role_id];
         }
     }
 

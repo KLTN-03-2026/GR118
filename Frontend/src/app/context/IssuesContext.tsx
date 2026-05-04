@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Issue, Verification, ProcessingStep } from "../data/issues";
 import { api } from "../../utils/api";
+import { toast } from "sonner";
 
 interface IssuesContextType {
   issues: Issue[];
@@ -81,6 +82,7 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
         );
         return true;
       }
+      if (res.message) toast.error(res.message);
       return false;
     } catch (error) {
       console.error("Lỗi khi thêm đánh giá:", error);
@@ -251,6 +253,7 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
         );
         return true;
       }
+      if (res.message) toast.error(res.message);
       return false;
     } catch (error) {
       console.error("Lỗi khi vote:", error);
@@ -267,6 +270,7 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
         );
         return true;
       }
+      if (res.message) toast.error(res.message);
       return false;
     } catch (error) {
       console.error("Lỗi khi add comment:", error);

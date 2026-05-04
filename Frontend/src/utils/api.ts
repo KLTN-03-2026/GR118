@@ -10,11 +10,12 @@ export const api = {
         credentials: "include",
         headers: token ? { "Authorization": `Bearer ${token}` } : {},
       });
-      if (!response.ok) throw new Error("Network response was not ok");
-      return await response.json();
+      const data = await response.json();
+      if (!response.ok) return { success: false, message: data.message || "Network response was not ok" };
+      return data;
     } catch (error) {
       console.error(`Lỗi GET ${endpoint}:`, error);
-      throw error;
+      return { success: false, message: "Lỗi kết nối" };
     }
   },
 
@@ -30,11 +31,12 @@ export const api = {
         credentials: "include",
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("Network response was not ok");
-      return await response.json();
+      const resData = await response.json();
+      if (!response.ok) return { success: false, message: resData.message || "Network response was not ok" };
+      return resData;
     } catch (error) {
       console.error(`Lỗi POST ${endpoint}:`, error);
-      throw error;
+      return { success: false, message: "Lỗi kết nối" };
     }
   },
 
@@ -50,11 +52,12 @@ export const api = {
         credentials: "include",
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("Network response was not ok");
-      return await response.json();
+      const resData = await response.json();
+      if (!response.ok) return { success: false, message: resData.message || "Network response was not ok" };
+      return resData;
     } catch (error) {
       console.error(`Lỗi PUT ${endpoint}:`, error);
-      throw error;
+      return { success: false, message: "Lỗi kết nối" };
     }
   },
 
@@ -70,11 +73,12 @@ export const api = {
         credentials: "include",
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("Network response was not ok");
-      return await response.json();
+      const resData = await response.json();
+      if (!response.ok) return { success: false, message: resData.message || "Network response was not ok" };
+      return resData;
     } catch (error) {
       console.error(`Lỗi PATCH ${endpoint}:`, error);
-      throw error;
+      return { success: false, message: "Lỗi kết nối" };
     }
   },
 
@@ -86,11 +90,12 @@ export const api = {
         credentials: "include",
         headers: token ? { "Authorization": `Bearer ${token}` } : {},
       });
-      if (!response.ok) throw new Error("Network response was not ok");
-      return await response.json();
+      const data = await response.json();
+      if (!response.ok) return { success: false, message: data.message || "Network response was not ok" };
+      return data;
     } catch (error) {
       console.error(`Lỗi DELETE ${endpoint}:`, error);
-      throw error;
+      return { success: false, message: "Lỗi kết nối" };
     }
   },
 };

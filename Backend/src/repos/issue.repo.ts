@@ -21,6 +21,15 @@ export const issueRepo = {
   },
 
   async addVerification(id: string, verification: Verification): Promise<IIssue | null> {
+    const issue = await Issue.findById(id);
+    if (!issue) return null;
+
+    // Kiểm tra xem người dùng đã đánh giá chưa
+    const alreadyVerified = issue.verifications?.some(v => v.userId === verification.userId);
+    if (alreadyVerified) {
+      throw new Error("ALREADY_VERIFIED");
+    }
+
     return await Issue.findByIdAndUpdate(
       id,
       { $push: { verifications: verification }, $inc: { comments: 1 } },

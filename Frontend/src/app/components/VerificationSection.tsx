@@ -10,6 +10,7 @@ import {
   Clock,
   AlertTriangle,
   Eye,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
@@ -66,6 +67,7 @@ export function VerificationSection({ issueId, issueTitle, reporterId, verificat
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [evidencePreviews, setEvidencePreviews] = useState<string[]>([]);
   const [showAllVerifications, setShowAllVerifications] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate average rating and distribution
@@ -111,6 +113,7 @@ export function VerificationSection({ issueId, issueTitle, reporterId, verificat
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
     if (!user) {
       toast.error("Vui lòng đăng nhập để đánh giá");
       return;
@@ -133,7 +136,9 @@ export function VerificationSection({ issueId, issueTitle, reporterId, verificat
       adminReviewed: false,
     };
 
+    setIsSubmitting(true);
     const success = await addVerification(issueId, newRating);
+    setIsSubmitting(false);
 
     if (success) {
       toast.success("Đã gửi đánh giá thành công!");
@@ -476,11 +481,11 @@ export function VerificationSection({ issueId, issueTitle, reporterId, verificat
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={!message.trim()}
+                  disabled={!message.trim() || isSubmitting}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-yellow-500/30"
                 >
-                  <Send size={18} />
-                  Gửi đánh giá
+                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                  {isSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
                 </button>
               </div>
             </motion.div>

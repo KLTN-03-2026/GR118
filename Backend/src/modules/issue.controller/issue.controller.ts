@@ -59,13 +59,15 @@ export const verifyIssue = async (req: Request, res: Response) => {
     const id = normalizeParam(req.params.id);
     const verificationData = req.body;
     
-    // In a real app we'd get user info from JWT, here we assume it's in body
     const updatedIssue = await issueRepo.addVerification(id, verificationData);
     if (!updatedIssue) {
       return res.status(404).json({ success: false, message: "Không tìm thấy báo cáo" });
     }
     res.status(200).json({ success: true, data: updatedIssue, message: "Thêm đánh giá thành công" });
   } catch (error) {
+    if (error instanceof Error && error.message === "ALREADY_VERIFIED") {
+      return res.status(400).json({ success: false, message: "Bạn đã gửi đánh giá cho báo cáo này rồi" });
+    }
     res.status(500).json({ success: false, message: "Lỗi máy chủ nội bộ" });
   }
 };

@@ -44,7 +44,11 @@ export function Navbar() {
   const hasStaffAccess = can("issues_mgnt", "read") || 
                         can("issues_process", "read") || 
                         can("activities_mgnt", "read") ||
-                        can("stats_overview", "read");
+                        can("stats_overview", "read") ||
+                        can("users_mgnt", "read") ||
+                        can("reports_stats", "read") ||
+                        can("perms_mgnt", "read") ||
+                        can("roles_mgnt", "read");
 
   // Kiểm tra xem có đang ở trang chủ và chưa scroll không
   const isHomePageTop = location.pathname === "/" && !scrolled;

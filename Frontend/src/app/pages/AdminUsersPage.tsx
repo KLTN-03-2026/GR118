@@ -1197,7 +1197,7 @@ export function AdminUsersPage() {
     };
   }, [users, user?.id]);
 
-  if (!user || user.role !== "admin") return <Navigate to="/" replace />;
+  if (!user || !can("users_mgnt", "read")) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen pt-20 pb-16 bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-50">

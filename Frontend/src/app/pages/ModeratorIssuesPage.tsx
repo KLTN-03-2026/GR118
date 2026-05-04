@@ -918,17 +918,6 @@ export function ModeratorIssuesPage() {
     refreshIssues();
   }, [refreshIssues]);
 
-  // Access control
-  if (!user || (user.role !== "moderator" && user.role !== "admin")) {
-    return (
-      <div className="min-h-screen pt-28 flex flex-col items-center justify-center text-gray-400">
-        <Shield size={48} className="mb-4 text-gray-300" />
-        <p className="font-semibold text-gray-600">Bạn không có quyền truy cập trang này</p>
-        <Link to="/" className="mt-4 text-indigo-500 hover:underline text-sm">← Về trang chủ</Link>
-      </div>
-    );
-  }
-
   const filtered = useMemo(() => {
     let list = [...issues];
 
@@ -982,6 +971,17 @@ export function ModeratorIssuesPage() {
     filterSeverity !== "all",
     filterAssigned !== "all",
   ].filter(Boolean).length;
+
+  // Access control - MOVE AFTER ALL HOOKS
+  if (!user || (user.role !== "moderator" && user.role !== "admin")) {
+    return (
+      <div className="min-h-screen pt-28 flex flex-col items-center justify-center text-gray-400">
+        <Shield size={48} className="mb-4 text-gray-300" />
+        <p className="font-semibold text-gray-600">Bạn không có quyền truy cập trang này</p>
+        <Link to="/" className="mt-4 text-indigo-500 hover:underline text-sm">← Về trang chủ</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-20 pb-16 bg-gradient-to-br from-slate-50 via-indigo-50/30 to-slate-50">

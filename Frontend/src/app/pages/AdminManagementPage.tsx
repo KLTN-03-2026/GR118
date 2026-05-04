@@ -26,6 +26,10 @@ import {
 } from "lucide-react";
 import { Link, Navigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import { PageTitle } from "../components/PageTitle";
+import { Skeleton, SkeletonCircle, SkeletonText } from "../components/ui/skeleton";
+import { Card } from "../components/ui/card";
+import { Loader2 } from "lucide-react";
 import { CATEGORY_LABELS, CATEGORY_COLORS, STATUS_LABELS, STATUS_COLORS, IssueStatus } from "../data/issues";
 import { useIssues } from "../context/IssuesContext";
 import { toast } from "sonner";
@@ -56,8 +60,62 @@ const SEVERITY_LABELS = {
 };
 
 export function AdminManagementPage() {
-  const { can, isLoading } = useAuth();
+  const { user, isLoading, can } = useAuth();
   const { issues, updateIssue } = useIssues();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50/50 pt-20 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex justify-between items-center mb-8">
+            <div className="space-y-3">
+              <Skeleton width="300px" height="32px" />
+              <Skeleton width="450px" height="16px" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i} className="p-5 border-0 shadow-sm bg-white">
+                <div className="flex items-center gap-4">
+                  <SkeletonCircle size="40px" />
+                  <div className="space-y-2">
+                    <Skeleton width="100px" height="20px" />
+                    <Skeleton width="60px" height="12px" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <Card className="p-6 border-0 shadow-sm bg-white overflow-hidden">
+            <div className="flex gap-4 mb-8">
+              <Skeleton width="300px" height="40px" borderRadius="10px" />
+              <div className="flex gap-2">
+                <Skeleton width="100px" height="40px" borderRadius="10px" />
+                <Skeleton width="100px" height="40px" borderRadius="10px" />
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-6 py-4 border-b border-gray-50">
+                  <Skeleton width="120px" height="16px" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton width="60%" height="16px" />
+                    <Skeleton width="40%" height="12px" />
+                  </div>
+                  <Skeleton width="100px" height="24px" borderRadius="20px" />
+                  <Skeleton width="120px" height="16px" />
+                  <SkeletonCircle size="32px" />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<IssueStatus | "all">("all");
   const [aiFilter, setAiFilter] = useState<"all" | "verified" | "unverified">("all");

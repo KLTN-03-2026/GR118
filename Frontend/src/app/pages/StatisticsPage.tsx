@@ -9,6 +9,7 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { Calendar, TrendingUp, CheckCircle, Clock, AlertCircle, FileText, Filter, Download, BarChart3, RefreshCw, Star, Zap, Inbox, ClipboardList } from "lucide-react";
 import { CATEGORY_LABELS, IssueCategory, STATUS_LABELS, STATUS_COLORS } from "../data/issues";
 import { PageTitle } from "../components/PageTitle";
+import { Skeleton, SkeletonCircle, SkeletonText } from "../components/ui/skeleton";
 
 // Helper component for Stat Cards
 function StatCard({ label, value, change, subtext, icon: Icon, color }: any) {
@@ -62,7 +63,54 @@ export function StatisticsPage() {
     refreshIssues();
   }, [refreshIssues]);
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 md:p-8 pt-20 md:pt-24">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header Skeleton */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-3">
+              <Skeleton width="120px" height="16px" />
+              <Skeleton width="300px" height="36px" />
+              <Skeleton width="200px" height="14px" />
+            </div>
+            <div className="flex gap-3">
+              <Skeleton width="120px" height="40px" borderRadius="10px" />
+              <Skeleton width="100px" height="40px" borderRadius="10px" />
+            </div>
+          </div>
+
+          {/* Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="p-5 border-0 shadow-sm bg-white">
+                <div className="flex justify-between mb-4">
+                  <div className="space-y-2">
+                    <Skeleton width="60px" height="12px" />
+                    <Skeleton width="80px" height="24px" />
+                  </div>
+                  <SkeletonCircle size="36px" />
+                </div>
+                <Skeleton width="100px" height="12px" />
+              </Card>
+            ))}
+          </div>
+
+          {/* Charts Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card className="p-8 border-0 shadow-sm bg-white h-[400px]">
+              <Skeleton width="200px" height="24px" className="mb-8" />
+              <Skeleton width="100%" height="280px" />
+            </Card>
+            <Card className="p-8 border-0 shadow-sm bg-white h-[400px]">
+              <Skeleton width="180px" height="24px" className="mb-8" />
+              <Skeleton width="100%" height="280px" />
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   // Chỉ những ai có quyền xem báo cáo đơn vị mới được truy cập
   if (!user || !can("reports_stats", "read")) {

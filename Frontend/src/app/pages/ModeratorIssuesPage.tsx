@@ -18,6 +18,8 @@ import {
 } from "../data/issues";
 import { PageTitle } from "../components/PageTitle";
 import { toast } from "sonner";
+import { Skeleton, SkeletonCircle, SkeletonText } from "../components/ui/skeleton";
+import { Card } from "../components/ui/card";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -904,7 +906,47 @@ export function ModeratorIssuesPage() {
   const { user, isLoading, can } = useAuth();
   const { issues } = useIssues();
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-20 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex justify-between items-center mb-8">
+            <div className="space-y-2">
+              <Skeleton width="250px" height="32px" />
+              <Skeleton width="400px" height="16px" />
+            </div>
+            <Skeleton width="150px" height="44px" borderRadius="12px" />
+          </div>
+
+          <Card className="p-6 border-0 shadow-sm bg-white overflow-hidden">
+            <div className="flex gap-4 mb-6">
+              <Skeleton width="300px" height="40px" borderRadius="10px" />
+              <Skeleton width="120px" height="40px" borderRadius="10px" />
+              <Skeleton width="120px" height="40px" borderRadius="10px" />
+            </div>
+            
+            <div className="space-y-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4 py-3 border-b border-gray-50">
+                  <Skeleton width="60px" height="24px" />
+                  <div className="flex-1 flex items-center gap-3">
+                    <SkeletonCircle size="40px" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton width="200px" height="16px" />
+                      <Skeleton width="150px" height="12px" />
+                    </div>
+                  </div>
+                  <Skeleton width="100px" height="24px" borderRadius="8px" />
+                  <Skeleton width="80px" height="16px" />
+                  <Skeleton width="100px" height="24px" borderRadius="20px" />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   // Check permission
   if (!user || !can("reports", "manage")) {

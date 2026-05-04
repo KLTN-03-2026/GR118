@@ -27,6 +27,8 @@ import { useActivities } from "../context/ActivitiesContext";
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
 import { PageTitle } from "../components/PageTitle";
+import { Skeleton, SkeletonCircle, SkeletonText } from "../components/ui/skeleton";
+import { Card } from "../components/ui/card";
 import { Activity, Participant } from "../data/activities";
 import { LocationPicker } from "../components/LocationPicker";
 
@@ -40,7 +42,40 @@ export function ModeratorActivitiesPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [search, setSearch] = useState("");
 
-  if (isLoading) return null;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50/50 pt-20 p-4 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="flex justify-between items-center mb-8">
+            <div className="space-y-3">
+              <Skeleton width="300px" height="32px" />
+              <Skeleton width="450px" height="16px" />
+            </div>
+            <Skeleton width="180px" height="44px" borderRadius="12px" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="p-0 border-0 shadow-sm bg-white overflow-hidden">
+                <Skeleton width="100%" height="160px" />
+                <div className="p-5 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <Skeleton width="60%" height="20px" />
+                    <Skeleton width="60px" height="20px" borderRadius="10px" />
+                  </div>
+                  <SkeletonText lines={2} />
+                  <div className="flex justify-between border-t border-gray-50 pt-4">
+                    <Skeleton width="80px" height="12px" />
+                    <Skeleton width="80px" height="12px" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Dynamic permission guard
   if (!user || !can("activities_mgnt", "read")) {

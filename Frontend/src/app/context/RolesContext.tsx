@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { Role } from "../data/roles";
 import { api } from "../../utils/api";
 
@@ -18,7 +18,7 @@ export function RolesProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     try {
       const res = await api.get("/auth/role?limit=200");
       if (res.success && (res.roles || res.data)) {
@@ -45,11 +45,11 @@ export function RolesProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRoles();
-  }, []);
+  }, [fetchRoles]);
 
   const addRole = async (
     roleData: Omit<Role, "id" | "createdAt">

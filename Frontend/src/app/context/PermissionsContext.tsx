@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { Permission, PermissionResource } from "../data/permissions";
 import { api } from "../../utils/api";
 
@@ -90,7 +90,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchPermissions = async () => {
+  const fetchPermissions = useCallback(async () => {
     try {
       // Fetch tất cả permissions — limit=500 để lấy hết
       const res = await api.get("/auth/permissions?limit=500");
@@ -117,11 +117,11 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPermissions();
-  }, []);
+  }, [fetchPermissions]);
 
   const addPermission = async (
     permissionData: Omit<Permission, "id" | "createdAt">

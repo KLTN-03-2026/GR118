@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { Issue, Verification, ProcessingStep } from "../data/issues";
 import { api } from "../../utils/api";
 import { toast } from "sonner";
@@ -34,7 +34,7 @@ function addProcessingStep(issue: Issue, step: Omit<ProcessingStep, "id">): Proc
 export function IssuesProvider({ children }: { children: ReactNode }) {
   const [issues, setIssues] = useState<Issue[]>([]);
 
-  const fetchIssues = async () => {
+  const fetchIssues = useCallback(async () => {
     try {
       const res = await api.get("/issues");
       if (res.success && res.data) {
@@ -47,11 +47,11 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Failed to load issues in context:", error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchIssues();
-  }, []);
+  }, [fetchIssues]);
 
   const addIssue = (issue: Issue) => {
     const normalizedIssue = {

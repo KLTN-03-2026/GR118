@@ -327,3 +327,58 @@ export const logout = async (req: Request, res: Response) => {
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
+
+export const getProfile = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?._id;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+
+        const user = await authModel.findById(userId).lean();
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // Lấy danh sách roleId từ bảng user_roles
+        const roleIds = await userRepo.GetRoleIDsByUserID(userId.toString());
+        
+        // Tìm thông tin vai trò để lấy tên vai trò chính
+        const validObjectIds = roleIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+        const roleDocs = await roleSchema.find({
+            $or: [
+                { role_id: { $in: roleIds } },
+                { _id: { $in: validObjectIds } }
+            ]
+        }).lean();
+
+        const primaryRole = user.role || (roleDocs.length > 0 ? roleDocs[0].name.toLowerCase() : "user");
+        const primaryRoleId = roleIds[0] || null;
+
+        // Lấy danh sách quyền hạn mới nhất
+        const permissions = await permissionRepo.getUserPermissions(roleIds);
+
+        return res.status(200).json({
+            success: true,
+            user: {
+                _id: user._id,
+                userName: user.userName,
+                email: user.email,
+                role: primaryRole,
+                roleId: primaryRoleId,
+                permissions: permissions,
+                phone: user.phone,
+                city: user.city,
+                avatar: user.avatar,
+                createdAt: user.createdAt,
+                reportsCount: user.reportsCount,
+                resolvedCount: user.resolvedCount,
+                lockEnd: user.lockEnd,
+                lockReason: user.lockReason
+            }
+        });
+    } catch (error) {
+        console.error("GetProfile error:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+}

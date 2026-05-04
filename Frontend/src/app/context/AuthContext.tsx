@@ -64,16 +64,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(CURRENT_USER_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setUser(parsed);
+    const initAuth = async () => {
+      try {
+        const stored = localStorage.getItem(CURRENT_USER_KEY);
+        const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+
+        if (stored && token) {
+          // 1. Tạm thời load từ local để UX mượt mà
+          const parsed = JSON.parse(stored);
+          setUser(parsed);
+
+          // 2. Gọi API đồng bộ quyền mới nhất từ server
+          const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+            headers: { 
+              "Authorization": `Bearer ${token}` 
+            },
+            credentials: "include"
+          });
+
+          if (res.ok) {
+            const result = await res.json();
+            if (result.success) {
+              const beUser = result.user;
+              const updatedUserData: User = {
+                id: beUser._id,
+                name: beUser.userName,
+                email: beUser.email,
+                phone: beUser.phone,
+                city: beUser.city,
+                avatar: beUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(beUser.userName)}`,
+                joinedAt: beUser.createdAt || new Date().toISOString(),
+                reportsCount: beUser.reportsCount || 0,
+                resolvedCount: beUser.resolvedCount || 0,
+                role: beUser.role || "user",
+                roleId: beUser.roleId,
+                permissions: beUser.permissions || {},
+                banned: beUser.lockEnd && new Date(beUser.lockEnd) > new Date() ? true : false,
+                banReason: beUser.lockReason
+              };
+              
+              setUser(updatedUserData);
+              localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUserData));
+              console.log("[AuthContext] Permissions synced from server");
+            }
+          } else if (res.status === 401) {
+            // Token hết hạn hoặc không hợp lệ
+            logout();
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load user from storage or sync with server", e);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e) {
-      console.error("Failed to load user from storage", e);
-    }
-    setIsLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {

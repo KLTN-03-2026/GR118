@@ -56,14 +56,16 @@ function StatCard({ label, value, change, subtext, icon: Icon, color }: any) {
 
 export function StatisticsPage() {
   const { issues, refreshIssues } = useIssues();
-  const { can, user } = useAuth();
+  const { can, user, isLoading } = useAuth();
 
   useEffect(() => {
     refreshIssues();
   }, [refreshIssues]);
+
+  if (isLoading) return null;
   
   // Chỉ những ai có quyền xem báo cáo đơn vị mới được truy cập
-  if (!can("reports_stats", "read")) {
+  if (!user || !can("reports_stats", "read")) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-8">
         <div className="max-w-4xl mx-auto">

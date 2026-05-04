@@ -56,7 +56,7 @@ const SEVERITY_LABELS = {
 };
 
 export function AdminManagementPage() {
-  const { can } = useAuth();
+  const { can, isLoading } = useAuth();
   const { issues, updateIssue } = useIssues();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<IssueStatus | "all">("all");
@@ -69,6 +69,8 @@ export function AdminManagementPage() {
   useEffect(() => {
     refreshIssues();
   }, [refreshIssues]);
+
+  if (isLoading) return null;
 
   if (!can("issues_mgnt", "read")) {
     return <Navigate to="/" replace />;

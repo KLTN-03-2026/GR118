@@ -901,8 +901,23 @@ const ALL_STATUSES: IssueStatus[] = ["pending", "received", "processing", "need_
 const ALL_CATEGORIES: IssueCategory[] = ["road", "garbage", "lighting", "flood", "noise", "other"];
 
 export function ModeratorIssuesPage() {
-  const { user } = useAuth();
+  const { user, isLoading, can } = useAuth();
   const { issues } = useIssues();
+
+  if (isLoading) return null;
+
+  // Check permission
+  if (!user || !can("reports", "manage")) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Shield className="h-12 w-12 text-red-500 mx-auto mb-3" />
+          <h2 className="text-xl font-bold text-gray-900">Không có quyền truy cập</h2>
+          <p className="text-gray-500 mt-1">Bạn không có quyền quản lý báo cáo.</p>
+        </div>
+      </div>
+    );
+  }
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<IssueStatus | "all">("all");

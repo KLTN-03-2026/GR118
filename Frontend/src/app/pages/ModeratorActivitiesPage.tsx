@@ -31,7 +31,7 @@ import { Activity, Participant } from "../data/activities";
 import { LocationPicker } from "../components/LocationPicker";
 
 export function ModeratorActivitiesPage() {
-  const { user, can } = useAuth();
+  const { user, can, isLoading } = useAuth();
   const { activities, addActivity, updateActivity, deleteActivity, getActivityParticipants } =
     useActivities();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -40,8 +40,22 @@ export function ModeratorActivitiesPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [search, setSearch] = useState("");
 
+  if (isLoading) return null;
 
-  const myActivities = activities.filter((a) => a.creatorId === user?.id);
+  // Dynamic permission guard
+  if (!user || !can("activities_mgnt", "read")) {
+    return (
+      <div className="min-h-screen pt-28 flex flex-col items-center justify-center text-gray-400">
+        <AlertCircle size={48} className="mb-4" />
+        <p className="text-lg font-medium">Bạn không có quyền quản lý hoạt động tình nguyện</p>
+        <Link to="/" className="mt-4 text-green-500 hover:underline">
+          ← Về trang chủ
+        </Link>
+      </div>
+    );
+  }
+
+  const myActivities = activities.filter((a) => a.creatorId === user.id);
 
   const filtered = useMemo(() => {
     let list = [...myActivities];
@@ -54,19 +68,6 @@ export function ModeratorActivitiesPage() {
     }
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [myActivities, search]);
-
-  // Dynamic permission guard (moved after hooks)
-  if (!can("activities_mgnt", "read")) {
-    return (
-      <div className="min-h-screen pt-28 flex flex-col items-center justify-center text-gray-400">
-        <AlertCircle size={48} className="mb-4" />
-        <p className="text-lg font-medium">Bạn không có quyền quản lý hoạt động tình nguyện</p>
-        <Link to="/" className="mt-4 text-green-500 hover:underline">
-          ← Về trang chủ
-        </Link>
-      </div>
-    );
-  }
 
   const handleToggleRegistration = (activity: Activity) => {
     updateActivity(activity.id, { registrationOpen: !activity.registrationOpen });

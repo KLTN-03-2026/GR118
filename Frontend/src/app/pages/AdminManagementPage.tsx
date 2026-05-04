@@ -78,7 +78,8 @@ export function AdminManagementPage() {
     const matchesSearch =
       issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       issue.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      issue.reporterName.toLowerCase().includes(searchQuery.toLowerCase());
+      issue.reporterName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (issue.issueCode && issue.issueCode.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus = statusFilter === "all" || issue.status === statusFilter;
     const matchesAi = aiFilter === "all" || (aiFilter === "verified" ? issue.aiVerified : !issue.aiVerified);
     return matchesSearch && matchesStatus && matchesAi;
@@ -554,7 +555,7 @@ export function AdminManagementPage() {
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="font-mono text-sm font-semibold text-gray-900">
-                            #VN{issue.id.padStart(6, "0")}
+                            #{issue.issueCode || issue.id.slice(-6).toUpperCase()}
                           </span>
                         </td>
                         <td className="px-6 py-4">

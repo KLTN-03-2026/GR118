@@ -359,7 +359,7 @@ export function IssueDetailPage() {
               <h3 className="font-bold text-gray-900 mb-4">Thông tin</h3>
               <div className="space-y-3 text-sm">
                 {[
-                  { label: "Mã báo cáo", value: `#VN${issue.id.padStart(6, "0")}` },
+                  { label: "Mã báo cáo", value: `#${issue.issueCode || issue.id.slice(-6).toUpperCase()}` },
                   { label: "Danh mục", value: CATEGORY_LABELS[issue.category] },
                   { label: "Phường/Xã", value: issue.ward },
                   { label: "Quận/Huyện", value: issue.district },

@@ -753,6 +753,12 @@ function IssueDetailModal({
                 {/* Meta */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-400 mb-0.5">Mã báo cáo</p>
+                    <p className="text-sm font-semibold text-gray-800 flex items-center gap-1">
+                      <FileText size={12} className="text-gray-400" /> #{liveIssue.issueCode || liveIssue.id.slice(-6).toUpperCase()}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3">
                     <p className="text-xs text-gray-400 mb-0.5">Người báo cáo</p>
                     <p className="text-sm font-semibold text-gray-800 flex items-center gap-1">
                       <User size={12} className="text-gray-400" /> {liveIssue.reporterName}
@@ -928,7 +934,8 @@ export function ModeratorIssuesPage() {
           i.title.toLowerCase().includes(q) ||
           i.location.toLowerCase().includes(q) ||
           i.district.toLowerCase().includes(q) ||
-          i.reporterName.toLowerCase().includes(q)
+          i.reporterName.toLowerCase().includes(q) ||
+          (i.issueCode && i.issueCode.toLowerCase().includes(q))
       );
     }
 

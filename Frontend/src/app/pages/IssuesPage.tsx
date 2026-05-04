@@ -22,7 +22,8 @@ export function IssuesPage() {
         (i) =>
           i.title.toLowerCase().includes(search.toLowerCase()) ||
           i.description.toLowerCase().includes(search.toLowerCase()) ||
-          i.location.toLowerCase().includes(search.toLowerCase())
+          i.location.toLowerCase().includes(search.toLowerCase()) ||
+          (i.issueCode && i.issueCode.toLowerCase().includes(search.toLowerCase()))
       );
     }
     if (categoryFilter !== "all") list = list.filter((i) => i.category === categoryFilter);

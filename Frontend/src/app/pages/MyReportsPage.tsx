@@ -372,7 +372,7 @@ export function MyReportsPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <span className="font-mono text-xs font-semibold text-gray-500">
-                              #VN{(issue.id || "").toString().padStart(6, "0").slice(-6)}
+                              #{issue.issueCode || issue.id.slice(-6).toUpperCase()}
                             </span>
                             <span
                               className="px-2 py-0.5 rounded-full text-xs font-semibold text-white"

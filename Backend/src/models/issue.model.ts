@@ -57,6 +57,7 @@ export interface ProcessingStep {
 }
 
 export interface IIssue extends Document {
+  issueCode?: string; // e.g. VN001
   title: string;
   description: string;
   category: "road" | "garbage" | "lighting" | "flood" | "noise" | "other";
@@ -150,6 +151,7 @@ const ProcessingStepSchema = new Schema<ProcessingStep>({
 });
 
 const IssueSchema: Schema = new Schema({
+  issueCode: { type: String, unique: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
   category: { type: String, enum: ["road", "garbage", "lighting", "flood", "noise", "other"], required: true },
@@ -187,5 +189,26 @@ const IssueSchema: Schema = new Schema({
   completionEvidence: [{ type: String }],
   processingHistory: [ProcessingStepSchema]
 }, { timestamps: true });
+
+import Counter from "./counter.model";
+
+IssueSchema.pre<IIssue>("save", async function() {
+  if (!this.issueCode) {
+    try {
+      const counter = await Counter.findOneAndUpdate(
+        { id: "issueCode" },
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+      );
+      if (counter) {
+        const seqStr = counter.seq.toString().padStart(3, "0");
+        this.issueCode = `VN${seqStr}`;
+      }
+    } catch (error) {
+      console.error("Error generating issueCode:", error);
+      throw error;
+    }
+  }
+});
 
 export default mongoose.model<IIssue>("Issue", IssueSchema);

@@ -53,6 +53,7 @@ export interface Comment {
 
 export interface Issue {
   id: string;
+  issueCode?: string;
   title: string;
   description: string;
   category: IssueCategory;

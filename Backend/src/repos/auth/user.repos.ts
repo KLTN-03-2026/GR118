@@ -203,17 +203,56 @@ export const getUsers = async (search: string) => {
     if (search) {
         query.$or = [
             { userName: { $regex: search, $options: "i" } },
-            { email: { $regex: search, $options: "i" } }
+            { email: { $regex: search, $options: "i" } },
+            { name: { $regex: search, $options: "i" } }
         ];
     }
 
-    const users = await authSchema.find(query).lean();
-
+    const users = await authSchema.find(query).sort({ createdAt: -1 }).lean();
     const total = await authSchema.countDocuments(query);
 
-    return {
-        users,
-        total
+    // Aggregate report counts from Issue collection
+    try {
+        const Issue = mongoose.model("Issue");
+        const userIds = users.map(u => u._id.toString());
+
+        // Count reports submitted by users
+        const reportCounts = await Issue.aggregate([
+            { $match: { reporterId: { $in: userIds } } },
+            { $group: { _id: "$reporterId", count: { $sum: 1 } } }
+        ]);
+
+        // Count reports assigned to/resolved by moderators/admins
+        const assignedCounts = await Issue.aggregate([
+            { $match: { assignedTo: { $in: userIds } } },
+            { $group: { 
+                _id: "$assignedTo", 
+                totalAssigned: { $sum: 1 },
+                resolvedCount: { $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] } }
+            } }
+        ]);
+
+        const reportMap = new Map(reportCounts.map(i => [i._id, i.count]));
+        const assignedMap = new Map(assignedCounts.map(i => [i._id, i]));
+
+        const usersWithStats = users.map((u: any) => {
+            const uid = u._id.toString();
+            const isStaff = u.role === "admin" || u.role === "moderator" || u.role === "cán bộ";
+            
+            return {
+                ...u,
+                reportsCount: isStaff ? (assignedMap.get(uid)?.totalAssigned || 0) : (reportMap.get(uid) || 0),
+                resolvedCount: assignedMap.get(uid)?.resolvedCount || 0
+            };
+        });
+
+        return {
+            users: usersWithStats,
+            total
+        };
+    } catch (error) {
+        console.error("[getUsers] Aggregation error:", error);
+        return { users, total };
     }
 }
 

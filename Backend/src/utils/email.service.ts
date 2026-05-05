@@ -9,6 +9,7 @@ const transporter = nodemailer.createTransport({
   port: 465,
   secure: true, // true for 465, false for other ports
   pool: true,   // use pooled connections
+  family: 4,    // force IPv4 to avoid IPv6 issues on Render
   auth: {
     user: process.env.GMAIL_USER,
     pass: sanitizedGmailPass,
@@ -16,6 +17,8 @@ const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false
   },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
   logger: true,
   debug: true
 });

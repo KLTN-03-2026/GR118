@@ -15,6 +15,7 @@ const transporter = nodemailer.createTransport({
 } as any);
 
 export async function sendOtpEmail(toEmail: string, otp: string, type: "register" | "reset" | "login"): Promise<void> {
+  console.log(`[Email Service] Starting background dispatch of OTP to ${toEmail}...`);
   const subjects: Record<string, string> = {
     register: "🎉 Xác thực tài khoản BáoCáoVN",
     reset: "🔐 Khôi phục mật khẩu BáoCáoVN",
@@ -97,6 +98,7 @@ export async function sendOtpEmail(toEmail: string, otp: string, type: "register
 }
 
 export async function sendAccountCreationEmail(toEmail: string, userName: string, password: string): Promise<void> {
+  console.log(`[Email Service] Starting background dispatch of Credentials to ${toEmail}...`);
   const html = `
 <!DOCTYPE html>
 <html>

@@ -26,6 +26,8 @@ export const syncUserPrimaryRole = async (userId: string, session?: mongoose.Cli
     const roleId = userRoles[0].role_id;
     
     // Tìm kiếm thông minh: hỗ trợ cả _id và role_id
+    console.log(`[SyncRole] Found ${userRoles.length} roles for user ${userId}. Primary role ID: ${roleId}`);
+
     const query: any = { $or: [{ role_id: roleId }] };
     if (mongoose.Types.ObjectId.isValid(roleId)) {
         query.$or.push({ _id: new mongoose.Types.ObjectId(roleId) });
@@ -34,7 +36,10 @@ export const syncUserPrimaryRole = async (userId: string, session?: mongoose.Cli
     const roleDoc = await roleSchema.findOne(query).session(session || null).lean();
     
     if (roleDoc) {
+        console.log(`[SyncRole] Updating user ${userId} primary role field in Auth to: "${roleDoc.name}"`);
         await authSchema.findByIdAndUpdate(userId, { role: roleDoc.name }, { session: session || null });
+    } else {
+        console.warn(`[SyncRole] WARNING: Role document not found for ID ${roleId}`);
     }
 }
 
@@ -62,29 +67,16 @@ export const assignRoleToUser = async (
         throw new Error("roleIds must be an array");
     }
 
-    const existing = await userRoleSchema.find({
-        user_id: userId
-    }).lean();
-
-    const existingRoleIds = existing.map(r => r.role_id);
-
-    const toAdd = roleIds.filter(r => !existingRoleIds.includes(r));
-    const toRemove = existingRoleIds.filter(r => !roleIds.includes(r));
-
-    if (toAdd.length > 0) {
-        const data = toAdd.map(roleId => ({
-            user_id: userId,
-            role_id: roleId
-        }));
-
-        await userRoleSchema.insertMany(data, { session: session || null });
-    }
-
-    if (toRemove.length > 0) {
-        await userRoleSchema.deleteMany({
-            user_id: userId,
-            role_id: { $in: toRemove }
-        }, session ? { session } : undefined);
+    console.log(`[Role] Assigning roles [${roleIds.join(', ')}] to user ${userId}`);
+    await userRoleSchema.deleteMany({ user_id: userId }).session(session || null);
+    
+    if (roleIds.length > 0) {
+        await userRoleSchema.insertMany(
+            roleIds.map(roleId => ({
+                user_id: userId,
+                role_id: roleId
+            }))
+        );
     }
 
     await syncUserPrimaryRole(userId, session);

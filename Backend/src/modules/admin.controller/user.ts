@@ -133,15 +133,11 @@ export const CreateNewUser = async (req: Request, res: Response, next: NextFunct
 
         const responseData = UserMapper.toUserResponse(result.data.user, result.data.roles);
 
-        // Send email with credentials
-        try {
-            console.log(`[Email] Attempting to send credentials to ${email}...`);
-            await sendAccountCreationEmail(email, userName, password);
-            console.log(`[Email] Credentials sent successfully to ${email}`);
-        } catch (emailErr: any) {
-            console.error(`[Email] Failed to send account creation email to ${email}:`, emailErr.message || emailErr);
-            // We don't block the response even if email fails, but we log it
-        }
+        // Send email with credentials - DO NOT AWAIT to keep response fast
+        sendAccountCreationEmail(email, userName, password).catch(emailErr => {
+            console.error(`[Email] Background failure sending to ${email}:`, emailErr.message || emailErr);
+        });
+        console.log(`[Email] Dispatching credentials to ${email} in background...`);
 
         return res.status(201).json({
             success: true,

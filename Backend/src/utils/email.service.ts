@@ -1,28 +1,75 @@
 import nodemailer from "nodemailer";
 
 /**
- * Dịch vụ gửi Email quay lại sử dụng Gmail SMTP theo yêu cầu của người dùng
+ * Dịch vụ gửi Email sử dụng Brevo API (Giải pháp duy nhất hoạt động trên Render vì không bị chặn cổng)
  */
 
-const GMAIL_USER = process.env.GMAIL_USER || "thaibc14@gmail.com";
-const GMAIL_PASS = (process.env.GMAIL_APP_PASSWORD || "lsgf jjoq kgrk jhsi").replace(/\s/g, "");
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const SENDER_EMAIL = process.env.GMAIL_USER || "thaibc14@gmail.com";
 
-console.log(`[Email Service] Provider: GMAIL SMTP`);
-console.log(`[Email Service] GMAIL_USER: ${GMAIL_USER}`);
-console.log(`[Email Service] GMAIL_APP_PASSWORD: ${GMAIL_PASS.length} chars`);
+console.log(`[Email Service] Provider: BREVO API (Reliable on Render)`);
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: GMAIL_USER,
-    pass: GMAIL_PASS,
-  },
-  // Thêm các tùy chọn để tăng khả năng kết nối trên môi trường bị hạn chế
-  pool: true,
-  maxConnections: 3,
-  socketTimeout: 30000,
-  connectionTimeout: 30000,
-} as any);
+/**
+ * Hàm gửi mail lõi qua Brevo API
+ */
+async function sendEmailViaBrevo(to: string, subject: string, htmlContent: string): Promise<boolean> {
+  let apiKey = BREVO_API_KEY;
+
+  // Tự động xử lý nếu người dùng dán nhầm đoạn mã JSON Base64
+  if (apiKey && apiKey.startsWith("eyJ")) {
+    try {
+      const decoded = Buffer.from(apiKey, "base64").toString("utf-8");
+      const parsed = JSON.parse(decoded);
+      if (parsed.api_key) {
+        apiKey = parsed.api_key;
+        console.log("[Email Service] Auto-decoded API Key from Base64 JSON.");
+      }
+    } catch (e) {
+      // Keep original if not JSON
+    }
+  }
+
+  if (!apiKey) {
+    console.error("[Email Service] ERROR: BREVO_API_KEY is not defined in environment variables.");
+    return false;
+  }
+
+  const cleanApiKey = apiKey.trim();
+  console.log(`[Email Service] Sending via Brevo: From=${SENDER_EMAIL} To=${to} Subject="${subject}"`);
+
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": cleanApiKey,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        sender: {
+          name: "Hệ thống BáoCáoVN",
+          email: SENDER_EMAIL
+        },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: htmlContent
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json() as any;
+      console.log(`[Email Service] ACTUAL SUCCESS: Email sent to ${to}. MessageId: ${data.messageId || 'OK'}`);
+      return true;
+    } else {
+      const errorData = await response.json() as any;
+      console.error(`[Email Service] Brevo API Error:`, JSON.stringify(errorData));
+      return false;
+    }
+  } catch (error: any) {
+    console.error(`[Email Service] Connection error to Brevo API:`, error.message || error);
+    return false;
+  }
+}
 
 export async function sendOtpEmail(toEmail: string, otp: string, type: "register" | "reset" | "login"): Promise<void> {
   console.log(`[Email Service] Starting background dispatch of OTP to ${toEmail}...`);
@@ -92,17 +139,10 @@ export async function sendOtpEmail(toEmail: string, otp: string, type: "register
 </html>
   `;
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"Hệ thống BáoCáoVN" <${GMAIL_USER}>`,
-      to: toEmail,
-      subject: subjects[type],
-      html,
-    });
-    console.log(`[Email Service] ACTUAL SUCCESS: OTP sent to ${toEmail}. MessageId: ${info.messageId}`);
-  } catch (error: any) {
-    console.error(`[Email Service] Failed to send OTP to ${toEmail} via Gmail SMTP.`);
-    console.error(`[Email Service] Error details: ${error.message}`);
+  const success = await sendEmailViaBrevo(toEmail, subjects[type], html);
+  
+  if (!success) {
+    console.error(`[Email Service] Failed to send OTP to ${toEmail}. Printing to log instead.`);
     console.log(`\n************************************************\n[BACKUP LOG] OTP Code for ${toEmail}: ${otp} (Type: ${type})\n************************************************\n`);
   }
 }
@@ -169,17 +209,10 @@ export async function sendAccountCreationEmail(toEmail: string, userName: string
 </html>
   `;
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"Hệ thống BáoCáoVN" <${GMAIL_USER}>`,
-      to: toEmail,
-      subject: "🚀 Tài khoản BáoCáoVN của bạn đã sẵn sàng",
-      html,
-    });
-    console.log(`[Email Service] ACTUAL SUCCESS: Credentials sent to ${toEmail}. MessageId: ${info.messageId}`);
-  } catch (error: any) {
-    console.error(`[Email Service] Failed to send credentials to ${toEmail} via Gmail SMTP.`);
-    console.error(`[Email Service] Error details: ${error.message}`);
+  const success = await sendEmailViaBrevo(toEmail, "🚀 Tài khoản BáoCáoVN của bạn đã sẵn sàng", html);
+
+  if (!success) {
+    console.error(`[Email Service] Failed to send credentials to ${toEmail}. Printing to log instead.`);
     console.log(`\n************************************************\n[BACKUP LOG] ACCOUNT CREATED\nUser: ${userName}\nPassword: ${password}\nEmail: ${toEmail}\n************************************************\n`);
   }
 }

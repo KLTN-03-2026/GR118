@@ -135,9 +135,11 @@ export const CreateNewUser = async (req: Request, res: Response, next: NextFunct
 
         // Send email with credentials
         try {
+            console.log(`[Email] Attempting to send credentials to ${email}...`);
             await sendAccountCreationEmail(email, userName, password);
-        } catch (emailErr) {
-            console.error("Failed to send account creation email:", emailErr);
+            console.log(`[Email] Credentials sent successfully to ${email}`);
+        } catch (emailErr: any) {
+            console.error(`[Email] Failed to send account creation email to ${email}:`, emailErr.message || emailErr);
             // We don't block the response even if email fails, but we log it
         }
 

@@ -24,32 +24,32 @@ router.post("/otp/send", authLimiter, sendOtp);
 router.post("/otp/verify", authLimiter, verifyOtp);
 router.post("/otp/reset-password", authLimiter, resetPasswordWithOtp);
 router.get("/seed", SeedDemoData);
-router.post("/assign-roles", AssignRoleToUser);
-router.post("/users", CreateNewUser);
-router.get("/users", GetUsers);
-router.get("/users/:id", GetUserById);
-router.patch("/users/:id", UpdateUser);
-router.post("/users/lockOrUnlock/:id", LockOrUnlockUser);
-router.delete("/users", DeleteUser); // Support ?id=...
-router.delete("/users/:id", DeleteUser); // Support /:id
+router.post("/assign-roles", isAuthenticated, AssignRoleToUser);
+router.post("/users", isAuthenticated, CreateNewUser);
+router.get("/users", isAuthenticated, GetUsers);
+router.get("/users/:id", isAuthenticated, GetUserById);
+router.patch("/users/:id", isAuthenticated, UpdateUser);
+router.post("/users/lockOrUnlock/:id", isAuthenticated, LockOrUnlockUser);
+router.delete("/users", isAuthenticated, DeleteUser); // Support ?id=...
+router.delete("/users/:id", isAuthenticated, DeleteUser); // Support /:id
 
 // permission
-router.post("/permissions", UpsertPermission);
-router.get("/permissions", GetPermissions);
+router.post("/permissions", isAuthenticated, UpsertPermission);
+router.get("/permissions", isAuthenticated, GetPermissions);
 // ⚠️  Specific paths MUST come before /:id — otherwise Express treats 'action'/'resources' as the id param
-router.get("/permissions/action", GetActions);
-router.get("/permissions/resources", GetResources);
-router.get("/permissions/:id", GetPermission);
-router.delete("/permissions/:id", DeletePermission);
+router.get("/permissions/action", isAuthenticated, GetActions);
+router.get("/permissions/resources", isAuthenticated, GetResources);
+router.get("/permissions/:id", isAuthenticated, GetPermission);
+router.delete("/permissions/:id", isAuthenticated, DeletePermission);
 
 
 
 //role
-router.post("/role", UpsertRole);
-router.get("/role", GetRoles);
-router.get("/role/:id", GetRoleById);
-router.delete("/role", DeleteRole);
-router.patch("/role", UpdateRole);
+router.post("/role", isAuthenticated, UpsertRole);
+router.get("/role", isAuthenticated, GetRoles);
+router.get("/role/:id", isAuthenticated, GetRoleById);
+router.delete("/role", isAuthenticated, DeleteRole);
+router.patch("/role", isAuthenticated, UpdateRole);
 
 
 // router

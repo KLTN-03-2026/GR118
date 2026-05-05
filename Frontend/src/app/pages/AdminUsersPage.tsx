@@ -149,29 +149,23 @@ function CreateAccountModal({
     const randomPassword = Math.random().toString(36).slice(-10) + Math.floor(Math.random() * 10);
 
     try {
-      const res = await fetch(`${API_BASE}/auth/users`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          userName: form.userName.trim(),
-          fullName: form.name.trim(),
-          email: form.email.trim().toLowerCase(),
-          password: randomPassword,
-          roleIds: [form.roleId],
-          sendEmail: true,
-          forcePasswordChange: true
-        }),
+      const res = await api.post("/auth/users", {
+        userName: form.userName.trim(),
+        fullName: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: randomPassword,
+        roleIds: [form.roleId],
+        sendEmail: true,
+        forcePasswordChange: true
       });
-      const contentType = res.headers.get("content-type");
-      const data = contentType && contentType.includes("application/json") ? await res.json() : await res.text();
       
-      if (!res.ok) {
-        toast.error((typeof data === "object" ? data.message : data) || "Tạo tài khoản thất bại");
+      if (!res.success) {
+        toast.error(res.message || "Tạo tài khoản thất bại");
         return;
       }
       
-      const userData = typeof data === "object" ? data.user || data : {};
+      const data = res.data || res;
+      const userData = data.user || data;
       const newUser: User & { password: string } = {
         id: userData._id || userData.id || Math.random().toString(36).substr(2, 9),
         name: userData.userName || form.name.trim(),
@@ -186,8 +180,8 @@ function CreateAccountModal({
         role: roleName as "admin" | "moderator" | "user",
       };
 
-      setUsers([newUser, ...users]);
-      setAddModalOpen(false);
+      onCreated(newUser);
+      onClose();
       setForm({ name: "", userName: "", email: "", phone: "", city: "Thành phố Đà Nẵng", roleId: "" });
       toast.success(`✅ Đã tạo tài khoản ${roleName} và gửi thông tin qua email: ${newUser.email}`);
     } catch (err) {

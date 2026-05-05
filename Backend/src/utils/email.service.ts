@@ -37,6 +37,8 @@ async function sendEmailViaBrevo(to: string, subject: string, htmlContent: strin
 
   const cleanApiKey = apiKey.trim();
 
+  console.log(`[Email Service] Sending via Brevo: From=${SENDER_EMAIL} To=${to} Subject="${subject}"`);
+
   try {
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",

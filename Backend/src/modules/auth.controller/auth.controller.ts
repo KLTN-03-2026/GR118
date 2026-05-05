@@ -231,6 +231,8 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
             .json({
                 success: true,
                 message: `Welcome back ${user.userName}`,
+                accessToken,
+                refreshToken,
                 user: {
                     _id: user._id,
                     userName: user.userName,

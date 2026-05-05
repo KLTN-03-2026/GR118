@@ -384,3 +384,32 @@ export const getProfile = async (req: Request, res: Response) => {
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
+
+ e x p o r t   c o n s t   T e s t E m a i l   =   a s y n c   ( r e q :   a n y ,   r e s :   a n y )   = >   { 
+         c o n s t   {   e m a i l   }   =   r e q . q u e r y ; 
+         i f   ( ! e m a i l )   r e t u r n   r e s . s t a t u s ( 4 0 0 ) . j s o n ( {   s u c c e s s :   f a l s e ,   m e s s a g e :   \  
+ E m a i l  
+ q u e r y  
+ p a r a m  
+ i s  
+ r e q u i r e d \   } ) ; 
+ 
+         t r y   { 
+                 c o n s t   {   s e n d O t p E m a i l   }   =   r e q u i r e ( \ . . / . . / u t i l s / e m a i l . s e r v i c e \ ) ; 
+                 a w a i t   s e n d O t p E m a i l ( e m a i l   a s   s t r i n g ,   \ 1 2 3 4 5 6 \ ,   \ l o g i n \ ) ; 
+                 r e t u r n   r e s . s t a t u s ( 2 0 0 ) . j s o n ( {   s u c c e s s :   t r u e ,   m e s s a g e :   \ E m a i l  
+ t e s t  
+ d i s p a t c h  
+ i n i t i a t e d .  
+ C h e c k  
+ s e r v e r  
+ l o g s  
+ a n d  
+ y o u r  
+ i n b o x / s p a m . \   } ) ; 
+         }   c a t c h   ( e r r o r )   { 
+                 r e t u r n   r e s . s t a t u s ( 5 0 0 ) . j s o n ( {   s u c c e s s :   f a l s e ,   m e s s a g e :   e r r o r   i n s t a n c e o f   E r r o r   ?   e r r o r . m e s s a g e   :   \ T e s t  
+ f a i l e d \   } ) ; 
+         } 
+ } ;  
+ 

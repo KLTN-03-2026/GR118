@@ -2,16 +2,13 @@ import { Request, Response } from 'express';
 import authModel from '../../models/auth.model';
 import bcrypt from "bcrypt";
 import otpModel from "../../models/otp.model";
-
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
 import { OAuth2Client } from 'google-auth-library';
 import roleSchema from '../../models/auth/roles';
 import { ROLES } from '../../constant/role';
 import { userRepo, authRepo, permissionRepo } from "../../repos/index";
 import { generateTokens } from '../../utils/jwt';
 import mongoose from 'mongoose';
-
 
 const secret = process.env.SECRET_KEY;
 const refreshSecret = process.env.JWT_REFRESH_SECRET;
@@ -22,7 +19,6 @@ if (!refreshSecret) {
     throw new Error("Thiếu biến môi trường JWT_REFRESH_SECRET!");
 }
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
-
 const client = new OAuth2Client(googleClientId);
 
 export const register = async (req: Request, res: Response) => {
@@ -71,7 +67,6 @@ export const register = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error("Register error:", error);
         
-        // Trả về lỗi cụ thể nếu do logic nghiệp vụ
         const businessErrors = [
             "Vui lòng xác thực email bằng mã OTP trước khi đăng ký",
             "This email or username is already registered",
@@ -119,7 +114,6 @@ export const login = async (req: Request, res: Response) => {
             });
         }
         
-        // Filter valid ObjectIds for the _id query part
         const validRoleObjectIds = roleIds.filter(id => id && mongoose.Types.ObjectId.isValid(id));
 
         const roleRes = await roleSchema.find({ 
@@ -202,7 +196,6 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
         }
 
         const roleIds = await userRepo.GetRoleIDsByUserID(user._id.toString());
-        // Filter valid ObjectIds for the _id query part
         const validRoleObjectIds = roleIds.filter(id => id && mongoose.Types.ObjectId.isValid(id));
 
         const roleRes = await roleSchema.find({ 
@@ -342,10 +335,7 @@ export const getProfile = async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
-        // Lấy danh sách roleId từ bảng user_roles
         const roleIds = await userRepo.GetRoleIDsByUserID(userId.toString());
-        
-        // Tìm thông tin vai trò để lấy tên vai trò chính
         const validObjectIds = roleIds.filter(id => mongoose.Types.ObjectId.isValid(id));
         const roleDocs = await roleSchema.find({
             $or: [
@@ -357,7 +347,6 @@ export const getProfile = async (req: Request, res: Response) => {
         const primaryRole = user.role || (roleDocs.length > 0 ? roleDocs[0].name.toLowerCase() : "user");
         const primaryRoleId = roleIds[0] || null;
 
-        // Lấy danh sách quyền hạn mới nhất
         const permissions = await permissionRepo.getUserPermissions(roleIds);
 
         return res.status(200).json({
@@ -385,31 +374,15 @@ export const getProfile = async (req: Request, res: Response) => {
     }
 }
 
- e x p o r t   c o n s t   T e s t E m a i l   =   a s y n c   ( r e q :   a n y ,   r e s :   a n y )   = >   { 
-         c o n s t   {   e m a i l   }   =   r e q . q u e r y ; 
-         i f   ( ! e m a i l )   r e t u r n   r e s . s t a t u s ( 4 0 0 ) . j s o n ( {   s u c c e s s :   f a l s e ,   m e s s a g e :   \  
- E m a i l  
- q u e r y  
- p a r a m  
- i s  
- r e q u i r e d \   } ) ; 
- 
-         t r y   { 
-                 c o n s t   {   s e n d O t p E m a i l   }   =   r e q u i r e ( \ . . / . . / u t i l s / e m a i l . s e r v i c e \ ) ; 
-                 a w a i t   s e n d O t p E m a i l ( e m a i l   a s   s t r i n g ,   \ 1 2 3 4 5 6 \ ,   \ l o g i n \ ) ; 
-                 r e t u r n   r e s . s t a t u s ( 2 0 0 ) . j s o n ( {   s u c c e s s :   t r u e ,   m e s s a g e :   \ E m a i l  
- t e s t  
- d i s p a t c h  
- i n i t i a t e d .  
- C h e c k  
- s e r v e r  
- l o g s  
- a n d  
- y o u r  
- i n b o x / s p a m . \   } ) ; 
-         }   c a t c h   ( e r r o r )   { 
-                 r e t u r n   r e s . s t a t u s ( 5 0 0 ) . j s o n ( {   s u c c e s s :   f a l s e ,   m e s s a g e :   e r r o r   i n s t a n c e o f   E r r o r   ?   e r r o r . m e s s a g e   :   \ T e s t  
- f a i l e d \   } ) ; 
-         } 
- } ;  
- 
+export const TestEmail = async (req: any, res: any) => {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ success: false, message: "Email query param is required" });
+
+    try {
+        const { sendOtpEmail } = require("../../utils/email.service");
+        await sendOtpEmail(email as string, "123456", "login");
+        return res.status(200).json({ success: true, message: "Email test dispatch initiated. Check server logs and your inbox/spam." });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error instanceof Error ? error.message : "Test failed" });
+    }
+};

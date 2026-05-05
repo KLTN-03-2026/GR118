@@ -6,6 +6,7 @@ export interface UsersResponse {
     phone?: string | null;
     city?: string | null;
     roles: string[];
+    role?: string | null;
     lockEnd ?: Date | null;
     lockReason ?: string | null;
     created_at: Date;

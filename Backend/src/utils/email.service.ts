@@ -1,10 +1,13 @@
 import nodemailer from "nodemailer";
 
+console.log(`[Email Service] GMAIL_USER: ${process.env.GMAIL_USER ? 'Defined (' + process.env.GMAIL_USER + ')' : 'MISSING'}`);
+console.log(`[Email Service] GMAIL_APP_PASSWORD: ${process.env.GMAIL_APP_PASSWORD ? 'Defined (*******)' : 'MISSING'}`);
+
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // true for 465, false for other ports
-  requireTLS: true,
+  port: 465,
+  secure: true, // true for 465, false for other ports
+  pool: true,   // use pooled connections
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,

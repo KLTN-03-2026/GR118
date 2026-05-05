@@ -28,8 +28,40 @@ export const GetStats = async (req: Request, res: Response, next: NextFunction) 
             aiAccuracy = Math.round((aiCorrectCount / aiTaggedCount) * 100);
         }
 
-        // 4. Tính toán tăng trưởng (Giả định so với tháng trước - có thể mở rộng sau)
-        // Hiện tại trả về số liệu thực tế, các phần trăm tăng trưởng có thể tính ở frontend hoặc trả về cứng tạm thời
+        // 4. Xu hướng 7 tháng gần nhất
+        const now = new Date();
+        const sevenMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+
+        const monthlyTrend = await issueSchema.aggregate([
+            { $match: { reportedAt: { $gte: sevenMonthsAgo } } },
+            { $group: {
+                _id: { 
+                    year: { $year: "$reportedAt" }, 
+                    month: { $month: "$reportedAt" } 
+                },
+                baocao: { $sum: 1 },
+                xuly: { $sum: { $cond: [{ $eq: ["$status", "resolved"] }, 1, 0] } }
+            } },
+            { $sort: { "_id.year": 1, "_id.month": 1 } }
+        ]);
+
+        const mappedMonthlyTrend = monthlyTrend.map(item => ({
+            month: `T${item._id.month}`,
+            baocao: item.baocao,
+            xuly: item.xuly
+        }));
+
+        // 5. Top thành phố báo cáo nhiều nhất
+        const cityStats = await issueSchema.aggregate([
+            { $group: { _id: "$city", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 5 }
+        ]);
+
+        const mappedCityStats = cityStats.map(item => ({
+            city: item._id,
+            count: item.count
+        }));
         
         return res.status(200).json({
             success: true,
@@ -41,7 +73,8 @@ export const GetStats = async (req: Request, res: Response, next: NextFunction) 
                 processingReports,
                 aiAccuracy,
                 completionRate: totalReports > 0 ? Math.round((resolvedReports / totalReports) * 100) : 0,
-                // Thêm một số dữ liệu tăng trưởng giả lập dựa trên dữ liệu thực
+                monthlyTrend: mappedMonthlyTrend,
+                cityStats: mappedCityStats,
                 growth: {
                     reports: "+12.5%",
                     users: "+5.2%",

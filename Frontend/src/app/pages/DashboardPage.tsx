@@ -283,9 +283,9 @@ export function DashboardPage() {
             className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
           >
             <h3 className="font-bold text-gray-900 mb-1">Xu hướng báo cáo theo tháng</h3>
-            <p className="text-gray-400 text-sm mb-5">Số lượng báo cáo và xử lý 7 tháng gần nhất</p>
+            <p className="text-gray-400 text-sm mb-5">Số lượng báo cáo và xử lý thực tế</p>
             <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={monthlyData}>
+              <AreaChart data={serverStats?.monthlyTrend || []}>
                 <defs>
                   <linearGradient id="gradRed" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15} />
@@ -318,7 +318,7 @@ export function DashboardPage() {
             className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
           >
             <h3 className="font-bold text-gray-900 mb-1">Trạng thái xử lý</h3>
-            <p className="text-gray-400 text-sm mb-4">Phân bổ theo trạng thái</p>
+            <p className="text-gray-400 text-sm mb-4">Phân bổ thực tế</p>
             <ResponsiveContainer width="100%" height={160}>
               <PieChart>
                 <Pie data={statusData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
@@ -353,7 +353,7 @@ export function DashboardPage() {
             className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
           >
             <h3 className="font-bold text-gray-900 mb-1">Theo danh mục</h3>
-            <p className="text-gray-400 text-sm mb-5">Số lượng báo cáo theo từng loại vấn đề</p>
+            <p className="text-gray-400 text-sm mb-5">Dữ liệu phân loại thực tế</p>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={categoryData} barSize={28}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
@@ -378,9 +378,9 @@ export function DashboardPage() {
           >
             <div className="flex items-center gap-2 mb-1">
               <Sparkles size={18} className="text-purple-600" />
-              <h3 className="font-bold text-gray-900">Độ chính xác AI theo tháng</h3>
+              <h3 className="font-bold text-gray-900">Độ chính xác AI</h3>
             </div>
-            <p className="text-gray-400 text-sm mb-5">Mô hình AI liên tục được cải thiện</p>
+            <p className="text-gray-400 text-sm mb-5">Hiệu suất mô hình hiện tại: {serverStats?.aiAccuracy}%</p>
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={aiAccuracyData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -415,19 +415,31 @@ export function DashboardPage() {
             <h3 className="font-bold text-gray-900">Top thành phố báo cáo nhiều nhất</h3>
           </div>
           <div className="space-y-4">
-            {cityData.map((city, i) => {
-              const max = cityData[0].count;
+            {(serverStats?.cityStats || []).length > 0 ? (serverStats?.cityStats || []).map((city: any, i: number) => {
+              const max = (serverStats?.cityStats || [])[0].count;
               const pct = (city.count / max) * 100;
               return (
                 <div key={city.city} className="flex items-center gap-4">
                   <div className="w-6 text-gray-400 text-sm font-bold">{i + 1}</div>
-                  <div className="w-20 text-sm font-semibold text-gray-700">{city.city}</div>
+                  <div className="w-24 text-sm font-semibold text-gray-700 truncate">{city.city}</div>
                   <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${pct}%` }}
                       transition={{ duration: 0.8, delay: 0.8 + i * 0.1 }}
                       className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-600"
+                    />
+                  </div>
+                  <div className="w-16 text-right text-sm font-semibold text-gray-900">
+                    {city.count.toLocaleString()}
+                  </div>
+                </div>
+              );
+            }) : (
+              <div className="py-8 text-center text-gray-400 italic">Đang tải dữ liệu khu vực...</div>
+            )}
+          </div>
+        </motion.div>-red-400 to-red-600"
                     />
                   </div>
                   <div className="w-16 text-right text-sm font-semibold text-gray-900">

@@ -439,16 +439,6 @@ export function DashboardPage() {
               <div className="py-8 text-center text-gray-400 italic">Đang tải dữ liệu khu vực...</div>
             )}
           </div>
-        </motion.div>-red-400 to-red-600"
-                    />
-                  </div>
-                  <div className="w-16 text-right text-sm font-semibold text-gray-900">
-                    {city.count.toLocaleString()}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </motion.div>
       </div>
     </div>

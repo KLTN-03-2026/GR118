@@ -130,6 +130,7 @@ function StatCard({ card, index }: { card: typeof statCards[0]; index: number })
 export function DashboardPage() {
   const { can } = useAuth();
   const { issues } = useIssues();
+  const [serverStats, setServerStats] = useState<any>(null);
 
   // We'll use local state for the dashboard cards
   const [stats, setStats] = useState([
@@ -148,6 +149,7 @@ export function DashboardPage() {
         const res = await api.get("/auth/stats");
         if (res.success && res.data) {
           const d = res.data;
+          setServerStats(d);
           setStats([
             {
               label: "Tổng báo cáo",

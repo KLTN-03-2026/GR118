@@ -421,6 +421,9 @@ export const updateUserByAdmin = async (
         email?: string;
         password?: string;
         roleIds?: string[];
+        avatar?: string | null;
+        phone?: string | null;
+        city?: string | null;
     }
 ) => {
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -454,7 +457,11 @@ export const updateUserByAdmin = async (
         userName === undefined &&
         email === undefined &&
         password === undefined &&
-        roleIds === undefined
+        roleIds === undefined &&
+        payload.name === undefined &&
+        payload.avatar === undefined &&
+        payload.phone === undefined &&
+        payload.city === undefined
     ) {
         return {
             success: false,
@@ -517,6 +524,18 @@ export const updateUserByAdmin = async (
             };
         }
         user.name = payload.name.trim();
+    }
+
+    if (payload.avatar !== undefined) {
+        user.avatar = payload.avatar;
+    }
+
+    if (payload.phone !== undefined) {
+        user.phone = payload.phone;
+    }
+
+    if (payload.city !== undefined) {
+        user.city = payload.city;
     }
 
     if (password !== undefined) {

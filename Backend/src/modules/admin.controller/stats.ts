@@ -63,6 +63,9 @@ export const GetStats = async (req: Request, res: Response, next: NextFunction) 
             count: item.count
         }));
         
+        console.log(`[Stats API] Monthly Trend Count: ${mappedMonthlyTrend.length}`);
+        console.log(`[Stats API] City Stats Count: ${mappedCityStats.length}`);
+        
         return res.status(200).json({
             success: true,
             data: {

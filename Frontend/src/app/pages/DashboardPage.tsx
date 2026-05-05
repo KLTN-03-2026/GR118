@@ -282,33 +282,35 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
-          >
-            <h3 className="font-bold text-gray-900 mb-1">Xu hướng báo cáo theo tháng</h3>
-            <p className="text-gray-400 text-sm mb-5">Số lượng báo cáo và xử lý thực tế</p>
-            <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={serverStats?.monthlyTrend || []}>
-                <defs>
-                  <linearGradient id="gradRed" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
-                  formatter={(v: any, name: string) => [v, name === "baocao" ? "Báo cáo" : "Xử lý"]}
-                />
-                <Legend formatter={(v) => v === "baocao" ? "Báo cáo" : "Đã xử lý"} />
-                <Area type="monotone" dataKey="baocao" stroke="#ef4444" strokeWidth={2.5} fill="url(#gradRed)" dot={{ fill: "#ef4444", strokeWidth: 0, r: 4 }} />
-                <Area type="monotone" dataKey="xuly" stroke="#10b981" strokeWidth={2.5} fill="url(#gradGreen)" dot={{ fill: "#10b981", strokeWidth: 0, r: 4 }} />
-              </AreaChart>
+            className="lg:col-span-2 bg-white rounded-2xl p-6            <ResponsiveContainer width="100%" height={240}>
+              {!serverStats ? (
+                <div className="h-full flex items-center justify-center text-gray-400 italic">Đang tải xu hướng...</div>
+              ) : (serverStats.monthlyTrend || []).length > 0 ? (
+                <AreaChart data={serverStats.monthlyTrend}>
+                  <defs>
+                    <linearGradient id="gradRed" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 12, border: "1px solid #f3f4f6", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}
+                    formatter={(v: any, name: string) => [v, name === "baocao" ? "Báo cáo" : "Xử lý"]}
+                  />
+                  <Legend formatter={(v) => v === "baocao" ? "Báo cáo" : "Đã xử lý"} />
+                  <Area type="monotone" dataKey="baocao" stroke="#ef4444" strokeWidth={2.5} fill="url(#gradRed)" dot={{ fill: "#ef4444", strokeWidth: 0, r: 4 }} />
+                  <Area type="monotone" dataKey="xuly" stroke="#10b981" strokeWidth={2.5} fill="url(#gradGreen)" dot={{ fill: "#10b981", strokeWidth: 0, r: 4 }} />
+                </AreaChart>
+              ) : (
+                <div className="h-full flex items-center justify-center text-gray-400 italic">Chưa có dữ liệu xu hướng</div>
+              )}
             </ResponsiveContainer>
           </motion.div>
 
@@ -417,22 +419,35 @@ export function DashboardPage() {
             <h3 className="font-bold text-gray-900">Top thành phố báo cáo nhiều nhất</h3>
           </div>
           <div className="space-y-4">
-            {(serverStats?.cityStats || []).length > 0 ? (serverStats?.cityStats || []).map((city: any, i: number) => {
-              const max = (serverStats?.cityStats || [])[0].count;
-              const pct = (city.count / max) * 100;
-              return (
-                <div key={city.city} className="flex items-center gap-4">
-                  <div className="w-6 text-gray-400 text-sm font-bold">{i + 1}</div>
-                  <div className="w-24 text-sm font-semibold text-gray-700 truncate">{city.city}</div>
-                  <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
-                      transition={{ duration: 0.8, delay: 0.8 + i * 0.1 }}
-                      className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-600"
-                    />
+            {!serverStats ? (
+              <div className="py-8 text-center text-gray-400 italic">Đang tải dữ liệu khu vực...</div>
+            ) : (serverStats.cityStats || []).length > 0 ? (
+              (serverStats.cityStats || []).map((city: any, i: number) => {
+                const max = (serverStats.cityStats || [])[0].count;
+                const pct = (city.count / max) * 100;
+                return (
+                  <div key={city.city} className="flex items-center gap-4">
+                    <div className="w-6 text-gray-400 text-sm font-bold">{i + 1}</div>
+                    <div className="w-24 text-sm font-semibold text-gray-700 truncate">{city.city}</div>
+                    <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.8, delay: 0.8 + i * 0.1 }}
+                        className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-600"
+                      />
+                    </div>
+                    <div className="w-16 text-right text-sm font-semibold text-gray-900">
+                      {city.count.toLocaleString()}
+                    </div>
                   </div>
-                  <div className="w-16 text-right text-sm font-semibold text-gray-900">
+                );
+              })
+            ) : (
+              <div className="py-8 text-center text-gray-400 italic">Chưa có dữ liệu theo thành phố</div>
+            )}
+          </div>
+        </motion.div>t-semibold text-gray-900">
                     {city.count.toLocaleString()}
                   </div>
                 </div>

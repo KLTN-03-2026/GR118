@@ -1,7 +1,8 @@
 import nodemailer from "nodemailer";
 
+const sanitizedGmailPass = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s/g, "");
 console.log(`[Email Service] GMAIL_USER: ${process.env.GMAIL_USER ? 'Defined (' + process.env.GMAIL_USER + ')' : 'MISSING'}`);
-console.log(`[Email Service] GMAIL_APP_PASSWORD: ${process.env.GMAIL_APP_PASSWORD ? 'Defined (*******)' : 'MISSING'}`);
+console.log(`[Email Service] GMAIL_APP_PASSWORD: ${sanitizedGmailPass ? 'Defined (' + sanitizedGmailPass.length + ' chars)' : 'MISSING'}`);
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -10,7 +11,7 @@ const transporter = nodemailer.createTransport({
   pool: true,   // use pooled connections
   auth: {
     user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
+    pass: sanitizedGmailPass,
   },
   tls: {
     rejectUnauthorized: false

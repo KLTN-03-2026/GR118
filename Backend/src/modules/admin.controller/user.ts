@@ -121,9 +121,10 @@ export const LockOrUnlockUser = async (req: Request, res: Response, next: NextFu
 
 export const CreateNewUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { userName, email, password, roleIds } = req.body;
+        const { userName, name, fullName, email, password, roleIds } = req.body;
+        const finalName = name || fullName;
 
-        const result = await userRepo.createNewUserByAdmin(userName, email, password, roleIds);
+        const result = await userRepo.createNewUserByAdmin(userName, finalName, email, password, roleIds);
         if (!result.success || !result.data) {
             const err = ERROR_CODES.INVALID_INPUT;
             return next(new AppError(err.statusCode, err.code, result.message || "Failed to create user"));

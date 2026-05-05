@@ -302,15 +302,17 @@ export const lockOrUnlockUser = async (userId: string, lockReason?: string) => {
 
 export const createNewUserByAdmin = async (
     userName: string,
+    name: string,
     email: string,
     password: string,
     roleIds?: string[]
 ) => {
     userName = userName?.trim().toLowerCase();
+    name = name?.trim();
     email = email?.trim().toLowerCase();
     password = password?.trim();
 
-    if (!userName || !email || !password) {
+    if (!userName || !name || !email || !password) {
         return {
             success: false,
             message: "All fields are required"
@@ -353,6 +355,7 @@ export const createNewUserByAdmin = async (
     const hashedPassword = await bcrypt.hash(password, 12);
     const newUser = await authSchema.create({
         userName,
+        name,
         email,
         password: hashedPassword,
         types: "login"
@@ -383,6 +386,7 @@ export const updateUserByAdmin = async (
     userId: string,
     payload: {
         userName?: string;
+        name?: string;
         email?: string;
         password?: string;
         roleIds?: string[];
@@ -472,6 +476,16 @@ export const updateUserByAdmin = async (
         }
 
         user.userName = userName;
+    }
+
+    if (payload.name !== undefined) {
+        if (!payload.name.trim()) {
+            return {
+                success: false,
+                message: "Name cannot be empty"
+            };
+        }
+        user.name = payload.name.trim();
     }
 
     if (password !== undefined) {

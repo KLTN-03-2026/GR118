@@ -5,6 +5,7 @@ const COLLECTION_NAME = "auths";
 
 export interface IAuth extends Document {
     userName: string;
+    name: string;
     password: string;
     email: string;
     avatar?: string | null;
@@ -25,6 +26,10 @@ const authSchema = new mongoose.Schema<IAuth>({
         required: true,
         unique: true,
         lowercase: true
+    },
+    name: {
+        type: String,
+        required: true
     },
     password: {
         type: String,

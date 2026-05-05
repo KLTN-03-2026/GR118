@@ -117,6 +117,7 @@ function CreateAccountModal({
   
   const [form, setForm] = useState({
     name: "",
+    userName: "",
     email: "",
     phone: "",
     city: "TP. Hồ Chí Minh",
@@ -131,6 +132,7 @@ function CreateAccountModal({
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Vui lòng nhập họ tên";
+    if (!form.userName.trim()) e.userName = "Vui lòng nhập tên đăng nhập";
     if (!form.email.trim()) e.email = "Vui lòng nhập email";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Email không hợp lệ";
     if (!form.roleId) e.roleId = "Vui lòng chọn vai trò";
@@ -152,7 +154,8 @@ function CreateAccountModal({
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          userName: form.name.trim(),
+          userName: form.userName.trim(),
+          fullName: form.name.trim(),
           email: form.email.trim().toLowerCase(),
           password: randomPassword,
           roleIds: [form.roleId],
@@ -185,7 +188,7 @@ function CreateAccountModal({
 
       setUsers([newUser, ...users]);
       setAddModalOpen(false);
-      setForm({ name: "", email: "", phone: "", city: "Thành phố Đà Nẵng", roleId: "" });
+      setForm({ name: "", userName: "", email: "", phone: "", city: "Thành phố Đà Nẵng", roleId: "" });
       toast.success(`✅ Đã tạo tài khoản ${roleName} và gửi thông tin qua email: ${newUser.email}`);
     } catch (err) {
       toast.error("Không thể kết nối đến máy chủ");
@@ -282,16 +285,28 @@ function CreateAccountModal({
             )}
           </div>
 
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Họ và tên <span className="text-red-500">*</span></label>
-            <input
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-              placeholder="VD: Nguyễn Văn Minh"
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${errors.name ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"}`}
-            />
-            {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+          {/* Name & Username */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Họ và tên <span className="text-red-500">*</span></label>
+              <input
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
+                placeholder="VD: Nguyễn Văn Minh"
+                className={`w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${errors.name ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"}`}
+              />
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tên đăng nhập <span className="text-red-500">*</span></label>
+              <input
+                value={form.userName}
+                onChange={(e) => set("userName", e.target.value)}
+                placeholder="VD: minh_nv"
+                className={`w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${errors.userName ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"}`}
+              />
+              {errors.userName && <p className="text-xs text-red-500 mt-1">{errors.userName}</p>}
+            </div>
           </div>
 
           {/* Email */}
@@ -1200,7 +1215,7 @@ export function AdminUsersPage() {
   if (!user || !can("users_mgnt", "read")) return <Navigate to="/" replace />;
 
   return (
-    <div className="min-h-screen pt-20 pb-16 bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-50">
+    <div className="relative min-h-screen pt-20 pb-16 bg-gradient-to-br from-slate-50 via-indigo-50/20 to-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
         {/* ── Page Header ── */}

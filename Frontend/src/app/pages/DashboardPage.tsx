@@ -282,7 +282,11 @@ export function DashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="lg:col-span-2 bg-white rounded-2xl p-6            <ResponsiveContainer width="100%" height={240}>
+            className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+          >
+            <h3 className="font-bold text-gray-900 mb-1">Xu hướng báo cáo theo tháng</h3>
+            <p className="text-gray-400 text-sm mb-5">Số lượng báo cáo và xử lý thực tế</p>
+            <ResponsiveContainer width="100%" height={240}>
               {!serverStats ? (
                 <div className="h-full flex items-center justify-center text-gray-400 italic">Đang tải xu hướng...</div>
               ) : (serverStats.monthlyTrend || []).length > 0 ? (

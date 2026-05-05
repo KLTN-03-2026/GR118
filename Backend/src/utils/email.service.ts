@@ -1,18 +1,57 @@
 import nodemailer from "nodemailer";
 
-const sanitizedGmailPass = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s/g, "");
-console.log(`[Email Service] GMAIL_USER: ${process.env.GMAIL_USER ? 'Defined (' + process.env.GMAIL_USER + ')' : 'MISSING'}`);
-console.log(`[Email Service] GMAIL_APP_PASSWORD: ${sanitizedGmailPass ? 'Defined (' + sanitizedGmailPass.length + ' chars)' : 'MISSING'}`);
+/**
+ * Dịch vụ gửi Email sử dụng Brevo API (để tránh bị Render chặn cổng SMTP)
+ */
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: sanitizedGmailPass,
-  },
-  logger: true,
-  debug: true
-} as any);
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const SENDER_EMAIL = process.env.GMAIL_USER || "thaibc14@gmail.com";
+
+console.log(`[Email Service] Provider: BREVO API`);
+console.log(`[Email Service] BREVO_API_KEY: ${BREVO_API_KEY ? 'Defined (' + BREVO_API_KEY.length + ' chars)' : 'MISSING'}`);
+
+/**
+ * Hàm gửi mail lõi qua Brevo API
+ */
+async function sendEmailViaBrevo(to: string, subject: string, htmlContent: string): Promise<boolean> {
+  if (!BREVO_API_KEY) {
+    console.error("[Email Service] ERROR: BREVO_API_KEY is not defined in environment variables.");
+    return false;
+  }
+
+  try {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        sender: {
+          name: "BáoCáoVN",
+          email: SENDER_EMAIL
+        },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: htmlContent
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json() as any;
+      console.log(`[Email Service] ACTUAL SUCCESS: Email sent to ${to}. MessageId: ${data.messageId || 'OK'}`);
+      return true;
+    } else {
+      const errorData = await response.json() as any;
+      console.error(`[Email Service] Brevo API Error:`, JSON.stringify(errorData));
+      return false;
+    }
+  } catch (error: any) {
+    console.error(`[Email Service] Connection error to Brevo API:`, error.message || error);
+    return false;
+  }
+}
 
 export async function sendOtpEmail(toEmail: string, otp: string, type: "register" | "reset" | "login"): Promise<void> {
   console.log(`[Email Service] Starting background dispatch of OTP to ${toEmail}...`);
@@ -82,18 +121,11 @@ export async function sendOtpEmail(toEmail: string, otp: string, type: "register
 </html>
   `;
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"BáoCáoVN" <${process.env.GMAIL_USER}>`,
-      to: toEmail,
-      subject: subjects[type],
-      html,
-    });
-    console.log(`[Email Service] ACTUAL SUCCESS: OTP sent to ${toEmail}. MessageId: ${info.messageId}`);
-  } catch (error) {
+  const success = await sendEmailViaBrevo(toEmail, subjects[type], html);
+  
+  if (!success) {
     console.error(`[Email Service] Failed to send OTP to ${toEmail}. Printing to log instead.`);
     console.log(`\n************************************************\n[BACKUP LOG] OTP Code for ${toEmail}: ${otp} (Type: ${type})\n************************************************\n`);
-    throw error;
   }
 }
 
@@ -143,11 +175,11 @@ export async function sendAccountCreationEmail(toEmail: string, userName: string
           <div class="value">${password}</div>
         </div>
       </div>
-
+  
       <div class="info-badge">
         <span>🔐 Vì lý do bảo mật, bạn sẽ được yêu cầu đổi mật khẩu trong lần đăng nhập đầu tiên.</span>
       </div>
-
+  
       <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}" class="cta-button">Đăng nhập ngay</a>
     </div>
     <div class="footer">
@@ -159,18 +191,10 @@ export async function sendAccountCreationEmail(toEmail: string, userName: string
 </html>
   `;
 
-  try {
-    const info = await transporter.sendMail({
-      from: `"BáoCáoVN" <${process.env.GMAIL_USER}>`,
-      to: toEmail,
-      subject: "🚀 Tài khoản BáoCáoVN của bạn đã sẵn sàng",
-      html,
-    });
-    console.log(`[Email Service] ACTUAL SUCCESS: Credentials sent to ${toEmail}. MessageId: ${info.messageId}`);
-  } catch (error) {
+  const success = await sendEmailViaBrevo(toEmail, "🚀 Tài khoản BáoCáoVN của bạn đã sẵn sàng", html);
+
+  if (!success) {
     console.error(`[Email Service] Failed to send credentials to ${toEmail}. Printing to log instead.`);
     console.log(`\n************************************************\n[BACKUP LOG] ACCOUNT CREATED\nUser: ${userName}\nPassword: ${password}\nEmail: ${toEmail}\n************************************************\n`);
-    throw error;
   }
 }
-

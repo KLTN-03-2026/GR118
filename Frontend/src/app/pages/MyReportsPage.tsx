@@ -73,148 +73,179 @@ export function MyReportsPage() {
     };
 
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto relative"
-        onClick={() => setEditingIssue(null)}
-      >
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="bg-white rounded-2xl p-6 max-w-2xl w-full my-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+          onClick={() => setEditingIssue(null)}
+        />
+        
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 20 }}
+          className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden relative z-10 border border-gray-100"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white">
-                <Edit3 size={20} />
+          {/* Decorative Top Bar */}
+          <div className="h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+
+          <div className="p-8">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
+                  <Edit3 size={28} />
+                </div>
+                <div>
+                  <h3 className="font-black text-gray-900 text-2xl tracking-tight">Chỉnh sửa báo cáo</h3>
+                  <p className="text-gray-500 font-medium">Cập nhật thông tin chi tiết cho sự vụ của bạn</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-lg">Chỉnh sửa báo cáo</h3>
-                <p className="text-gray-500 text-sm">Cập nhật thông tin báo cáo của bạn</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setEditingIssue(null)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Title */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Tiêu đề <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                required
-              />
-            </div>
-
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Danh mục <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value as IssueCategory })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                required
-              >
-                {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Mô tả chi tiết <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={4}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all resize-none"
-                required
-              />
-            </div>
-
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Địa điểm cụ thể <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                required
-              />
-            </div>
-
-            {/* District and City */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Quận/Huyện <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.district}
-                  onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Thành phố <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-4">
               <button
-                type="button"
                 onClick={() => setEditingIssue(null)}
-                className="flex-1 px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+                className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
               >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
-              >
-                <Save size={18} />
-                Lưu thay đổi
+                <X size={24} />
               </button>
             </div>
-          </form>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Side: Basic Info */}
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
+                      Tiêu đề sự vụ
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium"
+                      placeholder="Nhập tiêu đề ngắn gọn..."
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
+                      Phân loại danh mục
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value as IssueCategory })}
+                        className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium appearance-none"
+                        required
+                      >
+                        {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                          <option key={key} value={key}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                        <Clock size={16} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
+                      Mô tả tình trạng
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={5}
+                      className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium resize-none"
+                      placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Right Side: Location Info */}
+                <div className="space-y-5">
+                  <div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100/50 space-y-4">
+                    <div className="flex items-center gap-2 text-blue-700 font-bold text-sm mb-1">
+                      <MapPin size={16} />
+                      <span>Thông tin vị trí</span>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1.5 ml-1">
+                        Địa chỉ cụ thể
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none font-medium text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1.5 ml-1">
+                        Quận / Huyện
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.district}
+                        onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                        className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none font-medium text-sm"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1.5 ml-1">
+                        Tỉnh / Thành phố
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.city}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none font-medium text-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex gap-3 items-start">
+                    <AlertCircle className="text-amber-500 flex-shrink-0" size={18} />
+                    <p className="text-xs text-amber-700 leading-relaxed">
+                      Thông tin vị trí chính xác giúp cơ quan chức năng xử lý vấn đề nhanh chóng hơn.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingIssue(null)}
+                  className="px-8 py-3.5 text-gray-500 font-bold hover:text-gray-700 hover:bg-gray-100 rounded-2xl transition-all"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-200 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                >
+                  <Save size={22} />
+                  Cập nhật báo cáo
+                </button>
+              </div>
+            </form>
+          </div>
         </motion.div>
-      </motion.div>
+      </div>
     );
   };
 
@@ -356,7 +387,7 @@ export function MyReportsPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all"
+                  className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all duration-300"
                 >
                   <div className="flex flex-col md:flex-row gap-5">
                     {/* Image */}
@@ -386,7 +417,7 @@ export function MyReportsPage() {
                         </div>
 
                         <span
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white flex-shrink-0"
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-sm"
                           style={{ backgroundColor: STATUS_COLORS[issue.status] }}
                         >
                           <StatusIcon size={12} className={issue.status === "processing" ? "animate-spin" : ""} />
@@ -406,29 +437,29 @@ export function MyReportsPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex gap-2">
-                        <Link
-                          to={`/issues/${issue.id}`}
-                          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-all flex items-center gap-2 text-sm"
-                        >
-                          <Eye size={16} />
-                          Xem chi tiết
-                        </Link>
-                        <button
-                          onClick={() => setEditingIssue(issue)}
-                          className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium hover:bg-blue-200 transition-all flex items-center gap-2 text-sm"
-                        >
-                          <Edit3 size={16} />
-                          Chỉnh sửa
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(issue.id)}
-                          className="px-4 py-2 bg-red-100 text-red-700 rounded-lg font-medium hover:bg-red-200 transition-all flex items-center gap-2 text-sm"
-                        >
-                          <Trash2 size={16} />
-                          Xóa
-                        </button>
-                      </div>
+                        <div className="flex gap-2">
+                          <Link
+                            to={`/issues/${issue.id}`}
+                            className="px-5 py-2.5 bg-gray-50 text-gray-600 rounded-xl font-bold hover:bg-gray-100 transition-all flex items-center gap-2 text-xs"
+                          >
+                            <Eye size={16} />
+                            Xem chi tiết
+                          </Link>
+                          <button
+                            onClick={() => setEditingIssue(issue)}
+                            className="px-5 py-2.5 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition-all flex items-center gap-2 text-xs"
+                          >
+                            <Edit3 size={16} />
+                            Chỉnh sửa
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirm(issue.id)}
+                            className="px-5 py-2.5 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-all flex items-center gap-2 text-xs"
+                          >
+                            <Trash2 size={16} />
+                            Xóa
+                          </button>
+                        </div>
                     </div>
                   </div>
                 </motion.div>

@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   MapContainer, 
   TileLayer, 
@@ -32,6 +33,9 @@ interface LocationPickerProps {
   onChange: (lat: number, lng: number, address?: any) => void;
   height?: string;
   zoom?: number;
+  city?: string;
+  district?: string;
+  ward?: string;
 }
 
 // Internal component to handle map clicks
@@ -60,10 +64,34 @@ function ChangeView({ center, zoom }: { center: [number, number], zoom: number }
   return null;
 }
 
-export function LocationPicker({ lat, lng, onChange, height = "300px", zoom = 15 }: LocationPickerProps) {
+export function LocationPicker({ 
+  lat, 
+  lng, 
+  onChange, 
+  height = "300px", 
+  zoom = 15,
+  city,
+  district,
+  ward
+}: LocationPickerProps) {
   const [position, setPosition] = useState<[number, number]>([lat, lng]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Sync internal position with props
   useEffect(() => {
@@ -97,22 +125,66 @@ export function LocationPicker({ lat, lng, onChange, height = "300px", zoom = 15
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+  const fetchSuggestions = async (query: string) => {
+    if (!query || query.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+
+    if (suggestionTimeoutRef.current) clearTimeout(suggestionTimeoutRef.current);
+
+    suggestionTimeoutRef.current = setTimeout(async () => {
+      try {
+        const searchParts = [query];
+        if (ward) searchParts.push(ward);
+        if (district) searchParts.push(district);
+        if (city) searchParts.push(city);
+        const fullQuery = searchParts.join(" ").trim();
+
+        const res = await fetch(
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(fullQuery)}&limit=5&lat=${position[0]}&lon=${position[1]}`
+        );
+        const data = await res.json();
+        const results = data.features.map((f: any) => {
+          const p = f.properties;
+          const name = [p.name, p.street, p.housenumber].filter(Boolean).join(" ");
+          const context = [p.district, p.city, p.state].filter(Boolean).join(", ");
+          return {
+            display_name: `${name}${name && context ? ", " : ""}${context}` || p.display_name,
+            lat: f.geometry.coordinates[1],
+            lon: f.geometry.coordinates[0]
+          };
+        });
+        setSuggestions(results);
+        setShowSuggestions(results.length > 0);
+      } catch (error) {
+        console.error("Photon suggestions failed:", error);
+      }
+    }, 800);
+  };
+
+  const handleSearch = async (customQuery?: any) => {
+    // Ensure query is a string (React event might be passed if called from onClick)
+    const query = typeof customQuery === "string" ? customQuery : searchQuery;
+    if (!query || !query.trim()) return;
     setLoading(true);
+    setShowSuggestions(false);
+    
     try {
+      const searchParts = [query];
+      if (ward) searchParts.push(ward);
+      if (district) searchParts.push(district);
+      if (city) searchParts.push(city);
+      const fullQuery = searchParts.join(" ").trim();
+
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=1`,
-        {
-          headers: {
-            "User-Agent": "IssueReportingSystem/1.0",
-          },
-        }
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(fullQuery)}&limit=1&lat=${position[0]}&lon=${position[1]}`
       );
       const data = await res.json();
-      if (data && data.length > 0) {
-        const newLat = parseFloat(data[0].lat);
-        const newLng = parseFloat(data[0].lon);
+      if (data && data.features && data.features.length > 0) {
+        const feature = data.features[0];
+        const newLat = feature.geometry.coordinates[1];
+        const newLng = feature.geometry.coordinates[0];
         setPosition([newLat, newLng]);
         handleReverseGeocode(newLat, newLng);
       }
@@ -142,18 +214,52 @@ export function LocationPicker({ lat, lng, onChange, height = "300px", zoom = 15
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" ref={containerRef}>
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              fetchSuggestions(e.target.value);
+            }}
+            onFocus={() => {
+              if (suggestions.length > 0) setShowSuggestions(true);
+            }}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Tìm kiếm địa chỉ..."
             className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-200"
           />
+
+          <AnimatePresence>
+            {showSuggestions && suggestions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute z-[1001] left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden max-h-60 overflow-y-auto"
+              >
+                {suggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setPosition([suggestion.lat, suggestion.lon]);
+                      handleReverseGeocode(suggestion.lat, suggestion.lon);
+                      setSearchQuery(suggestion.display_name.split(',')[0]);
+                      setShowSuggestions(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left text-xs hover:bg-gray-50 flex items-start gap-2.5 border-b border-gray-50 last:border-0 transition-colors"
+                  >
+                    <MapPin size={14} className="text-red-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-gray-700 line-clamp-2">{suggestion.display_name}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <button
           type="button"

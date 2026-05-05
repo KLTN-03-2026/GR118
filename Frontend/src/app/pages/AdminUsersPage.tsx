@@ -12,6 +12,7 @@ import { useAuth, User } from "../context/AuthContext";
 import { useRoles } from "../context/RolesContext";
 import { toast } from "sonner";
 import { PageTitle } from "../components/PageTitle";
+import { api } from "../../utils/api";
 import { Skeleton, SkeletonCircle, SkeletonText } from "../components/ui/skeleton";
 import { Card } from "../components/ui/card";
 
@@ -45,14 +46,9 @@ const normalizeRole = (roleStr: string): "admin" | "moderator" | "user" => {
 // ──────────────────────────────────────────────────────────
 const API_BASE = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? "https://backend-cfgb.onrender.com/api/v1" : "http://localhost:8081/api/v1");
 
-async function fetchUsersFromAPI(search?: string): Promise<Array<User & { password: string }>> {
+async function fetchUsersFromAPI(): Promise<Array<User & { password: string }>> {
   try {
-    const res = await fetch(`${API_BASE}/auth/users`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    });
-    const data = await res.json();
+    const data = await api.get("/auth/users");
     if (data.success && data.users) {
       return data.users.map((u: any) => ({
         id: u.user_id || u._id || u.id,
@@ -1101,33 +1097,26 @@ export function AdminUsersPage() {
 
   // ── Helpers ──
   const updateUser = async (userId: string, updates: Partial<User>) => {
-    // Cập nhật UI trước
+    // Update UI first (optimistic)
     const updated = users.map((u) => u.id === userId ? { ...u, ...updates } : u);
     setUsers(updated);
     if (detailTarget?.id === userId) setDetailTarget((prev) => prev ? { ...prev, ...updates } : null);
-    // Gọi API
+
     try {
       let res;
       if (updates.banned !== undefined) {
-        res = await fetch(`${API_BASE}/auth/users/lockOrUnlock/${userId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ lockReason: updates.banReason }),
+        // Use api utility for lock/unlock
+        res = await api.post(`/auth/users/lockOrUnlock/${userId}`, { 
+          lockReason: updates.banReason 
         });
       } else {
-        res = await fetch(`${API_BASE}/auth/users/${userId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify(updates),
-        });
+        // Use api utility for patch
+        res = await api.patch(`/auth/users/${userId}`, updates);
       }
 
-      if (res && res.ok) {
-        const data = await res.json();
-        if (data.success && data.user) {
-          const u = data.user;
+      if (res && res.success) {
+        const u = res.user;
+        if (u) {
           const mappedUser = {
             id: u.user_id || u._id || u.id,
             name: u.username || u.userName || u.name,
@@ -1147,9 +1136,15 @@ export function AdminUsersPage() {
           setUsers((prev) => prev.map((item) => (item.id === userId ? mappedUser : item)));
           if (detailTarget?.id === userId) setDetailTarget(mappedUser);
         }
+      } else {
+        toast.error(res?.message || "Cập nhật thất bại");
+        // Revert UI on failure
+        const apiUsers = await fetchUsersFromAPI();
+        setUsers(apiUsers);
       }
     } catch (err) {
       console.error("updateUser API error:", err);
+      toast.error("Lỗi kết nối máy chủ");
     }
   };
 
@@ -1171,18 +1166,25 @@ export function AdminUsersPage() {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      const res = await fetch(`${API_BASE}/auth/users/${userId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (data.success) {
+      // Try query parameter pattern first as it matches deleteRole pattern
+      const res = await api.delete(`/auth/users?id=${userId}`);
+      
+      if (res.success) {
         const updated = users.filter((u) => u.id !== userId);
         setUsers(updated);
         if (detailTarget?.id === userId) setDetailTarget(null);
         toast.success("✅ Đã xóa tài khoản thành công");
       } else {
-        toast.error(data.message || "Xóa tài khoản thất bại");
+        // If query param fails, try the path pattern just in case
+        const res2 = await api.delete(`/auth/users/${userId}`);
+        if (res2.success) {
+          const updated = users.filter((u) => u.id !== userId);
+          setUsers(updated);
+          if (detailTarget?.id === userId) setDetailTarget(null);
+          toast.success("✅ Đã xóa tài khoản thành công");
+        } else {
+          toast.error(res2.message || res.message || "Xóa tài khoản thất bại");
+        }
       }
     } catch (err) {
       toast.error("Không thể kết nối đến máy chủ");

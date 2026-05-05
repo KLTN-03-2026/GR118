@@ -23,13 +23,13 @@ import {
   BarChart3,
   Shield,
   UserCog,
+  Loader2,
 } from "lucide-react";
 import { Link, Navigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { PageTitle } from "../components/PageTitle";
 import { Skeleton, SkeletonCircle, SkeletonText } from "../components/ui/skeleton";
 import { Card } from "../components/ui/card";
-import { Loader2 } from "lucide-react";
 import { CATEGORY_LABELS, CATEGORY_COLORS, STATUS_LABELS, STATUS_COLORS, IssueStatus } from "../data/issues";
 import { useIssues } from "../context/IssuesContext";
 import { toast } from "sonner";
@@ -42,8 +42,6 @@ const STATUS_ICONS = {
   resolved: CheckCircle2,
   rejected: XCircle,
 };
-
-import { Loader2 } from "lucide-react";
 
 const SEVERITY_COLORS = {
   low: "#6b7280",

@@ -21,6 +21,8 @@ import {
   Shield,
   Lock,
   Video,
+  Search,
+  Home,
   Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -143,6 +145,23 @@ export function ReportPage() {
   const [loadingProvinces, setLoadingProvinces] = useState(false);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
+  const suggestionRef = useRef<HTMLDivElement>(null);
+  const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Fetch all provinces on mount
   useEffect(() => {
@@ -162,21 +181,49 @@ export function ReportPage() {
     fetchProvinces();
   }, []);
 
+  // Pure fetch functions to avoid side effects during sync
+  const fetchDistrictsByCity = async (cityCode: number) => {
+    if (!cityCode) return [];
+    try {
+      const res = await fetch(`https://provinces.open-api.vn/api/p/${cityCode}?depth=2`);
+      const data = await res.json();
+      return data.districts || [];
+    } catch (error) {
+      console.error("Fetch districts failed:", error);
+      return [];
+    }
+  };
+
+  const fetchWardsByDistrict = async (districtCode: number) => {
+    if (!districtCode) return [];
+    try {
+      const res = await fetch(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`);
+      const data = await res.json();
+      return data.wards || [];
+    } catch (error) {
+      console.error("Fetch wards failed:", error);
+      return [];
+    }
+  };
+
   const handleCityChange = async (cityCode: number, cityName: string) => {
     setForm(f => ({ ...f, city: cityName, district: "", ward: "" }));
     setDistricts([]);
     setWards([]);
     
-    if (!cityCode) return;
+    if (!cityCode) return [];
     
     setLoadingDistricts(true);
     try {
       const res = await fetch(`https://provinces.open-api.vn/api/p/${cityCode}?depth=2`);
       const data = await res.json();
-      setDistricts(data.districts || []);
+      const fetchedDistricts = data.districts || [];
+      setDistricts(fetchedDistricts);
+      return fetchedDistricts;
     } catch (error) {
       console.error("Failed to fetch districts:", error);
       toast.error("Không thể tải danh sách quận/huyện");
+      return [];
     } finally {
       setLoadingDistricts(false);
     }
@@ -186,18 +233,240 @@ export function ReportPage() {
     setForm(f => ({ ...f, district: districtName, ward: "" }));
     setWards([]);
     
-    if (!districtCode) return;
+    if (!districtCode) return [];
     
     setLoadingWards(true);
     try {
       const res = await fetch(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`);
       const data = await res.json();
-      setWards(data.wards || []);
+      const fetchedWards = data.wards || [];
+      setWards(fetchedWards);
+      return fetchedWards;
     } catch (error) {
       console.error("Failed to fetch wards:", error);
       toast.error("Không thể tải danh sách phường/xã");
+      return [];
     } finally {
       setLoadingWards(false);
+    }
+  };
+
+  const fetchAddressSuggestions = async (query: string) => {
+    if (!query || query.length < 3) {
+      setAddressSuggestions([]);
+      return;
+    }
+
+    if (suggestionTimeoutRef.current) {
+      clearTimeout(suggestionTimeoutRef.current);
+    }
+
+    setIsFetchingSuggestions(true);
+
+    suggestionTimeoutRef.current = setTimeout(async () => {
+      // Use natural language query but keep it focused
+      const biasParams = (form.lat && form.lng) ? `&lat=${form.lat}&lon=${form.lng}` : "";
+      
+      const searchParts = [query];
+      if (form.ward) searchParts.push(form.ward);
+      if (form.district) searchParts.push(form.district);
+      if (form.city) searchParts.push(form.city);
+      
+      const fullQuery = searchParts.join(" ").trim();
+
+      try {
+        const res = await fetch(
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(fullQuery)}${biasParams}&limit=10`
+        );
+        
+        if (!res.ok) throw new Error(`Photon API error: ${res.status}`);
+
+        const data = await res.json();
+        if (!data.features) return;
+
+        // Filter results to stay within the selected administrative area
+        let suggestions = data.features
+          .map((f: any) => {
+            const p = f.properties;
+            const name = [p.name, p.street, p.housenumber].filter(Boolean).join(" ");
+            const context = [p.district, p.city, p.state].filter(Boolean).join(", ");
+            
+            return {
+              display_name: `${name}${name && context ? ", " : ""}${context}` || p.display_name,
+              lat: f.geometry.coordinates[1],
+              lon: f.geometry.coordinates[0],
+              properties: p
+            };
+          })
+          .filter((s: any) => {
+            const p = s.properties;
+            const targetCity = form.city.toLowerCase();
+            const targetDistrict = form.district.toLowerCase();
+            
+            // Basic city check (if city is selected)
+            if (form.city) {
+              const resCity = (p.city || p.state || "").toLowerCase();
+              if (!resCity.includes(targetCity.replace("thành phố ", "").replace("tỉnh ", "")) && 
+                  !targetCity.includes(resCity)) {
+                return false;
+              }
+            }
+            
+            // Basic district check (if district is selected)
+            if (form.district) {
+              const resDistrict = (p.district || p.city_district || p.county || "").toLowerCase();
+              const cleanTargetDistrict = targetDistrict.replace("quận ", "").replace("huyện ", "").replace("thị xã ", "");
+              if (resDistrict && !resDistrict.includes(cleanTargetDistrict) && !cleanTargetDistrict.includes(resDistrict)) {
+                // We keep it if the district is missing from the result (API limitation), 
+                // but filter out if it's explicitly a DIFFERENT district.
+                return false;
+              }
+            }
+            
+            return true;
+          });
+
+        setAddressSuggestions(suggestions.slice(0, 5));
+        setShowSuggestions(suggestions.length > 0);
+      } catch (error) {
+        console.error("Failed to fetch suggestions:", error);
+      } finally {
+        setIsFetchingSuggestions(false);
+      }
+    }, 1000);
+  };
+
+  const syncAdministrativeLevels = async (lat: number, lng: number, addressData: any) => {
+    if (!addressData) return;
+    
+    const addr = addressData.address || addressData.properties || {};
+    const rawCity = addr.city || addr.state || addr.province || addr.city_district || "";
+    const possibleDistricts = [addr.district, addr.city_district, addr.county, addr.town, addr.suburb].filter(Boolean);
+    const possibleWards = [addr.ward, addr.suburb, addr.village, addr.subdistrict, addr.quarter, addr.neighbourhood, addr.city_district].filter(Boolean);
+    
+    const road = addr.road || addr.street || addr.amenity || addr.building || "";
+    const houseNumber = addr.house_number || addr.housenumber || "";
+    const locationStr = [houseNumber, road].filter(Boolean).join(" ");
+    
+    let finalCity = "";
+    let finalDistrict = "";
+    let finalWard = "";
+
+    const removeAccents = (str: string) => {
+      return str.normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+    };
+
+    const cleanName = (name: string) => 
+      removeAccents(name.toLowerCase())
+        .replace(/thanh pho |tinh |quan |huyen |thi xa |phuong |xa |thi tran /g, "")
+        .trim();
+
+    if (rawCity) {
+      const targetCity = cleanName(rawCity);
+      const matchedCity = provinces.find(p => {
+        const pName = cleanName(p.name);
+        return pName === targetCity || pName.includes(targetCity) || targetCity.includes(pName);
+      });
+      
+      if (matchedCity) {
+        finalCity = matchedCity.name;
+        const currentDistricts = await fetchDistrictsByCity(matchedCity.code);
+        setDistricts(currentDistricts); 
+        
+        let matchedDist: any = null;
+        for (const rawDist of possibleDistricts) {
+          const targetDist = cleanName(rawDist);
+          matchedDist = currentDistricts.find((d: any) => {
+            const dName = cleanName(d.name);
+            return dName === targetDist || dName.includes(targetDist) || targetDist.includes(dName);
+          });
+          if (matchedDist) break;
+        }
+
+        if (matchedDist) {
+          finalDistrict = matchedDist.name;
+          const currentWards = await fetchWardsByDistrict(matchedDist.code);
+          setWards(currentWards); 
+          
+          for (const rawWard of possibleWards) {
+            const targetWard = cleanName(rawWard);
+            if (cleanName(matchedDist.name) === targetWard && possibleWards.length > 1) continue;
+            
+            const matchedWard = currentWards.find((w: any) => {
+              const wName = cleanName(w.name);
+              return wName === targetWard || wName.includes(targetWard) || targetWard.includes(wName);
+            });
+            if (matchedWard) {
+              finalWard = matchedWard.name;
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    setForm(f => ({
+      ...f,
+      lat,
+      lng,
+      city: finalCity || f.city,
+      district: finalDistrict || f.district,
+      ward: finalWard || f.ward,
+      location: locationStr || f.location
+    }));
+  };
+
+  const handleSearchAddress = async (customQuery?: string) => {
+    const query = customQuery || form.location;
+    if (!query && !form.ward && !form.district && !form.city) {
+      toast.error("Vui lòng nhập địa chỉ hoặc chọn khu vực");
+      return;
+    }
+
+    setIsSearchingAddress(true);
+    
+    // Use natural language query for Photon
+    const searchParts = [query];
+    if (form.ward) searchParts.push(form.ward);
+    if (form.district) searchParts.push(form.district);
+    if (form.city) searchParts.push(form.city);
+    
+    const fullQuery = searchParts.join(" ").trim();
+    const biasParams = (form.lat && form.lng) ? `&lat=${form.lat}&lon=${form.lng}` : "";
+
+    try {
+      // Switching to Photon for consistency and to avoid Nominatim 429/CORS
+      const res = await fetch(
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(fullQuery)}${biasParams}&limit=1`
+      );
+      
+      if (!res.ok) throw new Error("Search API error");
+      
+      const data = await res.json();
+      if (data && data.features && data.features.length > 0) {
+        const result = data.features[0];
+        const newLat = result.geometry.coordinates[1];
+        const newLng = result.geometry.coordinates[0];
+        
+        setForm(f => ({
+          ...f,
+          lat: newLat,
+          lng: newLng,
+          // Update location with a cleaner name if it was empty
+          location: f.location || result.properties.name || result.properties.street || f.location
+        }));
+        
+        toast.success("Đã tìm thấy vị trí trên bản đồ");
+      } else {
+        toast.error("Không tìm thấy địa chỉ này. Vui lòng chọn trên bản đồ.");
+      }
+    } catch (error) {
+      console.error("Search failed:", error);
+      toast.error("Lỗi khi tìm kiếm địa chỉ");
+    } finally {
+      setIsSearchingAddress(false);
     }
   };
 
@@ -1003,7 +1272,9 @@ export function ReportPage() {
                     onChange={(e) => {
                       const code = Number(e.target.value);
                       const name = provinces.find(p => p.code === code)?.name || "";
-                      handleCityChange(code, name);
+                      handleCityChange(code, name).then(() => {
+                        if (name) handleSearchAddress(""); 
+                      });
                     }}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white"
                   >
@@ -1022,7 +1293,9 @@ export function ReportPage() {
                     onChange={(e) => {
                       const code = Number(e.target.value);
                       const name = districts.find(d => d.code === code)?.name || "";
-                      handleDistrictChange(code, name);
+                      handleDistrictChange(code, name).then(() => {
+                        if (name) handleSearchAddress("");
+                      });
                     }}
                     disabled={!form.city || loadingDistricts}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white disabled:bg-gray-50 disabled:cursor-not-allowed"
@@ -1043,6 +1316,7 @@ export function ReportPage() {
                       const code = Number(e.target.value);
                       const name = wards.find(w => w.code === code)?.name || "";
                       setForm(f => ({ ...f, ward: name }));
+                      if (name) handleSearchAddress("");
                     }}
                     disabled={!form.district || loadingWards}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white disabled:bg-gray-50 disabled:cursor-not-allowed"
@@ -1052,48 +1326,75 @@ export function ReportPage() {
                   </select>
                 </div>
 
-                <div>
+                <div className="relative" ref={suggestionRef}>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Địa chỉ cụ thể *</label>
-                  <input
-                    value={form.location}
-                    onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                    placeholder="VD: 123 Đường Nguyễn Huệ"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm"
-                  />
-                </div>
+                  <div className="relative">
+                        <Home size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          value={form.location}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setForm((f) => ({ ...f, location: val }));
+                            fetchAddressSuggestions(val);
+                          }}
+                          onFocus={() => {
+                            if (addressSuggestions.length > 0) setShowSuggestions(true);
+                          }}
+                          placeholder="VD: 123 Đường Nguyễn Huệ"
+                          className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm"
+                        />
+                        
+                        {isFetchingSuggestions && (
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <Loader2 size={14} className="animate-spin text-gray-400" />
+                          </div>
+                        )}
+                        
+                        <AnimatePresence>
+                        {showSuggestions && addressSuggestions.length > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute z-[100] left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden"
+                          >
+                            {addressSuggestions.map((suggestion, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => {
+                                  syncAdministrativeLevels(
+                                    parseFloat(suggestion.lat),
+                                    parseFloat(suggestion.lon),
+                                    { properties: suggestion.properties, address: suggestion.properties }
+                                  );
+                                  setShowSuggestions(false);
+                                  toast.success("Đã cập nhật vị trí từ gợi ý");
+                                }}
+                                className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 flex items-start gap-3 border-b border-gray-50 last:border-0 transition-colors"
+                              >
+                                <MapPin size={16} className="text-red-400 mt-0.5 flex-shrink-0" />
+                                <span className="text-gray-700 line-clamp-2">{suggestion.display_name}</span>
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                    <Sparkles size={10} className="text-purple-400" />
+                    Mẹo: Chọn khu vực (Quận/Phường) trước để tìm kiếm chính xác hơn
+                  </p>
 
                 <LocationPicker
                   lat={form.lat}
                   lng={form.lng}
-                  onChange={(lat, lng, addressData) => {
-                    setForm(f => ({ ...f, lat, lng }));
-                    
-                    if (addressData) {
-                      const addr = addressData.address;
-                      const city = addr.city || addr.state || addr.province || "";
-                      const district = addr.suburb || addr.district || addr.town || addr.city_district || "";
-                      const ward = addr.suburb || addr.ward || addr.village || addr.subdistrict || "";
-                      const road = addr.road || addr.amenity || addr.building || "";
-                      const houseNumber = addr.house_number || "";
-                      
-                      const locationStr = [houseNumber, road].filter(Boolean).join(" ");
-                      
-                      // Try to match city from provinces list
-                      if (city) {
-                        const matchedCity = provinces.find(p => 
-                          p.name.toLowerCase().includes(city.toLowerCase()) || 
-                          city.toLowerCase().includes(p.name.toLowerCase())
-                        );
-                        if (matchedCity) {
-                          handleCityChange(matchedCity.code, matchedCity.name);
-                        }
-                      }
-
-                      setForm(f => ({
-                        ...f,
-                        location: locationStr || f.location
-                      }));
-                    }
+                  city={form.city}
+                  district={form.district}
+                  ward={form.ward}
+                  onChange={async (lat, lng, addressData) => {
+                    syncAdministrativeLevels(lat, lng, addressData);
                   }}
                 />
               </div>

@@ -24,6 +24,7 @@ export interface User {
     adminName: string;
   }>;
   permissions?: Record<string, string[]>;
+  mustChangePassword?: boolean;
 }
 
 interface AuthContextType {
@@ -43,6 +44,7 @@ interface AuthContextType {
   uploadAvatar: (file: File) => Promise<{ success: boolean; url?: string; error?: string }>;
   loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>;
   can: (resource: string, action: string) => boolean;
+  forceChangePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 interface RegisterData {
@@ -108,7 +110,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.log("[AuthContext] Permissions synced from server");
             }
           } else if (res.status === 401) {
-            // Token hết hạn hoặc không hợp lệ
             logout();
           }
         }
@@ -122,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; mustChangePassword?: boolean }> => {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
@@ -148,7 +149,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           roleId: beUser.roleId,
           permissions: beUser.permissions || {},
           banned: beUser.lockEnd && new Date(beUser.lockEnd) > new Date() ? true : false,
-          banReason: beUser.lockReason
+          banReason: beUser.lockReason,
+          mustChangePassword: beUser.mustChangePassword // BE should return this
         };
 
         if (userData.banned) {
@@ -158,21 +160,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
 
-        // Log permissions summary
-        console.group(`%c🔐 QUYỀN HẠN TÀI KHOẢN: ${userData.name}`, "color: #3b82f6; font-weight: bold; font-size: 12px;");
-        console.log("Vai trò:", userData.role);
-        if (userData.permissions) {
-          Object.entries(userData.permissions).forEach(([resource, actions]) => {
-            console.log(`- %c${resource}%c: [${actions.join(", ")}]`, "color: #ef4444; font-weight: bold;", "color: inherit;");
-          });
-        } else {
-          console.log("Không có quyền hạn nào được gán.");
-        }
-        console.groupEnd();
         if (result.accessToken) {
           localStorage.setItem(ACCESS_TOKEN_KEY, result.accessToken);
         }
-        return { success: true };
+        
+        return { success: true, mustChangePassword: userData.mustChangePassword };
       }
       
       return { success: false, error: result.message || "Email hoặc mật khẩu không đúng" };
@@ -249,14 +241,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           userName: data.name,
           email: data.email,
           password: data.password,
+          phone: data.phone,
+          city: data.city,
+          mustChangePassword: true // Flag for first login requirement
         }),
       });
       const result = await res.json();
       if (!res.ok || !result.success) {
         return { success: false, error: result.message || "Đăng ký thất bại" };
       }
-      // Tự động đăng nhập sau khi đăng ký thành công
-      return await login(data.email, data.password);
+      
+      // Since we generated a random password and "sent it via email", 
+      // we might not want to auto-login here if the user needs to check their email first.
+      // But the user said "sau khi nhấn nút tạo tài khoản mật khẩu sẽ được tạo random".
+      // Let's assume for now we don't auto-login so they check their email.
+      return { success: true };
     } catch {
       return { success: false, error: "Không thể kết nối đến máy chủ" };
     }
@@ -363,6 +362,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const forceChangePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}/auth/force-change-password`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        // Cập nhật state local
+        if (user) {
+          updateProfile({ mustChangePassword: false });
+        }
+        return { success: true };
+      }
+      return { success: false, error: data.message || "Đổi mật khẩu thất bại" };
+    } catch {
+      return { success: false, error: "Không thể kết nối đến máy chủ" };
+    }
+  };
+
   const uploadAvatar = async (file: File): Promise<{ success: boolean; url?: string; error?: string }> => {
     try {
       const formData = new FormData();
@@ -418,7 +442,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sendRegisterCode, verifyRegisterCode,
       uploadAvatar,
       loginWithGoogle,
-      can
+      can,
+      forceChangePassword
     }}>
       {children}
     </AuthContext.Provider>

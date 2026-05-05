@@ -18,7 +18,7 @@ const CITIES = ["TP. Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Cần Thơ", 
 
 export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProps) {
   const { login, register, sendResetCode, verifyResetCode, resetPassword, sendRegisterCode, verifyRegisterCode, loginWithGoogle } = useAuth();
-  const [tab, setTab] = useState<"login" | "register" | "forgot-password">(defaultTab);
+  const [tab, setTab] = useState<"login" | "register" | "forgot-password" | "force-change-password">(defaultTab);
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
@@ -30,7 +30,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
 
   // Register form
   const [regData, setRegData] = useState({
-    name: "", email: "", password: "", confirmPassword: "", phone: "", city: "",
+    name: "", email: "", phone: "", city: "",
   });
   const [regErrors, setRegErrors] = useState<Record<string, string>>({});
   const [regStep, setRegStep] = useState<1 | 2>(1);
@@ -84,7 +84,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
 
   const resetAll = () => {
     setLoginData({ email: "", password: "" });
-    setRegData({ name: "", email: "", password: "", confirmPassword: "", phone: "", city: "" });
+    setRegData({ name: "", email: "", phone: "", city: "" });
     setForgotData({ email: "", code: "", newPassword: "", confirmNewPassword: "" });
     setLoginErrors({});
     setRegErrors({});
@@ -104,7 +104,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     setTimeout(resetAll, 300);
   };
 
-  const switchTab = (t: "login" | "register" | "forgot-password") => {
+  const switchTab = (t: "login" | "register" | "forgot-password" | "force-change-password") => {
     setTab(t);
     resetAll();
   };
@@ -123,9 +123,6 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     if (!regData.name.trim()) errs.name = "Vui lòng nhập họ tên";
     if (!regData.email) errs.email = "Vui lòng nhập email";
     else if (!/\S+@\S+\.\S+/.test(regData.email)) errs.email = "Email không hợp lệ";
-    if (!regData.password) errs.password = "Vui lòng nhập mật khẩu";
-    else if (regData.password.length < 6) errs.password = "Mật khẩu tối thiểu 6 ký tự";
-    if (regData.password !== regData.confirmPassword) errs.confirmPassword = "Mật khẩu xác nhận không khớp";
     setRegErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -136,6 +133,12 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     const res = await login(loginData.email, loginData.password);
     setLoading(false);
     if (res.success) {
+      if (res.mustChangePassword) {
+        setForgotData(prev => ({ ...prev, email: loginData.email }));
+        setTab("force-change-password");
+        toast.info("Bạn cần đổi mật khẩu trong lần đăng nhập đầu tiên");
+        return;
+      }
       setSuccess(true);
       toast.success("Đăng nhập thành công! Chào mừng bạn trở lại 👋");
       setTimeout(handleClose, 1200);
@@ -191,10 +194,17 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
       return;
     }
     
+    // Generate random password
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+    let randomPassword = "";
+    for (let i = 0; i < 10; i++) {
+      randomPassword += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+
     const res = await register({
       name: regData.name,
       email: regData.email,
-      password: regData.password,
+      password: randomPassword,
       phone: regData.phone,
       city: regData.city,
     });
@@ -202,8 +212,8 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     
     if (res.success) {
       setSuccess(true);
-      toast.success("Đăng ký thành công! Chào mừng bạn đến với BáoCáoVN 🎉");
-      setTimeout(handleClose, 1400);
+      toast.success("Đăng ký thành công! Mật khẩu đã được gửi đến email của bạn 🎉");
+      setTimeout(handleClose, 2000);
     } else {
       setRegErrors({ general: res.error || "Đăng ký thất bại" });
     }
@@ -265,6 +275,27 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
         switchTab("login");
         handleClose();
       }, 1500);
+    } else {
+      setForgotErrors({ general: res.error || "Đổi mật khẩu thất bại" });
+    }
+  };
+
+  const { forceChangePassword } = useAuth();
+  const handleForceChangePassword = async () => {
+    const errs: Record<string, string> = {};
+    if (!forgotData.newPassword) errs.newPassword = "Vui lòng nhập mật khẩu mới";
+    else if (forgotData.newPassword.length < 6) errs.newPassword = "Mật khẩu tối thiểu 6 ký tự";
+    if (forgotData.newPassword !== forgotData.confirmNewPassword) errs.confirmNewPassword = "Mật khẩu xác nhận không khớp";
+    setForgotErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setLoading(true);
+    const res = await forceChangePassword(forgotData.newPassword);
+    setLoading(false);
+    if (res.success) {
+      setSuccess(true);
+      toast.success("Đổi mật khẩu thành công! Giờ bạn có thể sử dụng hệ thống.");
+      setTimeout(handleClose, 1500);
     } else {
       setForgotErrors({ general: res.error || "Đổi mật khẩu thất bại" });
     }
@@ -466,14 +497,6 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
 
                               <InputField icon={User} placeholder="Họ và tên" value={regData.name} onChange={(v) => setRegData((d) => ({ ...d, name: v }))} error={regErrors.name} />
                               <InputField icon={Mail} type="email" placeholder="Email" value={regData.email} onChange={(v) => setRegData((d) => ({ ...d, email: v }))} error={regErrors.email} />
-                              <InputField
-                                icon={Lock} type={showPass ? "text" : "password"} placeholder="Mật khẩu (tối thiểu 6 ký tự)" value={regData.password} onChange={(v) => setRegData((d) => ({ ...d, password: v }))} error={regErrors.password}
-                                rightIcon={<button type="button" onClick={() => setShowPass(!showPass)} className="text-gray-400 hover:text-gray-600">{showPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>}
-                              />
-                              <InputField
-                                icon={Lock} type={showConfirmPass ? "text" : "password"} placeholder="Xác nhận mật khẩu" value={regData.confirmPassword} onChange={(v) => setRegData((d) => ({ ...d, confirmPassword: v }))} error={regErrors.confirmPassword}
-                                rightIcon={<button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="text-gray-400 hover:text-gray-600">{showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}</button>}
-                              />
                               <div className="grid grid-cols-2 gap-3">
                                 <InputField icon={Phone} placeholder="Số điện thoại" value={regData.phone} onChange={(v) => setRegData((d) => ({ ...d, phone: v }))} />
                                 <div className="relative">
@@ -485,7 +508,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
                                 </div>
                               </div>
 
-                              {regData.password && <PasswordStrength password={regData.password} />}
+
 
                               <button
                                 onClick={handleRegisterStep1} disabled={loading}
@@ -563,6 +586,76 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
                               </button>
                             </motion.div>
                           )}
+                        </motion.div>
+                      ) : tab === "force-change-password" ? (
+                        <motion.div
+                          key="force-change-password"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.25 }}
+                          className="space-y-4"
+                        >
+                          <div>
+                            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+                              <Shield size={24} className="text-red-600" />
+                              Yêu cầu đổi mật khẩu
+                            </h2>
+                            <p className="text-gray-500 text-sm mt-1">
+                              Vì lý do bảo mật, bạn cần đổi mật khẩu trong lần đăng nhập đầu tiên.
+                            </p>
+                          </div>
+
+                          {forgotErrors.general && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="flex items-center gap-2 p-3 bg-red-50 rounded-xl border border-red-100 text-red-600 text-sm"
+                            >
+                              <X size={14} />
+                              {forgotErrors.general}
+                            </motion.div>
+                          )}
+
+                          <InputField
+                            icon={Lock}
+                            type={showPass ? "text" : "password"}
+                            placeholder="Mật khẩu mới (tối thiểu 6 ký tự)"
+                            value={forgotData.newPassword}
+                            onChange={(v) => setForgotData((d) => ({ ...d, newPassword: v }))}
+                            error={forgotErrors.newPassword}
+                            rightIcon={
+                              <button type="button" onClick={() => setShowPass(!showPass)} className="text-gray-400 hover:text-gray-600">
+                                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                              </button>
+                            }
+                          />
+                          <InputField
+                            icon={Lock}
+                            type={showConfirmPass ? "text" : "password"}
+                            placeholder="Xác nhận mật khẩu mới"
+                            value={forgotData.confirmNewPassword}
+                            onChange={(v) => setForgotData((d) => ({ ...d, confirmNewPassword: v }))}
+                            error={forgotErrors.confirmNewPassword}
+                            rightIcon={
+                              <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="text-gray-400 hover:text-gray-600">
+                                {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                              </button>
+                            }
+                          />
+
+                          {forgotData.newPassword && (
+                            <PasswordStrength password={forgotData.newPassword} />
+                          )}
+
+                          <button
+                            onClick={handleForceChangePassword}
+                            disabled={loading}
+                            className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-semibold shadow-lg shadow-red-200 hover:shadow-red-300 hover:scale-[1.02] transition-all duration-200 disabled:opacity-70 disabled:scale-100"
+                          >
+                            {loading ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                            {loading ? "Đang cập nhật..." : "Xác nhận & Hoàn tất"}
+                          </button>
                         </motion.div>
                       ) : (
                         <motion.div

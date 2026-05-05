@@ -21,7 +21,7 @@ const transporter = nodemailer.createTransport({
   greetingTimeout: 10000,
   logger: true,
   debug: true
-});
+} as any);
 
 export async function sendOtpEmail(toEmail: string, otp: string, type: "register" | "reset" | "login"): Promise<void> {
   const subjects: Record<string, string> = {

@@ -14,17 +14,35 @@ console.log(`[Email Service] BREVO_API_KEY: ${BREVO_API_KEY ? 'Defined (' + BREV
  * Hàm gửi mail lõi qua Brevo API
  */
 async function sendEmailViaBrevo(to: string, subject: string, htmlContent: string): Promise<boolean> {
-  if (!BREVO_API_KEY) {
+  let apiKey = BREVO_API_KEY;
+
+  // Tự động xử lý nếu người dùng dán nhầm đoạn mã JSON Base64
+  if (apiKey && apiKey.startsWith("eyJ")) {
+    try {
+      const decoded = Buffer.from(apiKey, "base64").toString("utf-8");
+      const parsed = JSON.parse(decoded);
+      if (parsed.api_key) {
+        apiKey = parsed.api_key;
+        console.log("[Email Service] Auto-decoded API Key from Base64 JSON.");
+      }
+    } catch (e) {
+      // Nếu không phải JSON thì kệ, cứ để nguyên
+    }
+  }
+
+  if (!apiKey) {
     console.error("[Email Service] ERROR: BREVO_API_KEY is not defined in environment variables.");
     return false;
   }
+
+  const cleanApiKey = apiKey.trim();
 
   try {
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
         "accept": "application/json",
-        "api-key": BREVO_API_KEY,
+        "api-key": cleanApiKey,
         "content-type": "application/json"
       },
       body: JSON.stringify({

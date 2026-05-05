@@ -5,19 +5,21 @@ console.log(`[Email Service] GMAIL_USER: ${process.env.GMAIL_USER ? 'Defined (' 
 console.log(`[Email Service] GMAIL_APP_PASSWORD: ${sanitizedGmailPass ? 'Defined (' + sanitizedGmailPass.length + ' chars)' : 'MISSING'}`);
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true, // true for 465, false for other ports
+  host: "smtp.googlemail.com",
+  port: 587,
+  secure: false, // true for 465, false for other ports
   pool: true,   // use pooled connections
   family: 4,    // force IPv4 to avoid IPv6 issues on Render
+  requireTLS: true,
   auth: {
     user: process.env.GMAIL_USER,
     pass: sanitizedGmailPass,
   },
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
+    minVersion: 'TLSv1.2'
   },
-  connectionTimeout: 10000, // 10 seconds
+  connectionTimeout: 10000,
   greetingTimeout: 10000,
   logger: true,
   debug: true

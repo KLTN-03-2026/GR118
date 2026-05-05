@@ -118,8 +118,6 @@ function CreateAccountModal({
   const [form, setForm] = useState({
     name: "",
     email: "",
-    password: "",
-    confirmPassword: "",
     phone: "",
     city: "TP. Hồ Chí Minh",
     roleId: activeRoles.length > 0 ? activeRoles[0].id : "",
@@ -135,9 +133,6 @@ function CreateAccountModal({
     if (!form.name.trim()) e.name = "Vui lòng nhập họ tên";
     if (!form.email.trim()) e.email = "Vui lòng nhập email";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Email không hợp lệ";
-    if (!form.password) e.password = "Vui lòng nhập mật khẩu";
-    else if (form.password.length < 6) e.password = "Mật khẩu tối thiểu 6 ký tự";
-    if (form.password !== form.confirmPassword) e.confirmPassword = "Mật khẩu xác nhận không khớp";
     if (!form.roleId) e.roleId = "Vui lòng chọn vai trò";
     return e;
   };
@@ -149,6 +144,7 @@ function CreateAccountModal({
 
     const selectedRole = roles.find((r) => r.id === form.roleId);
     const roleName = selectedRole?.name || "user";
+    const randomPassword = Math.random().toString(36).slice(-10) + Math.floor(Math.random() * 10);
 
     try {
       const res = await fetch(`${API_BASE}/auth/users`, {
@@ -158,32 +154,39 @@ function CreateAccountModal({
         body: JSON.stringify({
           userName: form.name.trim(),
           email: form.email.trim().toLowerCase(),
-          password: form.password,
+          password: randomPassword,
           roleIds: [form.roleId],
+          sendEmail: true,
+          forcePasswordChange: true
         }),
       });
-      const data = await res.json();
-      if (data.success && data.user) {
-        const newUser: User & { password: string } = {
-          id: data.user._id || data.user.id,
-          name: data.user.userName || form.name.trim(),
-          email: data.user.email || form.email.trim().toLowerCase(),
-          password: "",
-          phone: form.phone.trim() || undefined,
-          city: form.city,
-          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(form.name)}`,
-          joinedAt: data.user.createdAt || new Date().toISOString(),
-          reportsCount: 0,
-          resolvedCount: 0,
-          role: "user",
-          roleId: form.roleId,
-        };
-        onCreated(newUser);
-        toast.success(`✅ Đã tạo tài khoản ${roleName}: ${newUser.name}`);
-        onClose();
-      } else {
-        toast.error(data.message || "Tạo tài khoản thất bại");
+      const contentType = res.headers.get("content-type");
+      const data = contentType && contentType.includes("application/json") ? await res.json() : await res.text();
+      
+      if (!res.ok) {
+        toast.error((typeof data === "object" ? data.message : data) || "Tạo tài khoản thất bại");
+        return;
       }
+      
+      const userData = typeof data === "object" ? data.user || data : {};
+      const newUser: User & { password: string } = {
+        id: userData._id || userData.id || Math.random().toString(36).substr(2, 9),
+        name: userData.userName || form.name.trim(),
+        email: userData.email || form.email.trim().toLowerCase(),
+        password: "",
+        phone: form.phone.trim() || undefined,
+        city: form.city,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(form.name)}`,
+        joinedAt: userData.createdAt || new Date().toISOString(),
+        reportsCount: 0,
+        resolvedCount: 0,
+        role: roleName as "admin" | "moderator" | "user",
+      };
+
+      setUsers([newUser, ...users]);
+      setAddModalOpen(false);
+      setForm({ name: "", email: "", phone: "", city: "Thành phố Đà Nẵng", roleId: "" });
+      toast.success(`✅ Đã tạo tài khoản ${roleName} và gửi thông tin qua email: ${newUser.email}`);
     } catch (err) {
       toast.error("Không thể kết nối đến máy chủ");
     } finally {
@@ -307,39 +310,18 @@ function CreateAccountModal({
             {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
           </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mật khẩu <span className="text-red-500">*</span></label>
-            <div className="relative">
-              <Key size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type={showPw ? "text" : "password"}
-                value={form.password}
-                onChange={(e) => set("password", e.target.value)}
-                placeholder="Tối thiểu 6 ký tự"
-                className={`w-full pl-10 pr-11 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${errors.password ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"}`}
-              />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
+          {/* Info box about random password */}
+          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <Mail size={20} className="text-amber-600" />
             </div>
-            {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Xác nhận mật khẩu <span className="text-red-500">*</span></label>
-            <div className="relative">
-              <Key size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type={showPw ? "text" : "password"}
-                value={form.confirmPassword}
-                onChange={(e) => set("confirmPassword", e.target.value)}
-                placeholder="Nhập lại mật khẩu"
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${errors.confirmPassword ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"}`}
-              />
+            <div>
+              <p className="text-sm font-bold text-amber-800">Mật khẩu tự động</p>
+              <p className="text-xs text-amber-700 leading-relaxed mt-0.5">
+                Hệ thống sẽ tự động tạo mật khẩu ngẫu nhiên và gửi đến email <strong>{form.email || "của người dùng"}</strong>. 
+                Người dùng sẽ được yêu cầu đổi mật khẩu trong lần đăng nhập đầu tiên.
+              </p>
             </div>
-            {errors.confirmPassword && <p className="text-xs text-red-500 mt-1">{errors.confirmPassword}</p>}
           </div>
 
           {/* Phone + City */}
@@ -1166,29 +1148,40 @@ export function AdminUsersPage() {
 
   const handleDeleteUser = async (userId: string) => {
     try {
-      // Try query parameter pattern first as it matches deleteRole pattern
-      const res = await api.delete(`/auth/users?id=${userId}`);
-      
-      if (res.success) {
-        const updated = users.filter((u) => u.id !== userId);
-        setUsers(updated);
-        if (detailTarget?.id === userId) setDetailTarget(null);
-        toast.success("✅ Đã xóa tài khoản thành công");
-      } else {
-        // If query param fails, try the path pattern just in case
-        const res2 = await api.delete(`/auth/users/${userId}`);
-        if (res2.success) {
-          const updated = users.filter((u) => u.id !== userId);
-          setUsers(updated);
-          if (detailTarget?.id === userId) setDetailTarget(null);
-          toast.success("✅ Đã xóa tài khoản thành công");
-        } else {
-          toast.error(res2.message || res.message || "Xóa tài khoản thất bại");
-        }
-      }
+      // 1. Thử pattern query param chuẩn (giống Role)
+      let res = await api.delete(`/auth/users?id=${userId}`);
+      if (res.success) return handleDeletionSuccess(userId);
+
+      // 2. Thử pattern path param chuẩn (giống Permission)
+      res = await api.delete(`/auth/users/${userId}`);
+      if (res.success) return handleDeletionSuccess(userId);
+
+      // 3. Thử pattern không có prefix /auth
+      res = await api.delete(`/users/${userId}`);
+      if (res.success) return handleDeletionSuccess(userId);
+
+      // 4. Thử pattern có prefix /delete/ hoặc /remove/
+      res = await api.delete(`/auth/users/delete/${userId}`);
+      if (res.success) return handleDeletionSuccess(userId);
+
+      res = await api.delete(`/auth/users/remove/${userId}`);
+      if (res.success) return handleDeletionSuccess(userId);
+
+      // 5. Thử pattern query param với key userId
+      res = await api.delete(`/auth/users?userId=${userId}`);
+      if (res.success) return handleDeletionSuccess(userId);
+
+      toast.error(res.message || "Xóa tài khoản thất bại (Lỗi 404: Không tìm thấy endpoint xóa phù hợp)");
     } catch (err) {
       toast.error("Không thể kết nối đến máy chủ");
     }
+  };
+
+  const handleDeletionSuccess = (userId: string) => {
+    const updated = users.filter((u) => u.id !== userId);
+    setUsers(updated);
+    if (detailTarget?.id === userId) setDetailTarget(null);
+    toast.success("✅ Đã xóa tài khoản thành công");
   };
 
   // ── Stats ──

@@ -29,6 +29,8 @@ router.get("/users", GetUsers);
 router.get("/users/:id", GetUserById);
 router.patch("/users/:id", UpdateUser);
 router.post("/users/lockOrUnlock/:id", LockOrUnlockUser);
+router.delete("/users", DeleteUser); // Support ?id=...
+router.delete("/users/:id", DeleteUser); // Support /:id
 
 // permission
 router.post("/permissions", UpsertPermission);

@@ -6,9 +6,11 @@ import { IssueCard } from "../components/IssueCard";
 import { CATEGORY_LABELS, STATUS_LABELS, IssueCategory, IssueStatus } from "../data/issues";
 import { PageTitle } from "../components/PageTitle";
 import { useIssues } from "../context/IssuesContext";
+import { Skeleton, SkeletonText, SkeletonCircle } from "../components/ui/skeleton";
+import { Card } from "../components/ui/card";
 
 export function IssuesPage() {
-  const { issues } = useIssues();
+  const { issues, isLoading } = useIssues();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<IssueCategory | "all">("all");
   const [statusFilter, setStatusFilter] = useState<IssueStatus | "all">("all");
@@ -170,7 +172,29 @@ export function IssuesPage() {
         </motion.div>
 
         {/* Issues Grid */}
-        {filtered.length > 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="p-0 border-0 shadow-sm bg-white overflow-hidden rounded-2xl">
+                <Skeleton width="100%" height="200px" borderRadius="0" />
+                <div className="p-5 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <Skeleton width="60%" height="24px" />
+                    <Skeleton width="25%" height="20px" borderRadius="999px" />
+                  </div>
+                  <SkeletonText lines={2} />
+                  <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <SkeletonCircle size="24px" />
+                      <Skeleton width="80px" height="14px" />
+                    </div>
+                    <Skeleton width="60px" height="14px" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((issue, i) => (
               <IssueCard key={issue.id} issue={issue} index={i} />

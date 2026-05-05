@@ -24,6 +24,7 @@ import { AuthModal } from "../components/AuthModal";
 import { useActivities } from "../context/ActivitiesContext";
 import { Card } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { Skeleton, SkeletonText, SkeletonCircle } from "../components/ui/skeleton";
 
 const HERO_IMAGE = "https://images.unsplash.com/photo-1600440684297-d84c1789e058?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&w=1200";
 
@@ -72,7 +73,7 @@ const features = [
 
 
 export function HomePage() {
-  const { issues } = useIssues();
+  const { issues, isLoading } = useIssues();
   
   const categories = Object.entries(CATEGORY_LABELS).map(([key, label]) => ({
     key,
@@ -409,26 +410,36 @@ export function HomePage() {
           </motion.div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((cat, i) => (
-              <motion.div
-                key={cat.key}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.07 }}
-                whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
-                className="bg-white rounded-2xl p-5 text-center shadow-sm hover:shadow-lg transition-shadow duration-300 cursor-pointer border-2 border-transparent hover:border-gray-200"
-              >
-                <div
-                  className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center"
-                  style={{ backgroundColor: cat.color + "20" }}
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="bg-white rounded-2xl p-5 text-center shadow-sm border-2 border-transparent">
+                  <SkeletonCircle size="48px" className="mx-auto mb-3" />
+                  <Skeleton width="80px" height="14px" className="mx-auto mb-2" />
+                  <Skeleton width="60px" height="10px" className="mx-auto" />
+                </Card>
+              ))
+            ) : (
+              categories.map((cat, i) => (
+                <motion.div
+                  key={cat.key}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: i * 0.07 }}
+                  whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
+                  className="bg-white rounded-2xl p-5 text-center shadow-sm hover:shadow-lg transition-shadow duration-300 cursor-pointer border-2 border-transparent hover:border-gray-200"
                 >
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }} />
-                </div>
-                <div className="text-sm font-semibold text-gray-700">{cat.label}</div>
-                <div className="text-xs text-gray-400 mt-1">{cat.count} vấn đề</div>
-              </motion.div>
-            ))}
+                  <div
+                    className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center"
+                    style={{ backgroundColor: cat.color + "20" }}
+                  >
+                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }} />
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700">{cat.label}</div>
+                  <div className="text-xs text-gray-400 mt-1">{cat.count} vấn đề</div>
+                </motion.div>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -454,9 +465,31 @@ export function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {issues.slice(0, 3).map((issue, i) => (
-              <IssueCard key={issue.id} issue={issue} index={i} />
-            ))}
+            {isLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i} className="p-0 border-0 shadow-sm bg-white overflow-hidden rounded-2xl">
+                  <Skeleton width="100%" height="200px" borderRadius="0" />
+                  <div className="p-5 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <Skeleton width="60%" height="24px" />
+                      <Skeleton width="25%" height="20px" borderRadius="999px" />
+                    </div>
+                    <SkeletonText lines={2} />
+                    <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <SkeletonCircle size="24px" />
+                        <Skeleton width="80px" height="14px" />
+                      </div>
+                      <Skeleton width="60px" height="14px" />
+                    </div>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              issues.slice(0, 3).map((issue, i) => (
+                <IssueCard key={issue.id} issue={issue} index={i} />
+              ))
+            )}
           </div>
         </div>
       </section>

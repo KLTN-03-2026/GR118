@@ -19,7 +19,11 @@ import { useAuth } from "../context/AuthContext";
 import { useIssues } from "../context/IssuesContext";
 import { CATEGORY_LABELS, CATEGORY_COLORS, STATUS_LABELS, STATUS_COLORS, IssueCategory, Issue } from "../data/issues";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, Home } from "lucide-react";
+import { Skeleton, SkeletonText, SkeletonCircle } from "../components/ui/skeleton";
+import { Card } from "../components/ui/card";
+import { LocationPicker } from "../components/LocationPicker";
+import { api } from "../../utils/api";
 
 const STATUS_ICONS = {
   pending: Clock,
@@ -30,7 +34,7 @@ const STATUS_ICONS = {
 
 export function MyReportsPage() {
   const { user } = useAuth();
-  const { issues, updateIssue, deleteIssue } = useIssues();
+  const { issues, updateIssue, deleteIssue, isLoading } = useIssues();
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -60,8 +64,11 @@ export function MyReportsPage() {
       description: issue.description,
       category: issue.category,
       location: issue.location,
-      district: issue.district,
-      city: issue.city,
+      district: issue.district || "",
+      ward: issue.ward || "",
+      city: issue.city || "",
+      lat: issue.lat || 16.047079,
+      lng: issue.lng || 108.206230,
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -70,6 +77,99 @@ export function MyReportsPage() {
         ...issue,
         ...formData,
       });
+    };
+
+    const syncAdministrativeLevels = async (lat: number, lng: number, addressData: any) => {
+      if (!addressData) return;
+      
+      const addr = addressData.address || addressData.properties || {};
+      const rawCity = addr.city || addr.state || addr.province || addr.city_district || "";
+      const possibleDistricts = [addr.district, addr.city_district, addr.county, addr.town, addr.suburb].filter(Boolean);
+      const possibleWards = [addr.ward, addr.suburb, addr.village, addr.subdistrict, addr.quarter, addr.neighbourhood, addr.city_district].filter(Boolean);
+      
+      const road = addr.road || addr.street || addr.amenity || addr.building || "";
+      const houseNumber = addr.house_number || addr.housenumber || "";
+      const locationStr = [houseNumber, road].filter(Boolean).join(" ");
+      
+      let finalCity = "";
+      let finalDistrict = "";
+      let finalWard = "";
+
+      const removeAccents = (str: string) => {
+        return str.normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+      };
+
+      const cleanName = (name: string) => {
+        if (!name) return "";
+        return removeAccents(name.toLowerCase())
+          .replace(/thanh pho |tinh |quan |huyen |thi xa |phuong |xa |thi tran |tp |t\.p |q\. |p\. |district|ward|city|province/g, "")
+          .trim();
+      };
+
+      if (rawCity) {
+        const targetCity = cleanName(rawCity);
+        try {
+          const resP = await fetch("https://provinces.open-api.vn/api/p/");
+          const provinces = await resP.json();
+          const matchedCity = provinces.find((p: any) => {
+            const pName = cleanName(p.name);
+            return pName === targetCity || pName.includes(targetCity) || targetCity.includes(pName);
+          });
+          
+          if (matchedCity) {
+            finalCity = matchedCity.name;
+            const resD = await fetch(`https://provinces.open-api.vn/api/p/${matchedCity.code}?depth=2`);
+            const dataD = await resD.json();
+            const currentDistricts = dataD.districts || [];
+            
+            let matchedDist: any = null;
+            for (const rawDist of possibleDistricts) {
+              const targetDist = cleanName(rawDist);
+              if (!targetDist) continue;
+              matchedDist = currentDistricts.find((d: any) => {
+                const dName = cleanName(d.name);
+                return dName === targetDist || dName.includes(targetDist) || targetDist.includes(dName);
+              });
+              if (matchedDist) break;
+            }
+
+            if (matchedDist) {
+              finalDistrict = matchedDist.name;
+              const resW = await fetch(`https://provinces.open-api.vn/api/d/${matchedDist.code}?depth=2`);
+              const dataW = await resW.json();
+              const currentWards = dataW.wards || [];
+              
+              for (const rawWard of possibleWards) {
+                const targetWard = cleanName(rawWard);
+                if (!targetWard) continue;
+                if (cleanName(matchedDist.name) === targetWard && possibleWards.length > 1) continue;
+                const matchedWard = currentWards.find((w: any) => {
+                  const wName = cleanName(w.name);
+                  return wName === targetWard || wName.includes(targetWard) || targetWard.includes(wName);
+                });
+                if (matchedWard) {
+                  finalWard = matchedWard.name;
+                  break;
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Failed to sync administrative levels:", error);
+        }
+      }
+
+      setFormData(f => ({
+        ...f,
+        lat,
+        lng,
+        city: finalCity || f.city,
+        district: finalDistrict || f.district,
+        ward: finalWard || f.ward,
+        location: locationStr || f.location
+      }));
     };
 
     return (
@@ -86,59 +186,63 @@ export function MyReportsPage() {
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden relative z-10 border border-gray-100"
+          className="bg-white rounded-[32px] shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden relative z-10 border border-gray-100 flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Decorative Top Bar */}
           <div className="h-2 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
 
-          <div className="p-8">
+          <div className="p-6 sm:p-8 flex-1 overflow-y-auto">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
-                  <Edit3 size={28} />
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
+                  <Edit3 size={24} />
                 </div>
                 <div>
-                  <h3 className="font-black text-gray-900 text-2xl tracking-tight">Chỉnh sửa báo cáo</h3>
-                  <p className="text-gray-500 font-medium">Cập nhật thông tin chi tiết cho sự vụ của bạn</p>
+                  <h3 className="font-black text-gray-900 text-xl tracking-tight">Chỉnh sửa báo cáo</h3>
+                  <p className="text-gray-500 text-xs font-medium">Cập nhật thông tin chi tiết cho sự vụ của bạn</p>
                 </div>
               </div>
               <button
                 onClick={() => setEditingIssue(null)}
                 className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form id="edit-issue-form" onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left Side: Basic Info */}
                 <div className="space-y-5">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Tiêu đề sự vụ
                     </label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium"
-                      placeholder="Nhập tiêu đề ngắn gọn..."
-                      required
-                    />
+                    <div className="relative">
+                      <FileText size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium text-sm"
+                        placeholder="Nhập tiêu đề ngắn gọn..."
+                        required
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Phân loại danh mục
                     </label>
                     <div className="relative">
+                      <Clock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                       <select
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value as IssueCategory })}
-                        className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium appearance-none"
+                        className="w-full pl-11 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium text-sm appearance-none cursor-pointer"
                         required
                       >
                         {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
@@ -148,101 +252,113 @@ export function MyReportsPage() {
                         ))}
                       </select>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                        <Clock size={16} />
+                        <Calendar size={14} />
                       </div>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                       Mô tả tình trạng
                     </label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      rows={5}
-                      className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium resize-none"
+                      rows={6}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium text-sm resize-none"
                       placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."
                       required
                     />
                   </div>
                 </div>
 
-                {/* Right Side: Location Info */}
+                {/* Right Side: Map & Address */}
                 <div className="space-y-5">
-                  <div className="p-5 bg-blue-50/50 rounded-3xl border border-blue-100/50 space-y-4">
-                    <div className="flex items-center gap-2 text-blue-700 font-bold text-sm mb-1">
-                      <MapPin size={16} />
-                      <span>Thông tin vị trí</span>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1.5 ml-1">
-                        Địa chỉ cụ thể
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none font-medium text-sm"
-                        required
-                      />
-                    </div>
+                  <div className="rounded-[24px] overflow-hidden border border-gray-100 shadow-inner bg-gray-50">
+                    <LocationPicker
+                      lat={formData.lat}
+                      lng={formData.lng}
+                      city={formData.city}
+                      district={formData.district}
+                      ward={formData.ward}
+                      height="240px"
+                      onChange={(lat, lng, addressData) => {
+                        if (addressData) {
+                          syncAdministrativeLevels(lat, lng, addressData);
+                        } else {
+                          setFormData(f => ({ ...f, lat, lng }));
+                        }
+                      }}
+                    />
+                  </div>
 
-                    <div>
-                      <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1.5 ml-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
                         Quận / Huyện
                       </label>
                       <input
                         type="text"
                         value={formData.district}
                         onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                        className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none font-medium text-sm"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium text-xs"
+                        placeholder="Quận/Huyện"
                         required
                       />
                     </div>
-
-                    <div>
-                      <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1.5 ml-1">
-                        Tỉnh / Thành phố
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                        Phường / Xã
                       </label>
                       <input
                         type="text"
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        className="w-full px-4 py-3 bg-white border border-blue-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none font-medium text-sm"
+                        value={formData.ward}
+                        onChange={(e) => setFormData({ ...formData, ward: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium text-xs"
+                        placeholder="Phường/Xã"
                         required
                       />
                     </div>
                   </div>
-                  
-                  <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex gap-3 items-start">
-                    <AlertCircle className="text-amber-500 flex-shrink-0" size={18} />
-                    <p className="text-xs text-amber-700 leading-relaxed">
-                      Thông tin vị trí chính xác giúp cơ quan chức năng xử lý vấn đề nhanh chóng hơn.
-                    </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                      Địa chỉ cụ thể
+                    </label>
+                    <div className="relative">
+                      <Home size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none font-medium text-sm"
+                        placeholder="Số nhà, tên đường..."
+                        required
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-4 pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setEditingIssue(null)}
-                  className="px-8 py-3.5 text-gray-500 font-bold hover:text-gray-700 hover:bg-gray-100 rounded-2xl transition-all"
-                >
-                  Hủy bỏ
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-xl shadow-blue-200 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-                >
-                  <Save size={22} />
-                  Cập nhật báo cáo
-                </button>
-              </div>
             </form>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="p-6 bg-gray-50 border-t border-gray-100 flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setEditingIssue(null)}
+              className="px-6 py-3 text-gray-500 font-bold hover:text-gray-700 hover:bg-white rounded-xl transition-all text-sm"
+            >
+              Hủy bỏ
+            </button>
+            <button
+              type="submit"
+              form="edit-issue-form"
+              className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:shadow-xl hover:translate-y-[-1px] active:translate-y-[0px] transition-all flex items-center justify-center gap-2"
+            >
+              <Save size={18} />
+              Cập nhật báo cáo
+            </button>
           </div>
         </motion.div>
       </div>
@@ -365,7 +481,36 @@ export function MyReportsPage() {
         </div>
 
         {/* Issues List */}
-        {myIssues.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm overflow-hidden">
+                <div className="flex flex-col md:flex-row gap-5">
+                  <Skeleton width="192px" height="192px" className="rounded-xl flex-shrink-0" />
+                  <div className="flex-1 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-2 flex-1">
+                        <Skeleton width="100px" height="12px" />
+                        <Skeleton width="60%" height="24px" />
+                      </div>
+                      <Skeleton width="100px" height="32px" borderRadius="12px" />
+                    </div>
+                    <SkeletonText lines={2} />
+                    <div className="flex gap-4">
+                      <Skeleton width="120px" height="14px" />
+                      <Skeleton width="120px" height="14px" />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Skeleton width="120px" height="36px" borderRadius="12px" />
+                      <Skeleton width="120px" height="36px" borderRadius="12px" />
+                      <Skeleton width="80px" height="36px" borderRadius="12px" />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : myIssues.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center border border-gray-100 shadow-sm">
             <FileText size={64} className="mx-auto mb-4 text-gray-300" />
             <h3 className="font-bold text-gray-900 text-xl mb-2">Chưa có báo cáo nào</h3>

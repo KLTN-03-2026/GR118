@@ -197,10 +197,12 @@ export const UpdateUser = async (req: Request, res: Response, next: NextFunction
 
 export const DeleteUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+        const rawId = Array.isArray(req.query.id) ? req.query.id[0] : req.query.id;
+        const id = (typeof rawId === "string" ? rawId : null) || req.params.id || req.body.id || req.body.userId;
+        
         if (!id) {
             const err = ERROR_CODES.NOT_FOUND;
-            return next(new AppError(err.statusCode, err.code, "User not found"));
+            return next(new AppError(err.statusCode, err.code, "User ID is required for deletion"));
         }
 
         const result = await userRepo.deleteUser(id);

@@ -2,6 +2,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
 
 const ACCESS_TOKEN_KEY = "baocaovn_access_token";
 
+/**
+ * Utility helper for API calls with built-in token management and error handling.
+ * Gracefully handles non-JSON responses from the server.
+ */
 export const api = {
   get: async (endpoint: string) => {
     try {
@@ -10,9 +14,16 @@ export const api = {
         credentials: "include",
         headers: token ? { "Authorization": `Bearer ${token}` } : {},
       });
-      const data = await response.json();
-      if (!response.ok) return { success: false, message: data.message || "Network response was not ok" };
-      return data;
+      const contentType = response.headers.get("content-type");
+      const data = contentType && contentType.includes("application/json") ? await response.json() : await response.text();
+      
+      if (!response.ok) {
+        return { 
+          success: false, 
+          message: (typeof data === 'object' ? data.message : data) || "Network response was not ok" 
+        };
+      }
+      return typeof data === 'object' ? data : { success: true, data };
     } catch (error) {
       console.error(`Lỗi GET ${endpoint}:`, error);
       return { success: false, message: "Lỗi kết nối" };
@@ -31,9 +42,16 @@ export const api = {
         credentials: "include",
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      if (!response.ok) return { success: false, message: resData.message || "Network response was not ok" };
-      return resData;
+      const contentType = response.headers.get("content-type");
+      const resData = contentType && contentType.includes("application/json") ? await response.json() : await response.text();
+      
+      if (!response.ok) {
+        return { 
+          success: false, 
+          message: (typeof resData === 'object' ? resData.message : resData) || "Network response was not ok" 
+        };
+      }
+      return typeof resData === 'object' ? resData : { success: true, data: resData };
     } catch (error) {
       console.error(`Lỗi POST ${endpoint}:`, error);
       return { success: false, message: "Lỗi kết nối" };
@@ -52,9 +70,16 @@ export const api = {
         credentials: "include",
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      if (!response.ok) return { success: false, message: resData.message || "Network response was not ok" };
-      return resData;
+      const contentType = response.headers.get("content-type");
+      const resData = contentType && contentType.includes("application/json") ? await response.json() : await response.text();
+      
+      if (!response.ok) {
+        return { 
+          success: false, 
+          message: (typeof resData === 'object' ? resData.message : resData) || "Network response was not ok" 
+        };
+      }
+      return typeof resData === 'object' ? resData : { success: true, data: resData };
     } catch (error) {
       console.error(`Lỗi PUT ${endpoint}:`, error);
       return { success: false, message: "Lỗi kết nối" };
@@ -73,9 +98,16 @@ export const api = {
         credentials: "include",
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      if (!response.ok) return { success: false, message: resData.message || "Network response was not ok" };
-      return resData;
+      const contentType = response.headers.get("content-type");
+      const resData = contentType && contentType.includes("application/json") ? await response.json() : await response.text();
+      
+      if (!response.ok) {
+        return { 
+          success: false, 
+          message: (typeof resData === 'object' ? resData.message : resData) || "Network response was not ok" 
+        };
+      }
+      return typeof resData === 'object' ? resData : { success: true, data: resData };
     } catch (error) {
       console.error(`Lỗi PATCH ${endpoint}:`, error);
       return { success: false, message: "Lỗi kết nối" };
@@ -90,12 +122,33 @@ export const api = {
         credentials: "include",
         headers: token ? { "Authorization": `Bearer ${token}` } : {},
       });
-      const data = await response.json();
-      if (!response.ok) return { success: false, message: data.message || "Network response was not ok" };
-      return data;
+      const contentType = response.headers.get("content-type");
+      const data = contentType && contentType.includes("application/json") ? await response.json() : await response.text();
+      
+      if (!response.ok) {
+        return { 
+          success: false, 
+          message: (typeof data === 'object' ? data.message : data) || "Network response was not ok" 
+        };
+      }
+      return typeof data === 'object' ? data : { success: true, data };
     } catch (error) {
       console.error(`Lỗi DELETE ${endpoint}:`, error);
       return { success: false, message: "Lỗi kết nối" };
     }
   },
 };
+
+/**
+ * HƯỚNG DẪN GIẢI QUYẾT LỖI GOOGLE OAUTH (Origin not allowed):
+ * 
+ * Nếu bạn gặp lỗi "The given origin is not allowed for the given client ID", hãy làm theo các bước sau:
+ * 1. Truy cập https://console.cloud.google.com/
+ * 2. Chọn dự án của bạn.
+ * 3. Đi đến "APIs & Services" > "Credentials".
+ * 4. Tìm mục "OAuth 2.0 Client IDs" và nhấn vào Client ID bạn đang sử dụng.
+ * 5. Trong phần "Authorized JavaScript origins", thêm URL đang chạy localhost của bạn:
+ *    - http://localhost:5173
+ *    - http://127.0.0.1:5173
+ * 6. Lưu thay đổi. Lưu ý: Google có thể mất từ 5-10 phút để cập nhật cấu hình này.
+ */

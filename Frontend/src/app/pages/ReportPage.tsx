@@ -358,10 +358,12 @@ export function ReportPage() {
         .replace(/đ/g, 'd').replace(/Đ/g, 'D');
     };
 
-    const cleanName = (name: string) => 
-      removeAccents(name.toLowerCase())
-        .replace(/thanh pho |tinh |quan |huyen |thi xa |phuong |xa |thi tran /g, "")
+    const cleanName = (name: string) => {
+      if (!name) return "";
+      return removeAccents(name.toLowerCase())
+        .replace(/thanh pho |tinh |quan |huyen |thi xa |phuong |xa |thi tran |tp |t\.p |q\. |p\. |district|ward|city|province/g, "")
         .trim();
+    };
 
     if (rawCity) {
       const targetCity = cleanName(rawCity);
@@ -378,6 +380,8 @@ export function ReportPage() {
         let matchedDist: any = null;
         for (const rawDist of possibleDistricts) {
           const targetDist = cleanName(rawDist);
+          if (!targetDist) continue;
+          
           matchedDist = currentDistricts.find((d: any) => {
             const dName = cleanName(d.name);
             return dName === targetDist || dName.includes(targetDist) || targetDist.includes(dName);
@@ -392,6 +396,9 @@ export function ReportPage() {
           
           for (const rawWard of possibleWards) {
             const targetWard = cleanName(rawWard);
+            if (!targetWard) continue;
+            
+            // Skip if ward name is exactly same as district name and there are other options
             if (cleanName(matchedDist.name) === targetWard && possibleWards.length > 1) continue;
             
             const matchedWard = currentWards.find((w: any) => {
@@ -403,6 +410,10 @@ export function ReportPage() {
               break;
             }
           }
+        } else {
+          // Reset district and ward if city matched but district didn't
+          finalDistrict = "";
+          finalWard = "";
         }
       }
     }

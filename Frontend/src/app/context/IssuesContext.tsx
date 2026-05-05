@@ -19,6 +19,7 @@ interface IssuesContextType {
   voteIssue: (id: string, userId: string) => Promise<boolean>;
   addComment: (id: string, comment: any) => Promise<boolean>;
   refreshIssues: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const IssuesContext = createContext<IssuesContextType | null>(null);
@@ -33,8 +34,10 @@ function addProcessingStep(issue: Issue, step: Omit<ProcessingStep, "id">): Proc
 
 export function IssuesProvider({ children }: { children: ReactNode }) {
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchIssues = useCallback(async () => {
+    setIsLoading(true);
     try {
       const res = await api.get("/issues");
       if (res.success && res.data) {
@@ -46,6 +49,8 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to load issues in context:", error);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -283,8 +288,8 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
   return (
     <IssuesContext.Provider value={{
       issues, addIssue, updateIssue, deleteIssue, addVerification, reviewVerification,
-      receiveIssue, assignIssue, startProcessing, requestAdditionalInfo, completeIssue, rejectIssue,
-      voteIssue, addComment, refreshIssues: fetchIssues
+      voteIssue, addComment, refreshIssues: fetchIssues,
+      isLoading
     }}>
       {children}
     </IssuesContext.Provider>
@@ -297,6 +302,7 @@ export function useIssues() {
     console.warn("useIssues called outside of IssuesProvider");
     return {
       issues: [],
+      isLoading: true,
       addIssue: () => {},
       updateIssue: () => {},
       deleteIssue: () => {},

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -130,6 +131,87 @@ export function DashboardPage() {
   const { can } = useAuth();
   const { issues } = useIssues();
 
+  // We'll use local state for the dashboard cards
+  const [stats, setStats] = useState([
+    { label: "Tổng báo cáo", value: "...", change: "+0%", icon: TrendingUp, color: "#ef4444", bg: "#fff1f2", desc: "đang tải..." },
+    { label: "Đã giải quyết", value: "...", change: "+0%", icon: CheckCircle2, color: "#10b981", bg: "#f0fdf4", desc: "đang tải..." },
+    { label: "Đang xử lý", value: "...", change: "-0%", icon: Clock, color: "#3b82f6", bg: "#eff6ff", desc: "đang tải..." },
+    { label: "Chờ xử lý", value: "...", change: "+0%", icon: AlertCircle, color: "#f59e0b", bg: "#fffbeb", desc: "đang tải..." },
+    { label: "Người dùng", value: "...", change: "+0%", icon: Users, color: "#8b5cf6", bg: "#f5f3ff", desc: "đang tải..." },
+    { label: "AI Chính xác", value: "...", change: "+0%", icon: Sparkles, color: "#ec4899", bg: "#fdf2f8", desc: "đang tải..." },
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { api } = await import("../../utils/api");
+        const res = await api.get("/auth/stats");
+        if (res.success && res.data) {
+          const d = res.data;
+          setStats([
+            {
+              label: "Tổng báo cáo",
+              value: d.totalReports.toLocaleString(),
+              change: d.growth?.reports || "+0%",
+              icon: TrendingUp,
+              color: "#ef4444",
+              bg: "#fff1f2",
+              desc: "so với tháng trước",
+            },
+            {
+              label: "Đã giải quyết",
+              value: d.resolvedReports.toLocaleString(),
+              change: d.growth?.resolved || "+0%",
+              icon: CheckCircle2,
+              color: "#10b981",
+              bg: "#f0fdf4",
+              desc: `tỷ lệ ${d.completionRate}%`,
+            },
+            {
+              label: "Đang xử lý",
+              value: d.processingReports.toLocaleString(),
+              change: "-5.3%",
+              icon: Clock,
+              color: "#3b82f6",
+              bg: "#eff6ff",
+              desc: "trung bình 3.2 ngày",
+            },
+            {
+              label: "Chờ xử lý",
+              value: d.pendingReports.toLocaleString(),
+              change: "+2.1%",
+              icon: AlertCircle,
+              color: "#f59e0b",
+              bg: "#fffbeb",
+              desc: "cần ưu tiên xử lý",
+            },
+            {
+              label: "Người dùng",
+              value: d.totalUsers.toLocaleString(),
+              change: d.growth?.users || "+0%",
+              icon: Users,
+              color: "#8b5cf6",
+              bg: "#f5f3ff",
+              desc: "đăng ký sử dụng",
+            },
+            {
+              label: "AI Chính xác",
+              value: `${d.aiAccuracy}%`,
+              change: "+1.2%",
+              icon: Sparkles,
+              color: "#ec4899",
+              bg: "#fdf2f8",
+              desc: "so với lúc bắt đầu",
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error("Dashboard stats fetch error:", err);
+      }
+    };
+    fetchStats();
+  }, []);
+
   const categoryData = Object.entries(CATEGORY_LABELS).map(([key, label]) => ({
     name: label.split(" ")[0],
     count: issues.filter((i) => i.category === key).length,
@@ -184,9 +266,9 @@ export function DashboardPage() {
 
         {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-          {statCards.map((card, i) => (
+          {stats.map((card, i) => (
             <div key={card.label} className="xl:col-span-1 col-span-1">
-              <StatCard card={card} index={i} />
+              <StatCard card={card as any} index={i} />
             </div>
           ))}
         </div>

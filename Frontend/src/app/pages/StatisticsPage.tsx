@@ -180,29 +180,41 @@ export function StatisticsPage() {
     return filtered;
   }, [issues, startDate, endDate, selectedCategory, selectedDistrict, selectedSeverity]);
 
+  // State cho thống kê từ server
+  const [serverStats, setServerStats] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchServerStats = async () => {
+      try {
+        const res = await api.get("/auth/stats");
+        if (res.success) {
+          setServerStats(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch server stats:", err);
+      }
+    };
+    fetchServerStats();
+  }, []);
+
   // Thống kê tổng quan
   const stats = useMemo(() => {
-    const total = filteredIssues.length;
-    const pending = filteredIssues.filter((i) => i.status === "pending").length;
-    const received = filteredIssues.filter((i) => i.status === "received").length;
-    const processing = filteredIssues.filter((i) => i.status === "processing").length;
-    const needInfo = filteredIssues.filter((i) => i.status === "need_info").length;
-    const resolved = filteredIssues.filter((i) => i.status === "resolved").length;
-    const rejected = filteredIssues.filter((i) => i.status === "rejected").length;
-    const inProgress = processing + needInfo;
+    const total = serverStats?.totalReports || filteredIssues.length;
+    const pending = serverStats?.pendingReports || filteredIssues.filter((i) => i.status === "pending").length;
+    const resolved = serverStats?.resolvedReports || filteredIssues.filter((i) => i.status === "resolved").length;
+    const inProgress = serverStats?.processingReports || filteredIssues.filter((i) => i.status === "processing" || i.status === "received" || i.status === "need_info").length;
 
     return {
       total,
       pending,
-      received,
-      processing,
-      needInfo,
       resolved,
-      rejected,
       inProgress,
-      completionRate: total > 0 ? Math.round((resolved / total) * 100) : 0,
+      completionRate: serverStats?.completionRate || (total > 0 ? Math.round((resolved / total) * 100) : 0),
+      totalUsers: serverStats?.totalUsers || 0,
+      aiAccuracy: serverStats?.aiAccuracy || 92,
+      growth: serverStats?.growth || { reports: "+0%", users: "+0%", resolved: "+0%" }
     };
-  }, [filteredIssues]);
+  }, [filteredIssues, serverStats]);
 
   // Dữ liệu cho biểu đồ trạng thái
   const statusData = [
@@ -330,7 +342,7 @@ export function StatisticsPage() {
           <StatCard
             label="Tổng báo cáo"
             value={stats.total.toLocaleString()}
-            change="+18.5%"
+            change={stats.growth.reports}
             subtext="so với tháng trước"
             icon={FileText}
             color="indigo"
@@ -338,7 +350,7 @@ export function StatisticsPage() {
           <StatCard
             label="Đã giải quyết"
             value={stats.resolved.toLocaleString()}
-            change="+24.1%"
+            change={stats.growth.resolved}
             subtext={`tỷ lệ ${stats.completionRate}%`}
             icon={CheckCircle}
             color="emerald"
@@ -361,16 +373,16 @@ export function StatisticsPage() {
           />
           <StatCard
             label="Người dùng"
-            value="45,821" 
-            change="+31.2%"
+            value={stats.totalUsers.toLocaleString()} 
+            change={stats.growth.users}
             subtext="đăng ký sử dụng"
             icon={TrendingUp}
             color="blue"
           />
           <StatCard
             label="AI Chính xác"
-            value="94%" 
-            change="+12%"
+            value={`${stats.aiAccuracy}%`} 
+            change="+1.2%"
             subtext="so với lúc bắt đầu"
             icon={Zap}
             color="purple"

@@ -7,6 +7,7 @@ import { authLimiter } from '../middlewares/rate-limit.middleware';
 import { DeletePermission, GetActions, GetPermission, GetPermissions, GetResources, UpsertPermission } from '../modules/admin.controller/permission';
 import { DeleteRole, UpdateRole, GetRoleById, GetRoles, UpsertRole } from '../modules/admin.controller/role';
 import { AssignRoleToUser, CreateNewUser, GetUsers, GetUserById, LockOrUnlockUser, UpdateUser, DeleteUser } from '../modules/admin.controller/user';
+import { GetStats } from '../modules/admin.controller/stats';
 import { sendAccountCreationEmail } from '../utils/email.service';
 
 const router = Router();
@@ -18,6 +19,7 @@ router.post("/loginGoogle", authLimiter, loginWithGoogle);
 router.post("/logout", logout);
 router.post("/refresh-token", refreshToken);
 router.get("/profile", isAuthenticated, getProfile);
+router.get("/stats", isAuthenticated, GetStats);
 router.get("/test-email", TestEmail);
 
 // OTP

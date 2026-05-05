@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { Permission, PermissionResource } from "../data/permissions";
 import { api } from "../../utils/api";
+import { useAuth } from "./AuthContext";
 
 interface PermissionsContextType {
   permissions: Permission[];
@@ -89,11 +90,18 @@ function mapBackendPermission(raw: any): Permission {
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { logout } = useAuth();
 
   const fetchPermissions = useCallback(async () => {
     try {
       // Fetch tất cả permissions — limit=500 để lấy hết
       const res = await api.get("/auth/permissions?limit=500");
+
+      if (res.status === 401) {
+        logout();
+        return;
+      }
+
       console.log("[PermissionsContext] API response:", res);
       let rawList: any[] = [];
 
@@ -117,7 +125,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [logout]);
 
   useEffect(() => {
     fetchPermissions();

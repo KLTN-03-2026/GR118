@@ -20,13 +20,14 @@ export const api = {
       if (!response.ok) {
         return { 
           success: false, 
+          status: response.status,
           message: (typeof data === 'object' ? data.message : data) || "Network response was not ok" 
         };
       }
-      return typeof data === 'object' ? data : { success: true, data };
+      return typeof data === 'object' ? { ...data, status: response.status } : { success: true, data, status: response.status };
     } catch (error) {
       console.error(`Lỗi GET ${endpoint}:`, error);
-      return { success: false, message: "Lỗi kết nối" };
+      return { success: false, status: 500, message: "Lỗi kết nối" };
     }
   },
 
@@ -48,13 +49,14 @@ export const api = {
       if (!response.ok) {
         return { 
           success: false, 
+          status: response.status,
           message: (typeof resData === 'object' ? resData.message : resData) || "Network response was not ok" 
         };
       }
-      return typeof resData === 'object' ? resData : { success: true, data: resData };
+      return typeof resData === 'object' ? { ...resData, status: response.status } : { success: true, data: resData, status: response.status };
     } catch (error) {
       console.error(`Lỗi POST ${endpoint}:`, error);
-      return { success: false, message: "Lỗi kết nối" };
+      return { success: false, status: 500, message: "Lỗi kết nối" };
     }
   },
 
@@ -76,13 +78,14 @@ export const api = {
       if (!response.ok) {
         return { 
           success: false, 
+          status: response.status,
           message: (typeof resData === 'object' ? resData.message : resData) || "Network response was not ok" 
         };
       }
-      return typeof resData === 'object' ? resData : { success: true, data: resData };
+      return typeof resData === 'object' ? { ...resData, status: response.status } : { success: true, data: resData, status: response.status };
     } catch (error) {
       console.error(`Lỗi PUT ${endpoint}:`, error);
-      return { success: false, message: "Lỗi kết nối" };
+      return { success: false, status: 500, message: "Lỗi kết nối" };
     }
   },
 
@@ -104,13 +107,14 @@ export const api = {
       if (!response.ok) {
         return { 
           success: false, 
+          status: response.status,
           message: (typeof resData === 'object' ? resData.message : resData) || "Network response was not ok" 
         };
       }
-      return typeof resData === 'object' ? resData : { success: true, data: resData };
+      return typeof resData === 'object' ? { ...resData, status: response.status } : { success: true, data: resData, status: response.status };
     } catch (error) {
       console.error(`Lỗi PATCH ${endpoint}:`, error);
-      return { success: false, message: "Lỗi kết nối" };
+      return { success: false, status: 500, message: "Lỗi kết nối" };
     }
   },
 
@@ -128,13 +132,14 @@ export const api = {
       if (!response.ok) {
         return { 
           success: false, 
+          status: response.status,
           message: (typeof data === 'object' ? data.message : data) || "Network response was not ok" 
         };
       }
-      return typeof data === 'object' ? data : { success: true, data };
+      return typeof data === 'object' ? { ...data, status: response.status } : { success: true, data, status: response.status };
     } catch (error) {
       console.error(`Lỗi DELETE ${endpoint}:`, error);
-      return { success: false, message: "Lỗi kết nối" };
+      return { success: false, status: 500, message: "Lỗi kết nối" };
     }
   },
 };

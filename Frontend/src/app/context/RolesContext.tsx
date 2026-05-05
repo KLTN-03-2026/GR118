@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { Role } from "../data/roles";
 import { api } from "../../utils/api";
+import { useAuth } from "./AuthContext";
 
 interface RolesContextType {
   roles: Role[];
@@ -17,10 +18,17 @@ const RolesContext = createContext<RolesContextType | null>(null);
 export function RolesProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { logout } = useAuth();
 
   const fetchRoles = useCallback(async () => {
     try {
       const res = await api.get("/auth/role?limit=200");
+
+      if (res.status === 401) {
+        logout();
+        return;
+      }
+
       if (res.success && (res.roles || res.data)) {
         const rawRoles = res.roles || res.data;
         const mappedRoles = rawRoles.map((r: any) => ({
@@ -45,7 +53,7 @@ export function RolesProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [logout]);
 
   useEffect(() => {
     fetchRoles();

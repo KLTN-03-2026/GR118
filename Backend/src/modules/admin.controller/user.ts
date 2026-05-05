@@ -4,6 +4,7 @@ import { UserMapper } from "../../mapper/auth/user.mapper";
 import { ERROR_CODES } from "../../constant/error";
 import { AppError } from "../../utils/app-error";
 import { userRepo } from "../../repos/index";
+import { sendAccountCreationEmail } from "../../utils/email.service";
 
 // assignRoleToUser
 export const AssignRoleToUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -131,6 +132,14 @@ export const CreateNewUser = async (req: Request, res: Response, next: NextFunct
         }
 
         const responseData = UserMapper.toUserResponse(result.data.user, result.data.roles);
+
+        // Send email with credentials
+        try {
+            await sendAccountCreationEmail(email, userName, password);
+        } catch (emailErr) {
+            console.error("Failed to send account creation email:", emailErr);
+            // We don't block the response even if email fails, but we log it
+        }
 
         return res.status(201).json({
             success: true,

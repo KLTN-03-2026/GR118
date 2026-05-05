@@ -506,26 +506,40 @@ export const updateUserByAdmin = async (
 };
 
 export const deleteUser = async (userId: string) => {
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-        return {
-            success: false,
-            message: "User ID không hợp lệ"
-        };
-    }
-
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        await authSchema.findByIdAndDelete(userId).session(session);
-        await userRoleSchema.deleteMany({ user_id: userId }).session(session);
+        let userToDelete;
+        
+        if (mongoose.Types.ObjectId.isValid(userId)) {
+            userToDelete = await authSchema.findById(userId).session(session);
+        } else {
+            // Fallback for non-ObjectId (like 'eo5cho7t1' or 'admin')
+            userToDelete = await authSchema.findOne({ 
+                $or: [{ userName: userId }, { email: userId }] 
+            }).session(session);
+        }
+
+        if (!userToDelete) {
+            await session.abortTransaction();
+            session.endSession();
+            return {
+                success: false,
+                message: "Không tìm thấy người dùng để xóa"
+            };
+        }
+
+        const realId = userToDelete._id;
+        await authSchema.findByIdAndDelete(realId).session(session);
+        await userRoleSchema.deleteMany({ user_id: realId.toString() }).session(session);
         
         await session.commitTransaction();
         session.endSession();
 
         return {
             success: true,
-            message: "Xóa người dùng thành công"
+            message: `Đã xóa người dùng ${userToDelete.userName} thành công`
         };
     } catch (error) {
         await session.abortTransaction();

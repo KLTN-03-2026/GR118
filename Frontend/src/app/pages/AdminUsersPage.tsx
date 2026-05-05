@@ -167,7 +167,7 @@ function CreateAccountModal({
       const data = res.data || res;
       const userData = data.user || data;
       const newUser: User & { password: string } = {
-        id: userData._id || userData.id || Math.random().toString(36).substr(2, 9),
+        id: userData.user_id || userData._id || userData.id || Math.random().toString(36).substr(2, 9),
         name: userData.userName || form.name.trim(),
         email: userData.email || form.email.trim().toLowerCase(),
         password: "",

@@ -220,7 +220,7 @@ export const DeleteUser = async (req: Request, res: Response, next: NextFunction
 
         return res.status(200).json({
             success: true,
-            message: "Xóa người dùng thành công"
+            message: result.message || "Xóa người dùng thành công"
         });
     } catch (error) {
         console.error("DeleteUser error:", error);

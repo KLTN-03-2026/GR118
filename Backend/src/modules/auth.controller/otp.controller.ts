@@ -51,8 +51,11 @@ export const sendOtp = async (req: Request, res: Response) => {
       used: false,
     });
 
-    // Gửi email
-    await sendOtpEmail(email, code, type);
+    // Gửi email - không dùng await để tránh treo request nếu SMTP chậm
+    sendOtpEmail(email, code, type).catch(err => {
+      console.error(`[OTP Email] Background failure sending to ${email}:`, err.message || err);
+    });
+    console.log(`[OTP Email] Dispatching ${type} code to ${email} in background...`);
 
     return res.status(200).json({
       success: true,

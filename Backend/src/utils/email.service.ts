@@ -5,22 +5,11 @@ console.log(`[Email Service] GMAIL_USER: ${process.env.GMAIL_USER ? 'Defined (' 
 console.log(`[Email Service] GMAIL_APP_PASSWORD: ${sanitizedGmailPass ? 'Defined (' + sanitizedGmailPass.length + ' chars)' : 'MISSING'}`);
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.googlemail.com",
-  port: 587,
-  secure: false, // true for 465, false for other ports
-  pool: true,   // use pooled connections
-  family: 4,    // force IPv4 to avoid IPv6 issues on Render
-  requireTLS: true,
+  service: "gmail",
   auth: {
     user: process.env.GMAIL_USER,
     pass: sanitizedGmailPass,
   },
-  tls: {
-    rejectUnauthorized: false,
-    minVersion: 'TLSv1.2'
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
   logger: true,
   debug: true
 } as any);
@@ -92,12 +81,18 @@ export async function sendOtpEmail(toEmail: string, otp: string, type: "register
 </html>
   `;
 
-  await transporter.sendMail({
-    from: `"BáoCáoVN" <${process.env.GMAIL_USER}>`,
-    to: toEmail,
-    subject: subjects[type],
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: `"BáoCáoVN" <${process.env.GMAIL_USER}>`,
+      to: toEmail,
+      subject: subjects[type],
+      html,
+    });
+  } catch (error) {
+    console.error(`[Email Service] Failed to send OTP to ${toEmail}. Printing to log instead.`);
+    console.log(`\n************************************************\n[BACKUP LOG] OTP Code for ${toEmail}: ${otp} (Type: ${type})\n************************************************\n`);
+    throw error;
+  }
 }
 
 export async function sendAccountCreationEmail(toEmail: string, userName: string, password: string): Promise<void> {
@@ -161,11 +156,17 @@ export async function sendAccountCreationEmail(toEmail: string, userName: string
 </html>
   `;
 
-  await transporter.sendMail({
-    from: `"BáoCáoVN" <${process.env.GMAIL_USER}>`,
-    to: toEmail,
-    subject: "🚀 Tài khoản BáoCáoVN của bạn đã sẵn sàng",
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: `"BáoCáoVN" <${process.env.GMAIL_USER}>`,
+      to: toEmail,
+      subject: "🚀 Tài khoản BáoCáoVN của bạn đã sẵn sàng",
+      html,
+    });
+  } catch (error) {
+    console.error(`[Email Service] Failed to send credentials to ${toEmail}. Printing to log instead.`);
+    console.log(`\n************************************************\n[BACKUP LOG] ACCOUNT CREATED\nUser: ${userName}\nPassword: ${password}\nEmail: ${toEmail}\n************************************************\n`);
+    throw error;
+  }
 }
 

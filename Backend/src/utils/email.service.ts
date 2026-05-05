@@ -82,12 +82,13 @@ export async function sendOtpEmail(toEmail: string, otp: string, type: "register
   `;
 
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `"BáoCáoVN" <${process.env.GMAIL_USER}>`,
       to: toEmail,
       subject: subjects[type],
       html,
     });
+    console.log(`[Email Service] ACTUAL SUCCESS: OTP sent to ${toEmail}. MessageId: ${info.messageId}`);
   } catch (error) {
     console.error(`[Email Service] Failed to send OTP to ${toEmail}. Printing to log instead.`);
     console.log(`\n************************************************\n[BACKUP LOG] OTP Code for ${toEmail}: ${otp} (Type: ${type})\n************************************************\n`);
@@ -157,12 +158,13 @@ export async function sendAccountCreationEmail(toEmail: string, userName: string
   `;
 
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `"BáoCáoVN" <${process.env.GMAIL_USER}>`,
       to: toEmail,
       subject: "🚀 Tài khoản BáoCáoVN của bạn đã sẵn sàng",
       html,
     });
+    console.log(`[Email Service] ACTUAL SUCCESS: Credentials sent to ${toEmail}. MessageId: ${info.messageId}`);
   } catch (error) {
     console.error(`[Email Service] Failed to send credentials to ${toEmail}. Printing to log instead.`);
     console.log(`\n************************************************\n[BACKUP LOG] ACCOUNT CREATED\nUser: ${userName}\nPassword: ${password}\nEmail: ${toEmail}\n************************************************\n`);

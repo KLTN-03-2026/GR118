@@ -37,8 +37,16 @@ export function ActivityDetailPage() {
   const [formData, setFormData] = useState({
     name: user?.name || "",
     phone: user?.phone || "",
+    email: user?.email || "",
+    city: user?.city || "",
     note: "",
   });
+  const [formErrors, setFormErrors] = useState<{
+    name?: string;
+    phone?: string;
+    email?: string;
+    city?: string;
+  }>({});
 
   if (!activity) {
     return (
@@ -90,36 +98,68 @@ export function ActivityDetailPage() {
   const handleSubmitRegistration = () => {
     if (!user) return;
 
+    const errors: {
+      name?: string;
+      phone?: string;
+      email?: string;
+      city?: string;
+    } = {};
+
     if (!formData.name.trim()) {
-      toast.error("Vui lòng nhập họ tên");
-      return;
+      errors.name = "Vui lòng nhập họ tên";
     }
 
     if (!formData.phone.trim()) {
-      toast.error("Vui lòng nhập số điện thoại");
-      return;
+      errors.phone = "Vui lòng nhập số điện thoại";
+    }
+
+    if (!formData.email.trim()) {
+      errors.email = "Vui lòng nhập email";
+    }
+
+    if (!formData.city.trim()) {
+      errors.city = "Vui lòng nhập tỉnh/thành";
     }
 
     // Validate phone number
     const phoneRegex = /^(0|\+84)[0-9]{9,10}$/;
-    if (!phoneRegex.test(formData.phone.trim())) {
-      toast.error("Số điện thoại không hợp lệ");
+    if (formData.phone.trim() && !phoneRegex.test(formData.phone.trim())) {
+      errors.phone = "Số điện thoại không hợp lệ";
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (formData.email.trim() && !emailRegex.test(formData.email.trim())) {
+      errors.email = "Email không hợp lệ";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error("Vui lòng kiểm tra lại thông tin đã nhập");
       return;
     }
+
+    setFormErrors({});
 
     registerForActivity(activity.id, {
       activityId: activity.id,
       userId: user.id,
       userName: formData.name.trim(),
       userPhone: formData.phone.trim(),
-      userEmail: user.email,
+      userEmail: formData.email.trim(),
+      userCity: formData.city.trim(),
       userAvatar: user.avatar,
       note: formData.note.trim(),
     });
 
     toast.success("Đăng ký tham gia thành công!");
     setShowRegisterModal(false);
-    setFormData({ ...formData, note: "" });
+    setFormData({
+      name: user?.name || "",
+      phone: user?.phone || "",
+      email: user?.email || "",
+      city: user?.city || "",
+      note: "",
+    });
   };
 
   return (
@@ -360,10 +400,18 @@ export function ActivityDetailPage() {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      if (formErrors.name) setFormErrors({ ...formErrors, name: undefined });
+                    }}
                     placeholder="Nguyễn Văn A"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100 transition-all"
+                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                      formErrors.name
+                        ? "border-red-400 focus:border-red-500 focus:ring-red-100"
+                        : "border-gray-200 focus:border-green-500 focus:ring-green-100"
+                    }`}
                   />
+                  {formErrors.name && <p className="mt-1 text-sm text-red-500">{formErrors.name}</p>}
                 </div>
 
                 <div>
@@ -373,10 +421,60 @@ export function ActivityDetailPage() {
                   <input
                     type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, phone: e.target.value });
+                      if (formErrors.phone) setFormErrors({ ...formErrors, phone: undefined });
+                    }}
                     placeholder="0901234567"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100 transition-all"
+                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                      formErrors.phone
+                        ? "border-red-400 focus:border-red-500 focus:ring-red-100"
+                        : "border-gray-200 focus:border-green-500 focus:ring-green-100"
+                    }`}
                   />
+                  {formErrors.phone && <p className="mt-1 text-sm text-red-500">{formErrors.phone}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if (formErrors.email) setFormErrors({ ...formErrors, email: undefined });
+                    }}
+                    placeholder="example@email.com"
+                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                      formErrors.email
+                        ? "border-red-400 focus:border-red-500 focus:ring-red-100"
+                        : "border-gray-200 focus:border-green-500 focus:ring-green-100"
+                    }`}
+                  />
+                  {formErrors.email && <p className="mt-1 text-sm text-red-500">{formErrors.email}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tỉnh/Thành <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => {
+                      setFormData({ ...formData, city: e.target.value });
+                      if (formErrors.city) setFormErrors({ ...formErrors, city: undefined });
+                    }}
+                    placeholder="Ví dụ: TP. Ho Chi Minh"
+                    className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-all ${
+                      formErrors.city
+                        ? "border-red-400 focus:border-red-500 focus:ring-red-100"
+                        : "border-gray-200 focus:border-green-500 focus:ring-green-100"
+                    }`}
+                  />
+                  {formErrors.city && <p className="mt-1 text-sm text-red-500">{formErrors.city}</p>}
                 </div>
 
                 <div>

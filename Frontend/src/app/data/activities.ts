@@ -5,6 +5,7 @@ export interface Participant {
   userName: string;
   userPhone: string;
   userEmail?: string;
+  userCity?: string;
   userAvatar?: string;
   note?: string;
   registeredAt: string;

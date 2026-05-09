@@ -7,14 +7,13 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { toast } from "sonner";
 import { GoogleLogin } from "@react-oauth/google";
+import { VIETNAM_PROVINCES } from "../data/vietnamProvinces";
 
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
   defaultTab?: "login" | "register";
 }
-
-const CITIES = ["TP. Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Cần Thơ", "Hải Phòng", "Biên Hòa", "Huế", "Nha Trang"];
 
 export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProps) {
   const { login, register, sendResetCode, verifyResetCode, resetPassword, sendRegisterCode, verifyRegisterCode, loginWithGoogle } = useAuth();
@@ -122,7 +121,9 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     const errs: Record<string, string> = {};
     if (!regData.name.trim()) errs.name = "Vui lòng nhập họ tên";
     if (!regData.email) errs.email = "Vui lòng nhập email";
-    else if (!/\S+@\S+\.\S+/.test(regData.email)) errs.email = "Email không hợp lệ";
+    if (!regData.phone) errs.phone = "Vui lòng nhập số điện thoại";
+    if (!regData.city) errs.city = "Vui lòng chọn tỉnh/thành";
+    if (regData.email && !/\S+@\S+\.\S+/.test(regData.email)) errs.email = "Email không hợp lệ";
     setRegErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -495,16 +496,62 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
                                 </motion.div>
                               )}
 
-                              <InputField icon={User} placeholder="Họ và tên" value={regData.name} onChange={(v) => setRegData((d) => ({ ...d, name: v }))} error={regErrors.name} />
-                              <InputField icon={Mail} type="email" placeholder="Email" value={regData.email} onChange={(v) => setRegData((d) => ({ ...d, email: v }))} error={regErrors.email} />
+                              <InputField
+                                icon={User}
+                                placeholder="Họ và tên"
+                                value={regData.name}
+                                onChange={(v) => {
+                                  setRegData((d) => ({ ...d, name: v }));
+                                  if (regErrors.name) setRegErrors((e) => ({ ...e, name: "" }));
+                                }}
+                                error={regErrors.name}
+                              />
+                              <InputField
+                                icon={Mail}
+                                type="email"
+                                placeholder="Email"
+                                value={regData.email}
+                                onChange={(v) => {
+                                  setRegData((d) => ({ ...d, email: v }));
+                                  if (regErrors.email) setRegErrors((e) => ({ ...e, email: "" }));
+                                }}
+                                error={regErrors.email}
+                              />
                               <div className="grid grid-cols-2 gap-3">
-                                <InputField icon={Phone} placeholder="Số điện thoại" value={regData.phone} onChange={(v) => setRegData((d) => ({ ...d, phone: v }))} />
+                                <InputField
+                                  icon={Phone}
+                                  placeholder="Số điện thoại"
+                                  value={regData.phone}
+                                  onChange={(v) => {
+                                    setRegData((d) => ({ ...d, phone: v }));
+                                    if (regErrors.phone) setRegErrors((e) => ({ ...e, phone: "" }));
+                                  }}
+                                  error={regErrors.phone}
+                                />
                                 <div className="relative">
                                   <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                                  <select value={regData.city} onChange={(e) => setRegData((d) => ({ ...d, city: e.target.value }))} className="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all text-sm bg-white text-gray-600">
+                                  <select
+                                    value={regData.city}
+                                    onChange={(e) => {
+                                      setRegData((d) => ({ ...d, city: e.target.value }));
+                                      if (regErrors.city) setRegErrors((err) => ({ ...err, city: "" }));
+                                    }}
+                                    className={`w-full pl-10 pr-3 py-3 rounded-xl border focus:outline-none focus:ring-2 transition-all text-sm bg-white text-gray-600 ${
+                                      regErrors.city ? "border-red-300 bg-red-50 focus:ring-red-100" : "border-gray-200 focus:ring-red-300"
+                                    }`}
+                                  >
                                     <option value="">Tỉnh/Thành</option>
-                                    {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                                    {VIETNAM_PROVINCES.map((c) => <option key={c} value={c}>{c}</option>)}
                                   </select>
+                                  {regErrors.city && (
+                                    <motion.p
+                                      initial={{ opacity: 0, y: -4 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      className="text-red-500 text-xs mt-1 ml-1"
+                                    >
+                                      {regErrors.city}
+                                    </motion.p>
+                                  )}
                                 </div>
                               </div>
 

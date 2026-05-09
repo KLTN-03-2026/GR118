@@ -5,6 +5,7 @@ export interface Participant {
   userName: string;
   userPhone: string;
   userEmail?: string;
+  userCity?: string;
   userAvatar?: string;
   note?: string;
   registeredAt: Date;
@@ -42,6 +43,7 @@ const ParticipantSchema = new Schema<Participant>({
   userName: { type: String, required: true },
   userPhone: { type: String, required: true },
   userEmail: { type: String },
+  userCity: { type: String },
   userAvatar: { type: String },
   note: { type: String },
   registeredAt: { type: Date, default: Date.now },

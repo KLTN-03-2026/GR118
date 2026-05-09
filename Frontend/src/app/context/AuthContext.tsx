@@ -163,6 +163,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (result.accessToken) {
           localStorage.setItem(ACCESS_TOKEN_KEY, result.accessToken);
         }
+        if (result.refreshToken) {
+          localStorage.setItem("baocaovn_refresh_token", result.refreshToken);
+        }
         
         return { success: true, mustChangePassword: userData.mustChangePassword };
       }
@@ -223,6 +226,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (result.accessToken) {
           localStorage.setItem(ACCESS_TOKEN_KEY, result.accessToken);
         }
+        if (result.refreshToken) {
+          localStorage.setItem("baocaovn_refresh_token", result.refreshToken);
+        }
         return { success: true };
       }
       
@@ -261,10 +267,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(CURRENT_USER_KEY);
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
+  const logout = async () => {
+    try {
+      const refreshToken = localStorage.getItem("baocaovn_refresh_token");
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ refreshToken }),
+      });
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem(CURRENT_USER_KEY);
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+      localStorage.removeItem("baocaovn_refresh_token");
+    }
   };
 
   const updateProfile = (data: Partial<User>) => {

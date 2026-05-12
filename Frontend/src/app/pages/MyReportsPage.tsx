@@ -25,9 +25,11 @@ import { Card } from "../components/ui/card";
 import { LocationPicker } from "../components/LocationPicker";
 import { api } from "../../utils/api";
 
-const STATUS_ICONS = {
+const STATUS_ICONS: Record<string, any> = {
   pending: Clock,
+  received: Clock,
   processing: Loader2,
+  need_info: AlertCircle,
   resolved: CheckCircle2,
   rejected: XCircle,
 };

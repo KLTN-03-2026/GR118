@@ -30,9 +30,11 @@ import { SimilarIssues } from "../components/SimilarIssues";
 import { useIssues } from "../context/IssuesContext";
 import { PageTitle } from "../components/PageTitle";
 
-const STATUS_ICONS = {
+const STATUS_ICONS: Record<string, any> = {
   pending: AlertCircle,
+  received: Clock,
   processing: Loader2,
+  need_info: AlertCircle,
   resolved: CheckCircle2,
   rejected: XCircle,
 };

@@ -55,7 +55,7 @@ export function MyReportsPage() {
   };
 
   const handleUpdate = (updatedIssue: Issue) => {
-    updateIssue(updatedIssue);
+    updateIssue(updatedIssue.id, updatedIssue);
     toast.success("Đã cập nhật báo cáo thành công!");
     setEditingIssue(null);
   };

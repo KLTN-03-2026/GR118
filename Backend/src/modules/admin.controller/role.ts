@@ -125,12 +125,16 @@ export const UpdateRole = async (req: Request, res: Response, next: NextFunction
 
         // Trường hợp 1: Chỉ cập nhật trạng thái (Enable/Disable)
         if (enable !== undefined || toggleStatus) {
+            const currentRole = await roleRepo.findRoleById(targetId);
+            if (currentRole && currentRole.is_root) {
+                return next(new AppError(403, "FORBIDDEN", "Không thể thay đổi trạng thái vai trò hệ thống"));
+            }
+
             const status = toggleStatus ? undefined : enable; // Nếu toggleStatus thì repo sẽ tự đảo ngược hoặc ta lấy từ DB
             
             // Nếu là toggle, ta cần lấy trạng thái hiện tại
             let finalStatus = enable;
             if (toggleStatus) {
-                const currentRole = await roleRepo.findRoleById(targetId);
                 finalStatus = !currentRole?.is_active;
             }
 
@@ -139,6 +143,11 @@ export const UpdateRole = async (req: Request, res: Response, next: NextFunction
         }
 
         // Trường hợp 2: Cập nhật thông tin chi tiết (Name, Description...)
+        const existingRole = await roleRepo.findRoleById(targetId);
+        if (existingRole && existingRole.is_root) {
+            return next(new AppError(403, "FORBIDDEN", "Không thể chỉnh sửa vai trò hệ thống mặc định"));
+        }
+
         const roleData: any = { role_id: targetId };
         if (name) roleData.name = name;
         if (description) roleData.description = description;
@@ -175,6 +184,15 @@ export const UpsertRole = async (req: Request, res: Response, next: NextFunction
             name,
             description
         };
+
+        // Nếu là cập nhật (có roleId), kiểm tra xem có phải vai trò hệ thống không
+        if (roleId) {
+            const existingRole = await roleRepo.findRoleById(roleId);
+            if (existingRole && existingRole.is_root) {
+                return next(new AppError(403, "FORBIDDEN", "Không thể chỉnh sửa vai trò hệ thống mặc định"));
+            }
+        }
+
         const roleUs = await roleRepo.upsertRole(roleData);
         if (!roleUs) {
             const err = ERROR_CODES.SERVER_ERROR;

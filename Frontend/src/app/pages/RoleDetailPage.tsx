@@ -261,11 +261,13 @@ export function RoleDetailPage() {
               {can("roles_mgnt", "update") && (
                 <button
                   onClick={() => setShowToggleModal(true)}
+                  disabled={role.isSystem}
                   className={`flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all ${
                     role.isActive
                       ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
                       : "bg-green-100 text-green-700 hover:bg-green-200"
-                  }`}
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title={role.isSystem ? "Không thể thay đổi trạng thái vai trò hệ thống" : ""}
                 >
                   {role.isActive ? (
                     <>
@@ -319,7 +321,9 @@ export function RoleDetailPage() {
                 ) : (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-2 px-5 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-all"
+                    disabled={role.isSystem}
+                    className="flex items-center gap-2 px-5 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={role.isSystem ? "Không thể chỉnh sửa vai trò hệ thống" : ""}
                   >
                     <Edit3 size={18} />
                     Chỉnh sửa
@@ -384,6 +388,7 @@ export function RoleDetailPage() {
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       rows={3}
                       className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none"
+                      disabled={role.isSystem}
                     />
                   ) : (
                     <p className="text-gray-600">{role.description}</p>

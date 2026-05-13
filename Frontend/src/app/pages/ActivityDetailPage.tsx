@@ -121,10 +121,12 @@ export function ActivityDetailPage() {
       errors.city = "Vui lòng nhập tỉnh/thành";
     }
 
-    // Validate phone number
-    const phoneRegex = /^(0|\+84)[0-9]{9,10}$/;
-    if (formData.phone.trim() && !phoneRegex.test(formData.phone.trim())) {
-      errors.phone = "Số điện thoại không hợp lệ";
+    // Validate phone number for VN format: 0xxxxxxxxx or +84xxxxxxxxx
+    const normalizedPhone = formData.phone.trim().replace(/[\s.-]/g, "");
+    const isLocalPhone = /^0\d{9}$/.test(normalizedPhone);
+    const isIntlPhone = /^\+84\d{9}$/.test(normalizedPhone);
+    if (formData.phone.trim() && !isLocalPhone && !isIntlPhone) {
+      errors.phone = "Số điện thoại phải đủ 10 số (hoặc +84 và 9 số)";
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -287,7 +289,7 @@ export function ActivityDetailPage() {
               <div className="prose prose-sm max-w-none text-gray-700">
                 <p className="mb-4">{activity.description}</p>
                 <div dangerouslySetInnerHTML={{ __html: activity.content }} />
-              </div>
+              </div> 
             </motion.div>
 
             {/* Organizer */}

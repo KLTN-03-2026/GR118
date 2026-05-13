@@ -152,16 +152,66 @@ export function ReportPage() {
   const suggestionRef = useRef<HTMLDivElement>(null);
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Close suggestions when clicking outside
+  const checkProfanity = useCallback(async (title: string, description: string) => {
+    if (!title.trim() && !description.trim()) {
+      setDescriptionStatus('idle');
+      return;
+    }
+
+    setDescriptionStatus('checking');
+    setDescriptionReason(null);
+
+    try {
+      const res = await fetch('http://localhost:8081/api/v1/ai/check-profanity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title, description })
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message || 'Moderation service error');
+
+      if (json.data && json.data.isProfane) {
+        setDescriptionStatus('invalid');
+        setDescriptionReason("Nội dung chứa từ ngữ không phù hợp hoặc nhạy cảm.");
+        toast.warning("Phát hiện từ ngữ không phù hợp", {
+          description: "Vui lòng chỉnh sửa lại tiêu đề hoặc mô tả để tiếp tục.",
+        });
+      } else {
+        setDescriptionStatus('valid');
+      }
+    } catch (error) {
+      console.error("Failed to check profanity:", error);
+      setDescriptionStatus('idle'); // Reset on error
+      toast.error("Không thể kiểm tra nội dung. Vui lòng thử lại.");
+    }
+  }, []);
+
+  // Debounce description check
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Only check if there is some text
+    if (form.title.trim() || form.description.trim()) {
+      debounceTimerRef.current = setTimeout(() => {
+        checkProfanity(form.title, form.description);
+      }, 1500); // 1.5-second debounce
+    } else {
+      // Reset if both are empty
+      setDescriptionStatus('idle');
+      setDescriptionReason(null);
+    }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [form.title, form.description, checkProfanity]);
+
 
   // Fetch all provinces on mount
   useEffect(() => {
@@ -618,56 +668,14 @@ export function ReportPage() {
     processSequentially();
   }, [form.mediaFiles.length]);
 
-  // Handle Description Moderation (Debounced)
-  useEffect(() => {
-    if (step !== 1 || !form.description || form.description.length < 10) {
-      setDescriptionStatus('idle');
-      setDescriptionReason(null);
-      return;
-    }
-
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-
-    setDescriptionStatus('checking');
-    
-    debounceTimerRef.current = setTimeout(async () => {
-      try {
-        const response = await fetch(`${AI_BASE_URL}/moderate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: form.title,
-            description: form.description,
-            category: form.category,
-            aiLabel: form.aiLabel
-          }),
-        });
-
-        if (!response.ok) throw new Error("Moderation service error");
-        const result = await response.json();
-
-        if (result.is_flagged) {
-          setDescriptionStatus('invalid');
-          setDescriptionReason(result.reason);
-        } else {
-          setDescriptionStatus('valid');
-          setDescriptionReason(null);
-        }
-      } catch (error) {
-        console.error("Moderation failed:", error);
-        setDescriptionStatus('idle'); // Fallback to idle if error
-      }
-    }, 2000); // 2 second debounce
-
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    };
-  }, [form.description, form.title, step, form.category, form.aiLabel]);
+  // This useEffect block has been removed as it was calling the old /moderate API.
+  // The new logic is handled by the checkProfanity function and its corresponding useEffect.
 
   const handleNext = async () => {
     // Only moderate if moving from Step 1 (Info) to Step 2 (Location)
     if (step === 1) {
-      // If we already have a status and it's invalid, stop
+      // The new checkProfanity logic handles this automatically via its useEffect.
+      // We just need to check the final status before proceeding.
       if (descriptionStatus === 'invalid') {
         toast.error("Nội dung không hợp lệ", {
           description: descriptionReason || "Vui lòng kiểm tra lại tiêu đề và mô tả.",
@@ -676,54 +684,10 @@ export function ReportPage() {
         return;
       }
 
-      // If still checking, wait
+      // If still checking, wait for the debounced check to finish.
       if (descriptionStatus === 'checking') {
-        toast.info("Đang chờ AI kiểm duyệt...");
+        toast.info("Đang chờ AI kiểm duyệt nội dung...");
         return;
-      }
-      
-      // Traditional check if for some reason debouncing didn't run or was idle
-      if (descriptionStatus === 'idle') {
-        setModerating(true);
-        const toastId = toast.loading("Đang kiểm duyệt nội dung...", {
-          description: "AI đang kiểm tra tính xác thực của thông tin."
-        });
-
-        try {
-          const response = await fetch(`${AI_BASE_URL}/moderate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              title: form.title,
-              description: form.description,
-              category: form.category,
-              aiLabel: form.aiLabel
-            }),
-          });
-
-          if (!response.ok) throw new Error("Moderation service error");
-          const result = await response.json();
-
-          if (result.is_flagged) {
-            toast.error("Nội dung không hợp lệ", {
-              id: toastId,
-              description: result.reason || "Vui lòng kiểm tra lại tiêu đề và mô tả.",
-              duration: 5000
-            });
-            setDescriptionStatus('invalid');
-            setDescriptionReason(result.reason);
-            setModerating(false);
-            return;
-          }
-
-          toast.success("Nội dung hợp lệ", { id: toastId });
-          setDescriptionStatus('valid');
-        } catch (error) {
-          console.error("Moderation failed:", error);
-          toast.dismiss(toastId);
-        } finally {
-          setModerating(false);
-        }
       }
     }
 

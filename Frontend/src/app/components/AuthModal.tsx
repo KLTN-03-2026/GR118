@@ -119,11 +119,19 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
 
   const validateRegister = () => {
     const errs: Record<string, string> = {};
+    const normalizedPhone = regData.phone.replace(/[\s.-]/g, "");
     if (!regData.name.trim()) errs.name = "Vui lòng nhập họ tên";
     if (!regData.email) errs.email = "Vui lòng nhập email";
     if (!regData.phone) errs.phone = "Vui lòng nhập số điện thoại";
     if (!regData.city) errs.city = "Vui lòng chọn tỉnh/thành";
     if (regData.email && !/\S+@\S+\.\S+/.test(regData.email)) errs.email = "Email không hợp lệ";
+    if (regData.phone) {
+      const isLocalPhone = /^0\d{9}$/.test(normalizedPhone);
+      const isIntlPhone = /^\+84\d{9}$/.test(normalizedPhone);
+      if (!isLocalPhone && !isIntlPhone) {
+        errs.phone = "Số điện thoại phải đủ 10 số (hoặc +84 và 9 số)";
+      }
+    }
     setRegErrors(errs);
     return Object.keys(errs).length === 0;
   };

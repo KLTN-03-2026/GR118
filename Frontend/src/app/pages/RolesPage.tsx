@@ -368,7 +368,7 @@ export function RolesPage() {
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl font-semibold hover:bg-blue-100 transition-all"
                   >
                     <Eye size={16} />
-                    Chi tiết
+                    {role.isSystem ? "Xem chi tiết" : "Chi tiết"}
                   </Link>
                   {can("roles_mgnt", "delete") && !role.isSystem && (
                     <button

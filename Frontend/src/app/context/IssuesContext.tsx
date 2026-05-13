@@ -304,7 +304,7 @@ export function useIssues() {
       issues: [],
       isLoading: true,
       addIssue: () => {},
-      updateIssue: () => {},
+      updateIssue: (id: string, updatedIssue: Partial<Issue>) => {},
       deleteIssue: () => {},
       addVerification: () => {},
       reviewVerification: () => {},

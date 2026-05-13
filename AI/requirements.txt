@@ -4,7 +4,7 @@ python-multipart==0.0.6
 Pillow==10.2.0
 requests==2.31.0
 icrawler==0.6.6
-tensorflow==2.15.0
-tensorflowjs==4.17.0
+tensorflow
+tensorflowjs
 numpy==1.26.4
 matplotlib==3.8.3

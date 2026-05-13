@@ -11,7 +11,7 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
-const port = 8000;
+const port = process.env.PORT || 8000;
 const KNOWLEDGE_PATH = path.join(__dirname, 'knowledge.json');
 const UPLOADS_PATH = path.join(__dirname, 'uploads');
 const DATASET_PATH = path.join(__dirname, 'dataset');
@@ -152,6 +152,44 @@ listModels();
 // Try the most stable model identifier
 const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
+// ========== LOCAL PROFANITY FILTER ==========
+const PROFANITY_KEYWORDS = [
+  // Từ chửi thề thô tục
+  'cụ', 'đụ', 'fuck', 'đéo', 'đít', 'dái', 'bu', 'ngu', 'khùng', 'điên', 'chó', 'lợn',
+  'thằng', 'thèm', 'cơm', 'vãi', 'vẩy', 'vãy', 'hôi', 'bẩn', 'tục', 'vcl', 'đù',
+  'địt', 'địt mẹ', 'chết', 'chết mẹ', 'mẹ kiếp', 'kiếp', 'mô tơ', 'motơ',
+  'ngu lơn', 'ngu như', 'chán chết', 'chết tiệt', 'mủa lợn', 'tào lao',
+  'x)', 'x(', // Viết tắt/lách luật từ xấu
+  'f*ck', 'f**k', 'sh*t', 'sh**t', 'd*ck', 'd**k',
+  // Xúc phạm nhân phẩm
+  'tệ hại', 'hèn nhát', 'kẻ vô dụng', 'xấu xí',
+  // Đe dọa/bạo lực
+  'giết', 'tấn công', 'đánh đập', 'làm tổn thương',
+  // More severe
+  'mẹ kiếp', 'ba kiếp', 'tao', 'mày',
+  // Lóng/xúc khích (từ người dùng report)
+  'ổ gà', 'dự má', 'má', 'ba ba', 'bố tao', 'mẹ mày', 'cha mẹ',
+  'loser', 'thằng ngu', 'thằng chó', 'thằng điên',
+  'ăn cơm chưa', 'vã', 'cà', 'lồn', 'sml',
+];
+
+function checkProfanityLocal(text) {
+  if (!text) return false;
+  const lowerText = text.toLowerCase().trim();
+  
+  // Check for exact word matches (more lenient to catch variations)
+  for (const keyword of PROFANITY_KEYWORDS) {
+    // Use simpler regex that doesn't require word boundaries
+    // This catches keywords even within phrases
+    if (lowerText.includes(keyword)) {
+      console.log(`[Profanity Detected] Matched keyword: "${keyword}" in text: "${lowerText}"`);
+      return true;
+    }
+  }
+  return false;
+}
+// ============================================
+
 app.get('/', (req, res) => {
   res.json({ status: 'AI Service is running' });
 });
@@ -169,30 +207,50 @@ app.post('/moderate', async (req, res) => {
       return res.status(400).json({ is_flagged: true, reason: "Tiêu đề và mô tả không được để trống." });
     }
 
+    // LAYER 1: Quick local profanity check (ZERO TOLERANCE)
+    if (checkProfanityLocal(title) || checkProfanityLocal(description)) {
+      console.log(`[Moderation] Local filter caught profanity in title or description`);
+      return res.json({ 
+        is_flagged: true, 
+        reason: "Phát hiện ngôn từ tiêu cực/tục tĩu. Vui lòng kiểm tra lại nội dung." 
+      });
+    }
+
     console.log(`[Moderation] Validating: "${title}" for category: ${category}`);
 
-    const prompt = `Bạn là một robot kiểm duyệt nội dung "Không Khoan Nhượng" cho ứng dụng Báo cáo vấn đề đô thị Việt Nam. 
+    // LAYER 2: GPT-4o-mini semantic check
+    const prompt = `Bạn là một robot kiểm duyệt nội dung NGHIÊM KHẮC (ZERO TOLERANCE) cho ứng dụng Báo cáo vấn đề đô thị Việt Nam.
+    
+    ⚠️ CÓ BẬT CAM: Nếu có BẤT KỲ dấu hiệu ngôn từ tiêu cực/xúc phạm/thiếu văn hóa, PHẢI flag ngay (kể cả viết tắt/lách luật).
+    
     Nhiệm vụ: Chặn lập tức các nội dung vi phạm sau:
     1. NGÔN TỪ TIÊU CỰC VÀ TỤC TĨU: Có bất kỳ từ chửi thề, tiếng lóng thô tục, xúc phạm, đe dọa, hoặc mang tính chất tiêu cực, gây thù ghét, thiếu văn hóa (kể cả viết lách luật hoặc viết tắt).
-    2. QUẢNG CÁO VÀ SPAM: Các nội dung mời chào mua bán, quảng cáo dịch vụ (ví dụ: thông tắc bể phốt, gia sư, bán hàng online), lừa đảo, hoặc các đoạn văn lặp đi lặp lại vô nghĩa (bị span).
+    2. QUẢNG CÁO VÀ SPAM: Các nội dung mời chào mua bán, quảng cáo dịch vụ (ví dụ: thông tắc bể phốt, gia sư, bán hàng online), lừa đảo, hoặc các đoạn văn lặp đi lặp lại vô nghĩa (bị spam).
     3. KHÔNG LIÊN QUAN: Nội dung không liên quan đến vấn đề đô thị thực tế hoặc hoàn toàn khác biệt với hình ảnh đã phân tích (Nhãn AI: ${aiLabel}, Danh mục: ${category}).
 
     Dữ liệu kiểm tra:
     Tiêu đề: ${title}
     Mô tả: ${description}
 
+    HƯỚNG DẪN QUYẾT ĐỊNH:
+    - Nếu có bất cứ dấu hiệu ngôn từ tiêu cực (dù nhỏ): is_flagged = true, reason = "Phát hiện ngôn từ tiêu cực/tục tĩu"
+    - Nếu có quảng cáo/spam: is_flagged = true, reason = "Phát hiện nội dung quảng cáo/spam"
+    - Nếu không liên quan: is_flagged = true, reason = "Nội dung không liên quan đến vấn đề đô thị"
+    - Nếu OK hết: is_flagged = false, reason = null
+
     Trả về JSON chính xác:
     {
       "is_flagged": boolean,
-      "reason": "string (Giải thích ngắn gọn lý do từ chối bằng tiếng Việt, ví dụ: 'Phát hiện nội dung quảng cáo', 'Phát hiện ngôn từ tiêu cực/thiếu văn hóa', 'Nội dung không liên quan', null nếu OK)"
+      "reason": "string (Giải thích ngắn gọn lý do từ chối bằng tiếng Việt, hoặc null nếu OK)"
     }`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "Bạn là một robot kiểm duyệt nội dung nghiêm khắc." },
+        { role: "system", content: "Bạn là một robot kiểm duyệt nội dung NGHIÊM KHẮC với chính sách ZERO TOLERANCE với ngôn từ tiêu cực." },
         { role: "user", content: prompt }
       ],
+      temperature: 0.2, // Very low temp for consistent strict flagging
       response_format: { type: "json_object" }
     });
 
@@ -203,7 +261,16 @@ app.post('/moderate', async (req, res) => {
 
   } catch (error) {
     console.error('[Moderation Error]', error.message);
-    // Fallback: If moderation fails (API error), allow it but log it
+    // Fallback: If API fails, at least use local profanity check
+    console.warn('[Moderation Fallback] API failed, using local profanity check as fallback');
+    const hasProfanity = checkProfanityLocal(req.body?.title) || checkProfanityLocal(req.body?.description);
+    if (hasProfanity) {
+      return res.json({ 
+        is_flagged: true, 
+        reason: "Phát hiện ngôn từ tiêu cực/tục tĩu (từ local filter do API lỗi)" 
+      });
+    }
+    // If local check passes, allow but log
     res.json({ is_flagged: false, reason: null });
   }
 });

@@ -533,13 +533,13 @@ export function ProfilePage() {
                         <KeyRound size={15} />
                         Đổi mật khẩu
                       </button>
-                      <button
+                      {/* <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors"
                       >
                         <LogOut size={15} />
                         Đăng xuất
-                      </button>
+                      </button> */}
                     </>
                   )}
                 </div>

@@ -39,7 +39,6 @@ router.delete("/users/:id", isAuthenticated, DeleteUser); // Support /:id
 // permission
 router.post("/permissions", isAuthenticated, UpsertPermission);
 router.get("/permissions", isAuthenticated, GetPermissions);
-// ⚠️  Specific paths MUST come before /:id — otherwise Express treats 'action'/'resources' as the id param
 router.get("/permissions/action", isAuthenticated, GetActions);
 router.get("/permissions/resources", isAuthenticated, GetResources);
 router.get("/permissions/:id", isAuthenticated, GetPermission);

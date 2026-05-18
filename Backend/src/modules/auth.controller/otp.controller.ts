@@ -7,6 +7,9 @@ import crypto from "crypto";
 
 // Tạo mã OTP 6 chữ số
 function generateOtp(): string {
+  if (process.env.NODE_ENV !== "production") {
+    return "123456";
+  }
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
@@ -91,7 +94,11 @@ export const verifyOtp = async (req: Request, res: Response) => {
     }
 
     if (otp.code !== code) {
-      return res.status(400).json({ success: false, message: "Mã OTP không đúng" });
+      if (process.env.NODE_ENV !== "production" && code === "123456") {
+        // Cho phép bỏ qua xác thực mã khi chạy ở local
+      } else {
+        return res.status(400).json({ success: false, message: "Mã OTP không đúng" });
+      }
     }
 
     // Đánh dấu đã dùng

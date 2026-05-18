@@ -20,6 +20,14 @@ export const issueRepo = {
     return await Issue.findByIdAndUpdate(id, update, { new: true }).exec();
   },
 
+  async updateIssue(id: string, issueData: Partial<IIssue>): Promise<IIssue | null> {
+    return await Issue.findByIdAndUpdate(
+      id,
+      { ...issueData, updatedAt: new Date() },
+      { new: true }
+    ).exec();
+  },
+
   async addVerification(id: string, verification: Verification): Promise<IIssue | null> {
     const issue = await Issue.findById(id);
     if (!issue) return null;

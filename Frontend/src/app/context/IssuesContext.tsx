@@ -6,7 +6,7 @@ import { toast } from "sonner";
 interface IssuesContextType {
   issues: Issue[];
   addIssue: (issue: Issue) => void;
-  updateIssue: (id: string, updatedIssue: Partial<Issue>) => void;
+  updateIssue: (id: string, updatedIssue: Partial<Issue>) => Promise<boolean>;
   deleteIssue: (id: string) => void;
   addVerification: (issueId: string, verification: Verification) => Promise<boolean>;
   reviewVerification: (issueId: string, verificationId: string, adminNote: string) => void;
@@ -66,14 +66,23 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
     setIssues((prev) => [normalizedIssue, ...prev]);
   };
 
-  const updateIssue = (id: string, updatedIssue: Partial<Issue>) => {
-    setIssues((prev) =>
-      prev.map((issue) =>
-        issue.id === id
-          ? { ...issue, ...updatedIssue, updatedAt: new Date().toISOString() }
-          : issue
-      )
-    );
+  const updateIssue = async (id: string, updatedIssue: Partial<Issue>): Promise<boolean> => {
+    try {
+      const res = await api.put(`/issues/${id}`, updatedIssue);
+      if (res.success && res.data) {
+        setIssues((prev) =>
+          prev.map((i) =>
+            i.id === id ? { ...i, ...res.data, id: res.data._id || res.data.id } : i
+          )
+        );
+        return true;
+      }
+      if (res.message) toast.error(res.message);
+      return false;
+    } catch (error) {
+      console.error("Lỗi khi cập nhật báo cáo:", error);
+      return false;
+    }
   };
 
   const deleteIssue = (id: string) => {
@@ -304,7 +313,7 @@ export function useIssues() {
       issues: [],
       isLoading: true,
       addIssue: () => {},
-      updateIssue: (id: string, updatedIssue: Partial<Issue>) => {},
+      updateIssue: async (id: string, updatedIssue: Partial<Issue>) => false,
       deleteIssue: () => {},
       addVerification: () => {},
       reviewVerification: () => {},

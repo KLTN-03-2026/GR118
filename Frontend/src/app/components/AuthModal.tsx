@@ -29,7 +29,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
 
   // Register form
   const [regData, setRegData] = useState({
-    name: "", email: "", phone: "", city: "",
+    name: "", email: "", phone: "", city: "", password: "", confirmPassword: "",
   });
   const [regErrors, setRegErrors] = useState<Record<string, string>>({});
   const [regStep, setRegStep] = useState<1 | 2>(1);
@@ -83,7 +83,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
 
   const resetAll = () => {
     setLoginData({ email: "", password: "" });
-    setRegData({ name: "", email: "", phone: "", city: "" });
+    setRegData({ name: "", email: "", phone: "", city: "", password: "", confirmPassword: "" });
     setForgotData({ email: "", code: "", newPassword: "", confirmNewPassword: "" });
     setLoginErrors({});
     setRegErrors({});
@@ -124,6 +124,11 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     if (!regData.email) errs.email = "Vui lòng nhập email";
     if (!regData.phone) errs.phone = "Vui lòng nhập số điện thoại";
     if (!regData.city) errs.city = "Vui lòng chọn tỉnh/thành";
+    if (!regData.password) errs.password = "Vui lòng nhập mật khẩu";
+    else if (regData.password.length < 6) errs.password = "Mật khẩu tối thiểu phải 6 ký tự";
+    if (regData.password !== regData.confirmPassword) {
+      errs.confirmPassword = "Mật khẩu xác nhận không khớp";
+    }
     if (regData.email && !/\S+@\S+\.\S+/.test(regData.email)) errs.email = "Email không hợp lệ";
     if (regData.phone) {
       const isLocalPhone = /^0\d{9}$/.test(normalizedPhone);
@@ -183,6 +188,9 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
       setRegStep(2);
       setResendTimer(60); // Khởi động bộ đếm
       toast.success(`Mã xác thực đã được gửi đến ${regData.email}`);
+      if (process.env.NODE_ENV !== "production") {
+        toast.info("Đang chạy ở môi trường local, mã OTP mặc định là: 123456", { duration: 8000 });
+      }
     } else {
       setRegErrors({ general: res.error || "Không thể gửi OTP" });
     }
@@ -203,17 +211,10 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
       return;
     }
     
-    // Generate random password
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let randomPassword = "";
-    for (let i = 0; i < 10; i++) {
-      randomPassword += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-
     const res = await register({
       name: regData.name,
       email: regData.email,
-      password: randomPassword,
+      password: regData.password,
       phone: regData.phone,
       city: regData.city,
     });
@@ -221,7 +222,7 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
     
     if (res.success) {
       setSuccess(true);
-      toast.success("Đăng ký thành công! Mật khẩu đã được gửi đến email của bạn 🎉");
+      toast.success("Đăng ký tài khoản thành công! 🎉");
       setTimeout(handleClose, 2000);
     } else {
       setRegErrors({ general: res.error || "Đăng ký thất bại" });
@@ -563,7 +564,39 @@ export function AuthModal({ open, onClose, defaultTab = "login" }: AuthModalProp
                                 </div>
                               </div>
 
+                              <InputField
+                                icon={Lock}
+                                type={showPass ? "text" : "password"}
+                                placeholder="Mật khẩu (tối thiểu 6 ký tự)"
+                                value={regData.password}
+                                onChange={(v) => {
+                                  setRegData((d) => ({ ...d, password: v }));
+                                  if (regErrors.password) setRegErrors((e) => ({ ...e, password: "" }));
+                                }}
+                                error={regErrors.password}
+                                rightIcon={
+                                  <button type="button" onClick={() => setShowPass(!showPass)} className="text-gray-400 hover:text-gray-600">
+                                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  </button>
+                                }
+                              />
 
+                              <InputField
+                                icon={Lock}
+                                type={showConfirmPass ? "text" : "password"}
+                                placeholder="Xác nhận mật khẩu"
+                                value={regData.confirmPassword}
+                                onChange={(v) => {
+                                  setRegData((d) => ({ ...d, confirmPassword: v }));
+                                  if (regErrors.confirmPassword) setRegErrors((e) => ({ ...e, confirmPassword: "" }));
+                                }}
+                                error={regErrors.confirmPassword}
+                                rightIcon={
+                                  <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="text-gray-400 hover:text-gray-600">
+                                    {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  </button>
+                                }
+                              />
 
                               <button
                                 onClick={handleRegisterStep1} disabled={loading}

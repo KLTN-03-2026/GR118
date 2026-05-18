@@ -54,6 +54,21 @@ export const updateIssueStatus = async (req: Request, res: Response) => {
   }
 };
 
+export const updateIssue = async (req: Request, res: Response) => {
+  try {
+    const id = normalizeParam(req.params.id);
+    const issueData = req.body;
+    const updatedIssue = await issueRepo.updateIssue(id, issueData);
+    if (!updatedIssue) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy báo cáo" });
+    }
+    res.status(200).json({ success: true, data: updatedIssue, message: "Cập nhật báo cáo thành công" });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật issue:", error);
+    res.status(500).json({ success: false, message: "Lỗi máy chủ nội bộ", detail: error instanceof Error ? error.message : error });
+  }
+};
+
 export const verifyIssue = async (req: Request, res: Response) => {
   try {
     const id = normalizeParam(req.params.id);

@@ -73,10 +73,14 @@ export function MyActivitiesPage() {
     setShowCancelModal(true);
   };
 
-  const handleConfirmCancel = () => {
+  const handleConfirmCancel = async () => {
     if (selectedParticipant) {
-      cancelRegistration(selectedParticipant);
-      toast.success("Đã hủy đăng ký thành công");
+      const success = await cancelRegistration(selectedParticipant);
+      if (success) {
+        toast.success("Đã hủy đăng ký thành công");
+      } else {
+        toast.error("Không thể hủy đăng ký");
+      }
       setShowCancelModal(false);
       setSelectedParticipant(null);
     }

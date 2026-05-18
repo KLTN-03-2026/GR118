@@ -13,7 +13,7 @@ interface ActivitiesContextType {
   updateActivity: (id: string, updates: Partial<Activity>) => void;
   deleteActivity: (id: string) => void;
   registerForActivity: (activityId: string, participant: Omit<Participant, "id" | "registeredAt" | "status">) => void;
-  cancelRegistration: (participantId: string) => void;
+  cancelRegistration: (participantId: string) => Promise<boolean>;
   updateParticipantStatus: (participantId: string, status: Participant["status"]) => void;
 }
 
@@ -39,7 +39,13 @@ export function ActivitiesProvider({ children }: { children: ReactNode }) {
           const allParticipants: Participant[] = [];
           normalized.forEach((a: Activity) => {
             if (a.participants) {
-              allParticipants.push(...a.participants);
+              allParticipants.push(
+                ...a.participants.map((p: any) => ({
+                  ...p,
+                  id: p.id || p._id,
+                  activityId: a.id
+                }))
+              );
             }
           });
           setParticipants(allParticipants);
@@ -115,7 +121,14 @@ export function ActivitiesProvider({ children }: { children: ReactNode }) {
       if (response.success && response.data) {
         // Refresh the activities to get updated counts and participant list
         const updated = response.data;
-        const normalized = { ...updated, id: updated.id || updated._id };
+        const normalized = {
+          ...updated,
+          id: updated.id || updated._id,
+          participants: updated.participants?.map((p: any) => ({
+            ...p,
+            id: p.id || p._id
+          })) || []
+        };
         
         setActivities((prev) => prev.map(a => a.id === activityId ? normalized : a));
         
@@ -123,7 +136,11 @@ export function ActivitiesProvider({ children }: { children: ReactNode }) {
         if (normalized.participants) {
           setParticipants(prev => {
             const others = prev.filter(p => p.activityId !== activityId);
-            return [...others, ...normalized.participants];
+            const mappedParticipants = normalized.participants.map((p: any) => ({
+              ...p,
+              activityId: activityId
+            }));
+            return [...others, ...mappedParticipants];
           });
         }
         toast.success("Đăng ký tham gia thành công!");
@@ -133,22 +150,43 @@ export function ActivitiesProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const cancelRegistration = async (participantId: string) => {
+  const cancelRegistration = async (participantId: string): Promise<boolean> => {
     // We need activityId to call the API as defined in the controller
     const participant = participants.find((p) => p.id === participantId);
-    if (!participant) return;
+    if (!participant) return false;
 
     try {
       const response = await api.post(`/activities/${participant.activityId}/cancel`, { userId: participant.userId });
-      if (response.success) {
+      if (response.success && response.data) {
         // Refresh local state similar to register
         const updatedActivity = response.data;
-        const normalized = { ...updatedActivity, id: updatedActivity.id || updatedActivity._id };
+        const normalized = {
+          ...updatedActivity,
+          id: updatedActivity.id || updatedActivity._id,
+          participants: updatedActivity.participants?.map((p: any) => ({
+            ...p,
+            id: p.id || p._id
+          })) || []
+        };
         setActivities(prev => prev.map(a => a.id === participant.activityId ? normalized : a));
-        toast.success("Đã hủy đăng ký");
+        
+        // Update global participants list
+        if (normalized.participants) {
+          setParticipants(prev => {
+            const others = prev.filter(p => p.activityId !== participant.activityId);
+            const mappedParticipants = normalized.participants.map((p: any) => ({
+              ...p,
+              activityId: participant.activityId
+            }));
+            return [...others, ...mappedParticipants];
+          });
+        }
+        return true;
       }
+      return false;
     } catch (error) {
-      toast.error("Không thể hủy đăng ký");
+      console.error("Lỗi khi hủy đăng ký:", error);
+      return false;
     }
   };
 
@@ -193,7 +231,7 @@ export function useActivities() {
       updateActivity: () => {},
       deleteActivity: () => {},
       registerForActivity: () => {},
-      cancelRegistration: () => {},
+      cancelRegistration: async () => false,
       updateParticipantStatus: () => {},
     };
   }

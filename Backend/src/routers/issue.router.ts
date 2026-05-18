@@ -6,6 +6,7 @@ const router = Router();
 router.get("/", issueController.getAllIssues);
 router.get("/:id", issueController.getIssueById);
 router.post("/", issueController.createIssue);
+router.put("/:id", issueController.updateIssue);
 router.put("/:id/status", issueController.updateIssueStatus);
 router.post("/:id/verifications", issueController.verifyIssue);
 router.post("/:id/vote", issueController.upvoteIssue);

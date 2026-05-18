@@ -54,10 +54,12 @@ export function MyReportsPage() {
     setDeleteConfirm(null);
   };
 
-  const handleUpdate = (updatedIssue: Issue) => {
-    updateIssue(updatedIssue.id, updatedIssue);
-    toast.success("Đã cập nhật báo cáo thành công!");
-    setEditingIssue(null);
+  const handleUpdate = async (updatedIssue: Issue) => {
+    const success = await updateIssue(updatedIssue.id, updatedIssue);
+    if (success) {
+      toast.success("Đã cập nhật báo cáo thành công!");
+      setEditingIssue(null);
+    }
   };
 
   const EditModal = ({ issue }: { issue: Issue }) => {

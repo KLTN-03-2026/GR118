@@ -357,7 +357,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
     <div className="space-y-3">
       {/* Action Buttons */}
       <div className="grid grid-cols-2 gap-2">
-        {canReceive && can("issues_process", "update") && (
+        {canReceive && can("issues", "update") && (
           <button
             onClick={() => setActiveAction("receive")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -369,7 +369,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <Inbox size={15} /> Tiếp nhận
           </button>
         )}
-        {canAssign && can("issues_process", "assign") && (
+        {canAssign && can("issues", "update") && (
           <button
             onClick={() => setActiveAction("assign")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -381,7 +381,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <UserCheck size={15} /> Phân công
           </button>
         )}
-        {canProcess && can("issues_process", "update") && (
+        {canProcess && can("issues", "update") && (
           <button
             onClick={() => setActiveAction("processing")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -393,7 +393,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <RefreshCw size={15} /> Cập nhật tiến độ
           </button>
         )}
-        {canNeedInfo && can("issues_process", "update") && (
+        {canNeedInfo && can("issues", "update") && (
           <button
             onClick={() => setActiveAction("need_info")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -405,7 +405,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <Info size={15} /> Yêu cầu bổ sung
           </button>
         )}
-        {canComplete && can("issues_process", "approve") && (
+        {canComplete && can("issues", "approve") && (
           <button
             onClick={() => setActiveAction("complete")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -417,7 +417,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <CheckSquare size={15} /> Hoàn thành
           </button>
         )}
-        {canReject && can("issues_process", "update") && (
+        {canReject && can("issues", "update") && (
           <button
             onClick={() => setActiveAction("reject")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -948,18 +948,7 @@ export function ModeratorIssuesPage() {
     );
   }
 
-  // Check permission
-  if (!user || !can("reports", "manage")) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <Shield className="h-12 w-12 text-red-500 mx-auto mb-3" />
-          <h2 className="text-xl font-bold text-gray-900">Không có quyền truy cập</h2>
-          <p className="text-gray-500 mt-1">Bạn không có quyền quản lý báo cáo.</p>
-        </div>
-      </div>
-    );
-  }
+  // Access control is deferred until after all hooks are declared to comply with React Rules of Hooks
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<IssueStatus | "all">("all");
@@ -1039,12 +1028,22 @@ export function ModeratorIssuesPage() {
   ].filter(Boolean).length;
 
   // Access control - MOVE AFTER ALL HOOKS
-  if (!user || (user.role !== "moderator" && user.role !== "admin")) {
+  const hasAccess = user && (
+    user.role === "admin" || 
+    user.role === "moderator" || 
+    user.role === "Cán bộ" || 
+    user.role === "cán bộ" || 
+    user.role === "Quản trị viên" || 
+    can("issues", "read")
+  );
+
+  if (!hasAccess) {
     return (
-      <div className="min-h-screen pt-28 flex flex-col items-center justify-center text-gray-400">
-        <Shield size={48} className="mb-4 text-gray-300" />
-        <p className="font-semibold text-gray-600">Bạn không có quyền truy cập trang này</p>
-        <Link to="/" className="mt-4 text-indigo-500 hover:underline text-sm">← Về trang chủ</Link>
+      <div className="min-h-screen bg-slate-50 pt-28 flex flex-col items-center justify-center text-gray-400">
+        <Shield size={48} className="mb-4 text-red-500 animate-bounce" />
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Không có quyền truy cập</h2>
+        <p className="text-gray-500">Bạn không có quyền quản lý báo cáo.</p>
+        <Link to="/" className="mt-4 text-indigo-600 hover:underline text-sm font-medium">← Về trang chủ</Link>
       </div>
     );
   }

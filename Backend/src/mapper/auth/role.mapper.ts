@@ -11,6 +11,7 @@ export class RoleMapper {
             is_root: role.is_root,
             is_active: role.is_active,
             permissions: role.permissions || [],
+            managementScope: role.managementScope || [],
             created_at: role.createdAt,
             updated_at: role.updatedAt,
             userCount: role.userCount || 0
@@ -45,7 +46,8 @@ export class RoleMapper {
             created_at: first.created_at,
             updated_at: first.updated_at,
             permissions: permissions,
-            userCount: (first as any).userCount || 0
+            userCount: (first as any).userCount || 0,
+            managementScope: first.managementScope || []
         };
 
     }

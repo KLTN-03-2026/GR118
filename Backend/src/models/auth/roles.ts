@@ -29,6 +29,11 @@ const roleSchema = new mongoose.Schema({
     permissions: {
         type: [String],
         default: []
+    },
+
+    managementScope: {
+        type: [String],
+        default: []
     }
 
 }, { timestamps: true });

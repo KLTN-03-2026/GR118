@@ -155,7 +155,8 @@ export const login = async (req: Request, res: Response) => {
                     email: user.email,
                     role: primaryRole,
                     roleId: primaryRoleId,
-                    permissions: permissions
+                    permissions: permissions,
+                    managementScope: user.managementScope && user.managementScope.length > 0 ? user.managementScope : (roleRes.length > 0 ? roleRes[0].managementScope || [] : [])
                 }
             })
     }
@@ -232,7 +233,8 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
                     email: user.email,
                     role: primaryRole,
                     roleId: primaryRoleId,
-                    permissions: permissions
+                    permissions: permissions,
+                    managementScope: user.managementScope && user.managementScope.length > 0 ? user.managementScope : (roleRes.length > 0 ? roleRes[0].managementScope || [] : [])
                 }
             });
 
@@ -365,7 +367,8 @@ export const getProfile = async (req: Request, res: Response) => {
                 reportsCount: (user as any).reportsCount || 0,
                 resolvedCount: (user as any).resolvedCount || 0,
                 lockEnd: user.lockEnd,
-                lockReason: user.lockReason
+                lockReason: user.lockReason,
+                managementScope: user.managementScope && user.managementScope.length > 0 ? user.managementScope : (roleDocs.length > 0 ? roleDocs[0].managementScope || [] : [])
             }
         });
     } catch (error) {

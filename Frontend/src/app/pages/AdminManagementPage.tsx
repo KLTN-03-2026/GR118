@@ -59,7 +59,17 @@ const SEVERITY_LABELS = {
 
 export function AdminManagementPage() {
   const { user, isLoading, can } = useAuth();
-  const { issues, updateIssue } = useIssues();
+  const { issues, updateIssue, refreshIssues } = useIssues();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<IssueStatus | "all">("all");
+  const [aiFilter, setAiFilter] = useState<"all" | "verified" | "unverified">("all");
+  const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showAiAnalysis, setShowAiAnalysis] = useState<string | null>(null);
+
+  useEffect(() => {
+    refreshIssues();
+  }, [refreshIssues]);
 
   if (isLoading) {
     return (
@@ -114,19 +124,6 @@ export function AdminManagementPage() {
       </div>
     );
   }
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<IssueStatus | "all">("all");
-  const [aiFilter, setAiFilter] = useState<"all" | "verified" | "unverified">("all");
-  const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [showAiAnalysis, setShowAiAnalysis] = useState<string | null>(null);
-  const { refreshIssues } = useIssues();
-
-  useEffect(() => {
-    refreshIssues();
-  }, [refreshIssues]);
-
-  if (isLoading) return null;
 
   if (!can("issues_mgnt", "read")) {
     return <Navigate to="/" replace />;

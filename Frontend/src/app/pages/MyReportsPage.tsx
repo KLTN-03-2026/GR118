@@ -35,12 +35,20 @@ const STATUS_ICONS: Record<string, any> = {
 };
 
 export function MyReportsPage() {
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { issues, updateIssue, deleteIssue, isLoading } = useIssues();
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   // Redirect if not logged in
+  if (isAuthLoading || isLoading) {
+    return (
+      <div className="min-h-screen pt-20 pb-16 bg-gray-50 flex items-center justify-center">
+        <Loader2 size={48} className="text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
   if (!user) {
     return <Navigate to="/" replace />;
   }

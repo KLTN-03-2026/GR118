@@ -132,7 +132,7 @@ const DeletePermissionModal = ({
 };
 
 export function PermissionsPage() {
-  const { can, user } = useAuth();
+  const { can, user, isLoading } = useAuth();
   const { permissions, addPermission, deletePermission } = usePermissions();
   const [searchQuery, setSearchQuery] = useState("");
   const [resourceFilter, setResourceFilter] = useState<PermissionResource | "all">("all");
@@ -157,6 +157,14 @@ export function PermissionsPage() {
       }));
     }
   }, [formData.resource]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 pb-16 bg-gray-50 flex items-center justify-center">
+        <Loader2 size={48} className="text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   if (!can("perms_mgnt", "read")) {
     return <Navigate to="/" replace />;

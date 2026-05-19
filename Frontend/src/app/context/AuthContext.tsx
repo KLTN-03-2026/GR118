@@ -25,6 +25,7 @@ export interface User {
   }>;
   permissions?: Record<string, string[]>;
   mustChangePassword?: boolean;
+  managementScope?: string[];
 }
 
 interface AuthContextType {
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 role: beUser.role || "user",
                 roleId: beUser.roleId,
                 permissions: beUser.permissions || {},
+                managementScope: beUser.managementScope || [],
                 banned: beUser.lockEnd && new Date(beUser.lockEnd) > new Date() ? true : false,
                 banReason: beUser.lockReason
               };
@@ -148,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: beUser.role || "user",
           roleId: beUser.roleId,
           permissions: beUser.permissions || {},
+          managementScope: beUser.managementScope || [],
           banned: beUser.lockEnd && new Date(beUser.lockEnd) > new Date() ? true : false,
           banReason: beUser.lockReason,
           mustChangePassword: beUser.mustChangePassword // BE should return this
@@ -201,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: beUser.role || "user",
           roleId: beUser.roleId,
           permissions: beUser.permissions || {},
+          managementScope: beUser.managementScope || [],
           banned: beUser.lockEnd && new Date(beUser.lockEnd) > new Date() ? true : false,
           banReason: beUser.lockReason
         };

@@ -964,8 +964,16 @@ export function ModeratorIssuesPage() {
     refreshIssues();
   }, [refreshIssues]);
 
+  const visibleIssues = useMemo(() => {
+    if (user && user.role === "moderator") {
+      const scope = user.managementScope || [];
+      return issues.filter((i) => scope.includes(i.category));
+    }
+    return issues;
+  }, [issues, user]);
+
   const filtered = useMemo(() => {
-    let list = [...issues];
+    let list = [...visibleIssues];
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -1007,18 +1015,18 @@ export function ModeratorIssuesPage() {
     });
 
     return list;
-  }, [issues, search, filterStatus, filterCategory, filterSeverity, filterAssigned, sortBy, user.id]);
+  }, [visibleIssues, search, filterStatus, filterCategory, filterSeverity, filterAssigned, sortBy, user.id]);
 
   // Stats
   const stats = useMemo(() => ({
-    total: issues.length,
-    pending: issues.filter((i) => i.status === "pending").length,
-    received: issues.filter((i) => i.status === "received").length,
-    processing: issues.filter((i) => i.status === "processing").length,
-    need_info: issues.filter((i) => i.status === "need_info").length,
-    resolved: issues.filter((i) => i.status === "resolved").length,
-    mine: issues.filter((i) => i.moderatorId === user.id).length,
-  }), [issues, user.id]);
+    total: visibleIssues.length,
+    pending: visibleIssues.filter((i) => i.status === "pending").length,
+    received: visibleIssues.filter((i) => i.status === "received").length,
+    processing: visibleIssues.filter((i) => i.status === "processing").length,
+    need_info: visibleIssues.filter((i) => i.status === "need_info").length,
+    resolved: visibleIssues.filter((i) => i.status === "resolved").length,
+    mine: visibleIssues.filter((i) => i.moderatorId === user.id).length,
+  }), [visibleIssues, user.id]);
 
   const activeFilterCount = [
     filterStatus !== "all",

@@ -15,6 +15,7 @@ import { PageTitle } from "../components/PageTitle";
 import { api } from "../../utils/api";
 import { Skeleton, SkeletonCircle, SkeletonText } from "../components/ui/skeleton";
 import { Card } from "../components/ui/card";
+import { CATEGORY_LABELS } from "../data/issues";
 
 // ──────────────────────────────────────────────────────────
 // Constants
@@ -64,6 +65,7 @@ async function fetchUsersFromAPI(): Promise<Array<User & { password: string }>> 
         roleId: u.roleId || (Array.isArray(u.roles) && u.roles.length > 0 ? u.roles[0] : undefined),
         banned: u.banned || (u.lockEnd && new Date(u.lockEnd) > new Date()),
         banReason: u.lockReason || u.banReason,
+        managementScope: u.managementScope || [],
         password: "",
       }));
     }
@@ -121,6 +123,7 @@ function CreateAccountModal({
     phone: "",
     city: "TP. Hồ Chí Minh",
     roleId: activeRoles.length > 0 ? activeRoles[0].id : "",
+    managementScope: [] as string[],
   });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -130,12 +133,18 @@ function CreateAccountModal({
     "An Giang", "Bà Rịa - Vũng Tàu", "Bạc Liêu", "Bắc Giang", "Bắc Kạn", "Bắc Ninh", "Bến Tre", "Bình Dương", "Bình Định", "Bình Phước", "Bình Thuận", "Cà Mau", "Cao Bằng", "Cần Thơ", "Đà Nẵng", "Đắk Lắk", "Đắk Nông", "Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Giang", "Hà Nam", "Hà Nội", "Hà Tĩnh", "Hải Dương", "Hải Phòng", "Hậu Giang", "Hòa Bình", "Hưng Yên", "Khánh Hòa", "Kiên Giang", "Kon Tum", "Lai Châu", "Lạng Sơn", "Lào Cai", "Lâm Đồng", "Long An", "Nam Định", "Nghệ An", "Ninh Bình", "Ninh Thuận", "Phú Thọ", "Phú Yên", "Quảng Bình", "Quảng Nam", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị", "Sóc Trăng", "Sơn La", "Tây Ninh", "Thái Bình", "Thái Nguyên", "Thanh Hóa", "Thừa Thiên Huế", "Tiền Giang", "TP. Hồ Chí Minh", "Trà Vinh", "Tuyên Quang", "Vĩnh Long", "Vĩnh Phúc", "Yên Bái"
   ];
 
+  const selectedRole = roles.find((r) => r.id === form.roleId);
+  const isModerator = selectedRole && normalizeRole(selectedRole.name) === "moderator";
+
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Vui lòng nhập họ tên";
     if (!form.email.trim()) e.email = "Vui lòng nhập email";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Email không hợp lệ";
     if (!form.roleId) e.roleId = "Vui lòng chọn vai trò";
+    if (isModerator && form.managementScope.length === 0) {
+      e.managementScope = "Vui lòng chọn ít nhất một lĩnh vực phụ trách";
+    }
     return e;
   };
 
@@ -144,7 +153,6 @@ function CreateAccountModal({
     if (Object.keys(e).length > 0) { setErrors(e); return; }
     setLoading(true);
 
-    const selectedRole = roles.find((r) => r.id === form.roleId);
     const roleName = selectedRole?.name || "user";
     const randomPassword = Math.random().toString(36).slice(-10) + Math.floor(Math.random() * 10);
 
@@ -156,7 +164,8 @@ function CreateAccountModal({
         password: randomPassword,
         roleIds: [form.roleId],
         sendEmail: true,
-        forcePasswordChange: true
+        forcePasswordChange: true,
+        managementScope: form.managementScope
       });
       
       if (!res.success) {
@@ -178,11 +187,12 @@ function CreateAccountModal({
         reportsCount: 0,
         resolvedCount: 0,
         role: roleName as "admin" | "moderator" | "user",
+        managementScope: form.managementScope
       };
 
       onCreated(newUser);
       onClose();
-      setForm({ name: "", email: "", phone: "", city: "Thành phố Đà Nẵng", roleId: "" });
+      setForm({ name: "", email: "", phone: "", city: "Thành phố Đà Nẵng", roleId: "", managementScope: [] });
       toast.success(`✅ Đã tạo tài khoản ${roleName} và gửi thông tin qua email: ${newUser.email}`);
     } catch (err) {
       toast.error("Không thể kết nối đến máy chủ");
@@ -195,8 +205,6 @@ function CreateAccountModal({
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: "" }));
   };
-
-  const selectedRole = roles.find((r) => r.id === form.roleId);
 
   return (
     <motion.div
@@ -278,6 +286,38 @@ function CreateAccountModal({
               </p>
             )}
           </div>
+
+          {/* Lĩnh vực phụ trách cho Cán bộ */}
+          {isModerator && (
+            <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-2">
+              <label className="block text-sm font-semibold text-indigo-900">
+                Lĩnh vực phụ trách <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(CATEGORY_LABELS).map(([catKey, catLabel]) => {
+                  const isChecked = form.managementScope.includes(catKey);
+                  return (
+                    <label key={catKey} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          const newScope = isChecked
+                            ? form.managementScope.filter((s) => s !== catKey)
+                            : [...form.managementScope, catKey];
+                          setForm((prev) => ({ ...prev, managementScope: newScope }));
+                          setErrors((prev) => ({ ...prev, managementScope: "" }));
+                        }}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      {catLabel}
+                    </label>
+                  );
+                })}
+              </div>
+              {errors.managementScope && <p className="text-xs text-red-500 mt-1">{errors.managementScope}</p>}
+            </div>
+          )}
 
           {/* Họ và tên */}
           <div>
@@ -391,24 +431,32 @@ function ChangeRoleModal({
   target: User;
   currentAdminId: string;
   onClose: () => void;
-  onSaved: (newRoleId: string) => void;
+  onSaved: (newRoleId: string, managementScope: string[]) => void;
 }) {
   const { roles } = useRoles();
   const activeRoles = roles.filter((r) => r.isActive);
   const [selectedRoleId, setSelectedRoleId] = useState<string>(target.roleId || "");
+  const [managementScope, setManagementScope] = useState<string[]>(target.managementScope || []);
   const [loading, setLoading] = useState(false);
+  const [scopeError, setScopeError] = useState("");
+
+  const selectedRole = roles.find((r) => r.id === selectedRoleId);
+  const isSelectedRoleModerator = selectedRole && normalizeRole(selectedRole.name) === "moderator";
 
   const handleSave = async () => {
-    if (selectedRoleId === target.roleId || !selectedRoleId) { onClose(); return; }
+    if (!selectedRoleId) return;
+    if (isSelectedRoleModerator && managementScope.length === 0) {
+      setScopeError("Vui lòng chọn ít nhất một lĩnh vực phụ trách");
+      return;
+    }
     setLoading(true);
     // API call will be handled by the onSaved callback which calls updateUser
-    onSaved(selectedRoleId);
+    onSaved(selectedRoleId, isSelectedRoleModerator ? managementScope : []);
     setLoading(false);
     onClose();
   };
 
   const currentRole = roles.find((r) => r.id === target.roleId);
-  const selectedRole = roles.find((r) => r.id === selectedRoleId);
 
   return (
     <motion.div
@@ -496,6 +544,38 @@ function ChangeRoleModal({
             })}
           </div>
 
+          {/* Lĩnh vực phụ trách cho Cán bộ khi đổi vai trò */}
+          {isSelectedRoleModerator && (
+            <div className="mt-4 p-4 bg-violet-50/50 border border-violet-100 rounded-2xl space-y-2">
+              <label className="block text-sm font-semibold text-violet-900">
+                Lĩnh vực phụ trách <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(CATEGORY_LABELS).map(([catKey, catLabel]) => {
+                  const isChecked = managementScope.includes(catKey);
+                  return (
+                    <label key={catKey} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-gray-900 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          const newScope = isChecked
+                            ? managementScope.filter((s) => s !== catKey)
+                            : [...managementScope, catKey];
+                          setManagementScope(newScope);
+                          setScopeError("");
+                        }}
+                        className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                      />
+                      {catLabel}
+                    </label>
+                  );
+                })}
+              </div>
+              {scopeError && <p className="text-xs text-red-500 mt-1">{scopeError}</p>}
+            </div>
+          )}
+
           {activeRoles.length === 0 && (
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
               <div className="flex items-start gap-2">
@@ -521,7 +601,7 @@ function ChangeRoleModal({
             <button onClick={onClose} className="flex-1 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 text-sm">Hủy</button>
             <button
               onClick={handleSave}
-              disabled={loading || selectedRoleId === target.roleId || !selectedRoleId || activeRoles.length === 0}
+              disabled={loading || !selectedRoleId || activeRoles.length === 0 || (selectedRoleId === target.roleId && JSON.stringify(managementScope) === JSON.stringify(target.managementScope || []))}
               className="flex-1 py-2.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2 text-sm shadow-lg shadow-violet-200 transition-all"
             >
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -987,6 +1067,20 @@ function UserDetailDrawer({
             ))}
           </div>
 
+          {/* Lĩnh vực phụ trách */}
+          {target.role === "moderator" && target.managementScope && target.managementScope.length > 0 && (
+            <div className="mt-4 p-4 bg-indigo-50 border border-indigo-150 rounded-xl">
+              <p className="text-sm font-semibold text-indigo-800 mb-1">Lĩnh vực phụ trách</p>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {target.managementScope.map((scopeVal) => (
+                  <span key={scopeVal} className="inline-flex items-center px-2 py-0.5 rounded bg-white text-indigo-700 border border-indigo-100 text-xs font-medium">
+                    {CATEGORY_LABELS[scopeVal as keyof typeof CATEGORY_LABELS] || scopeVal}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Ban info */}
           {target.banned && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl">
@@ -1035,7 +1129,7 @@ type FilterRole = "all" | "admin" | "moderator" | "user";
 type FilterStatus = "all" | "active" | "banned";
 
 export function AdminUsersPage() {
-  const { user, can } = useAuth();
+  const { user, can, isLoading } = useAuth();
   const [users, setUsers] = useState<Array<User & { password: string }>>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [search, setSearch] = useState("");
@@ -1110,6 +1204,7 @@ export function AdminUsersPage() {
             roleId: u.roleId || (Array.isArray(u.roles) && u.roles.length > 0 ? u.roles[0] : undefined),
             banned: u.banned || (u.lockEnd && new Date(u.lockEnd) > new Date()),
             banReason: u.lockReason || u.banReason,
+            managementScope: u.managementScope || [],
             password: "",
           };
           setUsers((prev) => prev.map((item) => (item.id === userId ? mappedUser : item)));
@@ -1193,6 +1288,14 @@ export function AdminUsersPage() {
       banned: users.filter((u) => u.banned).length,
     };
   }, [users, user?.id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 pb-16 bg-gray-50 flex items-center justify-center">
+        <Loader2 size={48} className="text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   if (!user || !can("users_mgnt", "read")) return <Navigate to="/" replace />;
 
@@ -1433,6 +1536,17 @@ export function AdminUsersPage() {
                           <span className="flex items-center gap-1"><Calendar size={11} className="text-gray-400" />Tham gia {new Date(u.joinedAt).toLocaleDateString("vi-VN")}</span>
                         </div>
 
+                        {u.role === "moderator" && u.managementScope && u.managementScope.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1 items-center">
+                            <span className="text-[11px] text-gray-400 mr-1">Lĩnh vực phụ trách:</span>
+                            {u.managementScope.map((scopeVal) => (
+                              <span key={scopeVal} className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] font-medium">
+                                {CATEGORY_LABELS[scopeVal as keyof typeof CATEGORY_LABELS] || scopeVal}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
                         {/* Ban info */}
                         {u.banned && (
                           <div className="mt-2 px-3 py-2 bg-red-100 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-1.5">
@@ -1534,8 +1648,8 @@ export function AdminUsersPage() {
             target={changeRoleTarget}
             currentAdminId={user.id}
             onClose={() => setChangeRoleTarget(null)}
-            onSaved={(newRoleId) => {
-              updateUser(changeRoleTarget.id, { roleIds: [newRoleId] });
+            onSaved={(newRoleId, newScope) => {
+              updateUser(changeRoleTarget.id, { roleIds: [newRoleId], managementScope: newScope });
             }}
           />
         )}

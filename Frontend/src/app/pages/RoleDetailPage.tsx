@@ -29,7 +29,7 @@ import { toast } from "sonner";
 export function RoleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, can } = useAuth();
+  const { user, can, isLoading } = useAuth();
   const { roles, updateRole, toggleRoleStatus } = useRoles();
   const { permissions } = usePermissions();
   const [isEditing, setIsEditing] = useState(false);
@@ -56,6 +56,14 @@ export function RoleDetailPage() {
   }, [role]);
 
   // Permission guard
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 pb-16 bg-gray-50 flex items-center justify-center">
+        <Loader2 size={48} className="text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
   if (!user || !can("roles_mgnt", "read")) {
     return <Navigate to="/" replace />;
   }

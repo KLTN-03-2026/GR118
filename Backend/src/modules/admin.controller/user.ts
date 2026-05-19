@@ -122,11 +122,11 @@ export const LockOrUnlockUser = async (req: Request, res: Response, next: NextFu
 
 export const CreateNewUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { userName, name, fullName, email, password, roleIds } = req.body;
+        const { userName, name, fullName, email, password, roleIds, managementScope } = req.body;
         const finalUserName = userName || email; // Sử dụng email làm userName nếu trống
         const finalName = name || fullName;
 
-        const result = await userRepo.createNewUserByAdmin(finalUserName, finalName, email, password, roleIds);
+        const result = await userRepo.createNewUserByAdmin(finalUserName, finalName, email, password, roleIds, managementScope);
         if (!result.success || !result.data) {
             const err = ERROR_CODES.INVALID_INPUT;
             return next(new AppError(err.statusCode, err.code, result.message || "Failed to create user"));
@@ -163,10 +163,10 @@ export const UpdateUser = async (req: Request, res: Response, next: NextFunction
             return next(new AppError(err.statusCode, err.code, "User not found"));
         }
 
-        const { userName, email, password, roleIds, roleId } = req.body;
+        const { userName, email, password, roleIds, roleId, managementScope } = req.body;
         
         console.log(`[UpdateUser] Request for ID: ${id}`);
-        console.log(`[UpdateUser] Payload:`, JSON.stringify({ userName, email, hasPassword: !!password, roleIds, roleId }));
+        console.log(`[UpdateUser] Payload:`, JSON.stringify({ userName, email, hasPassword: !!password, roleIds, roleId, managementScope }));
 
         // Fallback: nếu client gửi roleId (số ít) thay vì roleIds (mảng)
         let finalRoleIds = roleIds;
@@ -178,7 +178,8 @@ export const UpdateUser = async (req: Request, res: Response, next: NextFunction
             userName,
             email,
             password,
-            roleIds: finalRoleIds
+            roleIds: finalRoleIds,
+            managementScope
         });
 
         if (!result.success || !result.data) {

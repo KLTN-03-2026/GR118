@@ -10,4 +10,5 @@ export interface RoleResponse{
     updated_at: Date;
     permissions: PermissionsInfo[] | null;
     userCount?: number;
+    managementScope?: string[];
 }

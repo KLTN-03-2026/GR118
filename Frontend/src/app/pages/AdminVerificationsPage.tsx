@@ -12,6 +12,7 @@ import {
   Send,
   TrendingUp,
   BarChart3,
+  Loader2,
 } from "lucide-react";
 import { Navigate, Link } from "react-router";
 import { useAuth } from "../context/AuthContext";
@@ -40,7 +41,7 @@ function StarRating({ rating, size = 16 }: { rating: number; size?: number }) {
 }
 
 export function AdminVerificationsPage() {
-  const { can } = useAuth();
+  const { can, isLoading } = useAuth();
   const { issues, reviewVerification } = useIssues();
   const { addNotification } = useNotifications();
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,6 +54,14 @@ export function AdminVerificationsPage() {
   } | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [adminNote, setAdminNote] = useState("");
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 pb-16 bg-gray-50 flex items-center justify-center">
+        <Loader2 size={48} className="text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   if (!can("users_mgnt", "verify")) {
     return <Navigate to="/" replace />;

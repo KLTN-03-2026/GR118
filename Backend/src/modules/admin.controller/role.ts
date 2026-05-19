@@ -151,6 +151,7 @@ export const UpdateRole = async (req: Request, res: Response, next: NextFunction
         const roleData: any = { role_id: targetId };
         if (name) roleData.name = name;
         if (description) roleData.description = description;
+        if (req.body.managementScope !== undefined) roleData.managementScope = req.body.managementScope;
 
         const updatedRole = await roleRepo.upsertRole(roleData);
         
@@ -174,7 +175,7 @@ export const UpdateRole = async (req: Request, res: Response, next: NextFunction
 
 export const UpsertRole = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { roleId, name, description, permIds = [] } = req.body;
+        const { roleId, name, description, permIds = [], managementScope = [] } = req.body;
         if (!name) {
             const err = ERROR_CODES.INVALID_INPUT;
             return next(new AppError(err.statusCode, err.code, "Missing required Name"));
@@ -182,7 +183,8 @@ export const UpsertRole = async (req: Request, res: Response, next: NextFunction
         const roleData = {
             role_id: roleId,
             name,
-            description
+            description,
+            managementScope
         };
 
         // Nếu là cập nhật (có roleId), kiểm tra xem có phải vai trò hệ thống không

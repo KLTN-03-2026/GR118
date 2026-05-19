@@ -9,4 +9,5 @@ export interface RoleRow {
     permission_id?: string | null;
     permission_name?: string | null;
     permission_description?: string | null;
+    managementScope?: string[];
 }

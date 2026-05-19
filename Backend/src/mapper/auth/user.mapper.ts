@@ -13,6 +13,7 @@ export class UserMapper {
                 roles: user.roles || [],
                 lockEnd: user.lockEnd,
                 lockReason: user.lockReason,
+                managementScope: user.managementScope || [],
                 created_at: user.createdAt,
                 updated_at: user.updatedAt
             };
@@ -30,6 +31,7 @@ export class UserMapper {
                 roles: role || [],
                 lockEnd: user.lockEnd,
                 lockReason: user.lockReason,
+                managementScope: user.managementScope || [],
                 created_at: user.createdAt,
                 updated_at: user.updatedAt
             };

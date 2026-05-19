@@ -27,7 +27,7 @@ import { toast } from "sonner";
 export function PermissionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user, can } = useAuth();
+  const { user, can, isLoading } = useAuth();
   const { getPermissionById, updatePermission } = usePermissions();
 
   const permission = getPermissionById(id || "");
@@ -41,17 +41,7 @@ export function PermissionDetailPage() {
     actions: [] as PermissionAction[],
   });
 
-  // Permission guard
-  if (!user || !can("perms_mgnt", "read")) {
-    return <Navigate to="/" replace />;
-  }
-
-  // Redirect if permission not found
-  if (!permission) {
-    return <Navigate to="/admin/permissions" replace />;
-  }
-
-  // Initialize form data
+  // Initialize form data - MOVED BEFORE EARLY RETURNS to respect React rules of hooks
   useEffect(() => {
     if (permission) {
       setFormData({
@@ -62,6 +52,7 @@ export function PermissionDetailPage() {
       });
     }
   }, [permission]);
+
   // Khi đổi tài nguyên, lọc bỏ các hành động không còn khả dụng
   useEffect(() => {
     if (formData.resource) {
@@ -72,6 +63,25 @@ export function PermissionDetailPage() {
       }));
     }
   }, [formData.resource]);
+
+  // Auth/loading checks
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 pb-16 bg-gray-50 flex items-center justify-center">
+        <Loader2 size={48} className="text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
+  // Permission guard
+  if (!user || !can("perms_mgnt", "read")) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Redirect if permission not found
+  if (!permission) {
+    return <Navigate to="/admin/permissions" replace />;
+  }
 
   const allActions: PermissionAction[] = formData.resource 
     ? RESOURCE_ACTIONS[formData.resource as PermissionResource] || []

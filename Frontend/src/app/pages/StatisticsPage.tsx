@@ -10,6 +10,8 @@ import { Calendar, TrendingUp, CheckCircle, Clock, AlertCircle, FileText, Filter
 import { CATEGORY_LABELS, IssueCategory, STATUS_LABELS, STATUS_COLORS } from "../data/issues";
 import { PageTitle } from "../components/PageTitle";
 import { Skeleton, SkeletonCircle, SkeletonText } from "../components/ui/skeleton";
+import { api } from "../../utils/api";
+
 
 // Helper component for Stat Cards
 function StatCard({ label, value, change, subtext, icon: Icon, color }: any) {
@@ -59,83 +61,39 @@ export function StatisticsPage() {
   const { issues, refreshIssues } = useIssues();
   const { can, user, isLoading } = useAuth();
 
-  useEffect(() => {
-    refreshIssues();
-  }, [refreshIssues]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 p-4 md:p-8 pt-20 md:pt-24">
-        <div className="max-w-7xl mx-auto space-y-8">
-          {/* Header Skeleton */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="space-y-3">
-              <Skeleton width="120px" height="16px" />
-              <Skeleton width="300px" height="36px" />
-              <Skeleton width="200px" height="14px" />
-            </div>
-            <div className="flex gap-3">
-              <Skeleton width="120px" height="40px" borderRadius="10px" />
-              <Skeleton width="100px" height="40px" borderRadius="10px" />
-            </div>
-          </div>
-
-          {/* Cards Skeleton */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="p-5 border-0 shadow-sm bg-white">
-                <div className="flex justify-between mb-4">
-                  <div className="space-y-2">
-                    <Skeleton width="60px" height="12px" />
-                    <Skeleton width="80px" height="24px" />
-                  </div>
-                  <SkeletonCircle size="36px" />
-                </div>
-                <Skeleton width="100px" height="12px" />
-              </Card>
-            ))}
-          </div>
-
-          {/* Charts Skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Card className="p-8 border-0 shadow-sm bg-white h-[400px]">
-              <Skeleton width="200px" height="24px" className="mb-8" />
-              <Skeleton width="100%" height="280px" />
-            </Card>
-            <Card className="p-8 border-0 shadow-sm bg-white h-[400px]">
-              <Skeleton width="180px" height="24px" className="mb-8" />
-              <Skeleton width="100%" height="280px" />
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
-  // Chỉ những ai có quyền xem báo cáo đơn vị mới được truy cập
-  if (!user || !can("reports_stats", "read")) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="pt-6 mb-4">
-            <PageTitle title="Không có quyền truy cập" backTo="" />
-          </div>
-          <div className="text-center py-16">
-            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h2 className="text-2xl mb-2">Không có quyền truy cập</h2>
-            <p className="text-gray-600">Bạn không có quyền xem thống kê báo cáo đơn vị.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   // State cho bộ lọc
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("all");
   const [selectedSeverity, setSelectedSeverity] = useState<string>("all");
+
+  // State cho thống kê từ server
+  const [serverStats, setServerStats] = useState<any>(null);
+
+  // Lọc và làm mới các vấn đề
+  useEffect(() => {
+    if (user && can("reports_stats", "read")) {
+      refreshIssues();
+    }
+  }, [refreshIssues, user, can]);
+
+  // Lấy dữ liệu thống kê từ server
+  useEffect(() => {
+    const fetchServerStats = async () => {
+      try {
+        const res = await api.get("/auth/stats");
+        if (res.success) {
+          setServerStats(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch server stats:", err);
+      }
+    };
+    if (user && can("reports_stats", "read")) {
+      fetchServerStats();
+    }
+  }, [user, can]);
 
   // Lấy danh sách quận/huyện từ dữ liệu
   const districts = useMemo(() => {
@@ -180,35 +138,26 @@ export function StatisticsPage() {
     return filtered;
   }, [issues, startDate, endDate, selectedCategory, selectedDistrict, selectedSeverity]);
 
-  // State cho thống kê từ server
-  const [serverStats, setServerStats] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchServerStats = async () => {
-      try {
-        const res = await api.get("/auth/stats");
-        if (res.success) {
-          setServerStats(res.data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch server stats:", err);
-      }
-    };
-    fetchServerStats();
-  }, []);
-
   // Thống kê tổng quan
   const stats = useMemo(() => {
     const total = serverStats?.totalReports || filteredIssues.length;
     const pending = serverStats?.pendingReports || filteredIssues.filter((i) => i.status === "pending").length;
     const resolved = serverStats?.resolvedReports || filteredIssues.filter((i) => i.status === "resolved").length;
     const inProgress = serverStats?.processingReports || filteredIssues.filter((i) => i.status === "processing" || i.status === "received" || i.status === "need_info").length;
+    const received = filteredIssues.filter((i) => i.status === "received").length;
+    const processing = filteredIssues.filter((i) => i.status === "processing").length;
+    const needInfo = filteredIssues.filter((i) => i.status === "need_info").length;
+    const rejected = filteredIssues.filter((i) => i.status === "rejected").length;
 
     return {
       total,
       pending,
       resolved,
       inProgress,
+      received,
+      processing,
+      needInfo,
+      rejected,
       completionRate: serverStats?.completionRate || (total > 0 ? Math.round((resolved / total) * 100) : 0),
       totalUsers: serverStats?.totalUsers || 0,
       aiAccuracy: serverStats?.aiAccuracy || 92,
@@ -217,14 +166,16 @@ export function StatisticsPage() {
   }, [filteredIssues, serverStats]);
 
   // Dữ liệu cho biểu đồ trạng thái
-  const statusData = [
-    { name: "Mới", value: stats.pending, color: "#8b5cf6" },
-    { name: "Đã tiếp nhận", value: stats.received, color: "#3b82f6" },
-    { name: "Đang xử lý", value: stats.processing, color: "#f59e0b" },
-    { name: "Cần bổ sung", value: stats.needInfo, color: "#ef4444" },
-    { name: "Hoàn thành", value: stats.resolved, color: "#10b981" },
-    { name: "Từ chối", value: stats.rejected, color: "#6b7280" },
-  ].filter((item) => item.value > 0);
+  const statusData = useMemo(() => {
+    return [
+      { name: "Mới", value: stats.pending, color: "#8b5cf6" },
+      { name: "Đã tiếp nhận", value: stats.received, color: "#3b82f6" },
+      { name: "Đang xử lý", value: stats.processing, color: "#f59e0b" },
+      { name: "Cần bổ sung", value: stats.needInfo, color: "#ef4444" },
+      { name: "Hoàn thành", value: stats.resolved, color: "#10b981" },
+      { name: "Từ chối", value: stats.rejected, color: "#6b7280" },
+    ].filter((item) => item.value > 0);
+  }, [stats]);
 
   // Dữ liệu cho biểu đồ danh mục
   const categoryData = useMemo(() => {
@@ -239,7 +190,6 @@ export function StatisticsPage() {
     }));
   }, [filteredIssues]);
 
-  // Dữ liệu cho biểu đồ xu hướng theo thời gian
   // Dữ liệu cho biểu đồ xu hướng theo tháng
   const monthlyTrendData = useMemo(() => {
     const months: string[] = [];
@@ -308,6 +258,73 @@ export function StatisticsPage() {
   const handleExport = () => {
     alert("Chức năng xuất báo cáo sẽ được phát triển trong phiên bản tiếp theo.");
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-4 md:p-8 pt-20 md:pt-24">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Header Skeleton */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-3">
+              <Skeleton width="120px" height="16px" />
+              <Skeleton width="300px" height="36px" />
+              <Skeleton width="200px" height="14px" />
+            </div>
+            <div className="flex gap-3">
+              <Skeleton width="120px" height="40px" borderRadius="10px" />
+              <Skeleton width="100px" height="40px" borderRadius="10px" />
+            </div>
+          </div>
+
+          {/* Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="p-5 border-0 shadow-sm bg-white">
+                <div className="flex justify-between mb-4">
+                  <div className="space-y-2">
+                    <Skeleton width="60px" height="12px" />
+                    <Skeleton width="80px" height="24px" />
+                  </div>
+                  <SkeletonCircle size="36px" />
+                </div>
+                <Skeleton width="100px" height="12px" />
+              </Card>
+            ))}
+          </div>
+
+          {/* Charts Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card className="p-8 border-0 shadow-sm bg-white h-[400px]">
+              <Skeleton width="200px" height="24px" className="mb-8" />
+              <Skeleton width="100%" height="280px" />
+            </Card>
+            <Card className="p-8 border-0 shadow-sm bg-white h-[400px]">
+              <Skeleton width="180px" height="24px" className="mb-8" />
+              <Skeleton width="100%" height="280px" />
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Chỉ những ai có quyền xem báo cáo đơn vị mới được truy cập
+  if (!user || !can("reports_stats", "read")) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="pt-6 mb-4">
+            <PageTitle title="Không có quyền truy cập" backTo="" />
+          </div>
+          <div className="text-center py-16">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-2xl mb-2">Không có quyền truy cập</h2>
+            <p className="text-gray-600">Bạn không có quyền xem thống kê báo cáo đơn vị.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-4 md:p-8 pt-20 md:pt-24">

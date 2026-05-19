@@ -84,7 +84,8 @@ export const getRoleById = async (roleId: string): Promise<RoleRow[] | null> => 
         permission_id: p.perm_id || "",
         permission_name: p.name || "",
         permission_description: p.description || "",
-        userCount: userCount
+        userCount: userCount,
+        managementScope: role?.managementScope || []
     } as any));
 
     if (result.length === 0 && role) {
@@ -99,7 +100,8 @@ export const getRoleById = async (roleId: string): Promise<RoleRow[] | null> => 
             permission_id: null,
             permission_name: null,
             permission_description: null,
-            userCount: userCount
+            userCount: userCount,
+            managementScope: role.managementScope || []
         } as any];
     }
 

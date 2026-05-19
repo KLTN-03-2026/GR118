@@ -9,6 +9,7 @@ export interface UsersResponse {
     role?: string | null;
     lockEnd ?: Date | null;
     lockReason ?: string | null;
+    managementScope?: string[];
     created_at: Date;
     updated_at: Date;
 }

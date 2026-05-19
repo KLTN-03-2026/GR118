@@ -32,8 +32,8 @@ import {
 } from "../components/ui/drawer";
 
 export function RolesPage() {
-  const { can } = useAuth();
-  const { roles, isLoading, addRole, deleteRole } = useRoles();
+  const { can, isLoading: isAuthLoading } = useAuth();
+  const { roles, isLoading: isRolesLoading, addRole, deleteRole } = useRoles();
   const { permissions } = usePermissions();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
@@ -47,6 +47,14 @@ export function RolesPage() {
     permissionIds: [] as string[],
     isActive: true,
   });
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen pt-20 pb-16 bg-gray-50 flex items-center justify-center">
+        <Loader2 size={48} className="text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   if (!can("roles_mgnt", "read")) {
     return <Navigate to="/" replace />;
@@ -202,7 +210,7 @@ export function RolesPage() {
     );
   };
 
-  if (isLoading) {
+  if (isRolesLoading) {
     return (
       <div className="min-h-screen pt-20 pb-16 bg-gray-50 flex items-center justify-center">
         <Loader2 size={48} className="text-blue-500 animate-spin" />

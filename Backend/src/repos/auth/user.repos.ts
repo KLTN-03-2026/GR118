@@ -336,7 +336,8 @@ export const createNewUserByAdmin = async (
     name: string,
     email: string,
     password: string,
-    roleIds?: string[]
+    roleIds?: string[],
+    managementScope?: string[]
 ) => {
     userName = userName?.trim().toLowerCase();
     name = name?.trim();
@@ -389,7 +390,8 @@ export const createNewUserByAdmin = async (
         name,
         email,
         password: hashedPassword,
-        types: "login"
+        types: "login",
+        managementScope: managementScope || []
     });
 
     // Nếu Admin không chọn role, mặc định gán role "công dân"
@@ -424,6 +426,7 @@ export const updateUserByAdmin = async (
         avatar?: string | null;
         phone?: string | null;
         city?: string | null;
+        managementScope?: string[];
     }
 ) => {
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -461,7 +464,8 @@ export const updateUserByAdmin = async (
         payload.name === undefined &&
         payload.avatar === undefined &&
         payload.phone === undefined &&
-        payload.city === undefined
+        payload.city === undefined &&
+        payload.managementScope === undefined
     ) {
         return {
             success: false,
@@ -536,6 +540,10 @@ export const updateUserByAdmin = async (
 
     if (payload.city !== undefined) {
         user.city = payload.city;
+    }
+
+    if (payload.managementScope !== undefined) {
+        user.managementScope = payload.managementScope;
     }
 
     if (password !== undefined) {

@@ -42,6 +42,22 @@ export function ModeratorActivitiesPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [search, setSearch] = useState("");
 
+  const myActivities = useMemo(() => {
+    return activities.filter((a) => a.creatorId === user?.id);
+  }, [activities, user?.id]);
+
+  const filtered = useMemo(() => {
+    let list = [...myActivities];
+    if (search) {
+      list = list.filter(
+        (a) =>
+          a.title.toLowerCase().includes(search.toLowerCase()) ||
+          a.location.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [myActivities, search]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50/50 pt-20 p-4 md:p-8">
@@ -89,20 +105,6 @@ export function ModeratorActivitiesPage() {
       </div>
     );
   }
-
-  const myActivities = activities.filter((a) => a.creatorId === user.id);
-
-  const filtered = useMemo(() => {
-    let list = [...myActivities];
-    if (search) {
-      list = list.filter(
-        (a) =>
-          a.title.toLowerCase().includes(search.toLowerCase()) ||
-          a.location.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [myActivities, search]);
 
   const handleToggleRegistration = (activity: Activity) => {
     updateActivity(activity.id, { registrationOpen: !activity.registrationOpen });

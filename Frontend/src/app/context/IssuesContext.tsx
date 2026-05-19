@@ -124,140 +124,110 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const receiveIssue = (id: string, moderatorId: string, moderatorName: string) => {
-    setIssues((prev) =>
-      prev.map((issue) => {
-        if (issue.id !== id) return issue;
-        const history = addProcessingStep(issue, {
-          action: "received",
-          note: "Báo cáo đã được tiếp nhận và đang chờ phân công xử lý.",
-          actorId: moderatorId,
-          actorName: moderatorName,
-          createdAt: new Date().toISOString(),
-        });
-        return {
-          ...issue,
-          status: "received",
-          moderatorId,
-          moderatorName,
-          receivedAt: new Date().toISOString(),
-          processingHistory: history,
-          updatedAt: new Date().toISOString(),
-        };
-      })
-    );
+  const receiveIssue = async (id: string, moderatorId: string, moderatorName: string) => {
+    const issue = issues.find((i) => i.id === id);
+    if (!issue) return;
+    const history = addProcessingStep(issue, {
+      action: "received",
+      note: "Báo cáo đã được tiếp nhận và đang chờ phân công xử lý.",
+      actorId: moderatorId,
+      actorName: moderatorName,
+      createdAt: new Date().toISOString(),
+    });
+    await updateIssue(id, {
+      status: "received",
+      moderatorId,
+      moderatorName,
+      receivedAt: new Date().toISOString(),
+      processingHistory: history,
+    });
   };
 
-  const assignIssue = (id: string, assignedTo: string, moderatorId: string, moderatorName: string) => {
-    setIssues((prev) =>
-      prev.map((issue) => {
-        if (issue.id !== id) return issue;
-        const history = addProcessingStep(issue, {
-          action: "assigned",
-          note: `Báo cáo đã được phân công cho: ${assignedTo}`,
-          actorId: moderatorId,
-          actorName: moderatorName,
-          assignedTo,
-          createdAt: new Date().toISOString(),
-        });
-        return {
-          ...issue,
-          assignedTo,
-          assignedAt: new Date().toISOString(),
-          processingHistory: history,
-          updatedAt: new Date().toISOString(),
-        };
-      })
-    );
+  const assignIssue = async (id: string, assignedTo: string, moderatorId: string, moderatorName: string) => {
+    const issue = issues.find((i) => i.id === id);
+    if (!issue) return;
+    const history = addProcessingStep(issue, {
+      action: "assigned",
+      note: `Báo cáo đã được phân công cho: ${assignedTo}`,
+      actorId: moderatorId,
+      actorName: moderatorName,
+      assignedTo,
+      createdAt: new Date().toISOString(),
+    });
+    await updateIssue(id, {
+      assignedTo,
+      assignedAt: new Date().toISOString(),
+      processingHistory: history,
+    });
   };
 
-  const startProcessing = (id: string, note: string, moderatorId: string, moderatorName: string) => {
-    setIssues((prev) =>
-      prev.map((issue) => {
-        if (issue.id !== id) return issue;
-        const history = addProcessingStep(issue, {
-          action: "processing",
-          note: note || "Báo cáo đang được xử lý.",
-          actorId: moderatorId,
-          actorName: moderatorName,
-          createdAt: new Date().toISOString(),
-        });
-        return {
-          ...issue,
-          status: "processing",
-          processingNote: note,
-          processingHistory: history,
-          updatedAt: new Date().toISOString(),
-        };
-      })
-    );
+  const startProcessing = async (id: string, note: string, moderatorId: string, moderatorName: string) => {
+    const issue = issues.find((i) => i.id === id);
+    if (!issue) return;
+    const history = addProcessingStep(issue, {
+      action: "processing",
+      note: note || "Báo cáo đang được xử lý.",
+      actorId: moderatorId,
+      actorName: moderatorName,
+      createdAt: new Date().toISOString(),
+    });
+    await updateIssue(id, {
+      status: "processing",
+      processingNote: note,
+      processingHistory: history,
+    });
   };
 
-  const requestAdditionalInfo = (id: string, request: string, moderatorId: string, moderatorName: string) => {
-    setIssues((prev) =>
-      prev.map((issue) => {
-        if (issue.id !== id) return issue;
-        const history = addProcessingStep(issue, {
-          action: "need_info",
-          note: request,
-          actorId: moderatorId,
-          actorName: moderatorName,
-          createdAt: new Date().toISOString(),
-        });
-        return {
-          ...issue,
-          status: "need_info",
-          additionalInfoRequest: request,
-          processingHistory: history,
-          updatedAt: new Date().toISOString(),
-        };
-      })
-    );
+  const requestAdditionalInfo = async (id: string, request: string, moderatorId: string, moderatorName: string) => {
+    const issue = issues.find((i) => i.id === id);
+    if (!issue) return;
+    const history = addProcessingStep(issue, {
+      action: "need_info",
+      note: request,
+      actorId: moderatorId,
+      actorName: moderatorName,
+      createdAt: new Date().toISOString(),
+    });
+    await updateIssue(id, {
+      status: "need_info",
+      additionalInfoRequest: request,
+      processingHistory: history,
+    });
   };
 
-  const completeIssue = (id: string, note: string, evidence: string[], moderatorId: string, moderatorName: string) => {
-    setIssues((prev) =>
-      prev.map((issue) => {
-        if (issue.id !== id) return issue;
-        const history = addProcessingStep(issue, {
-          action: "resolved",
-          note,
-          actorId: moderatorId,
-          actorName: moderatorName,
-          evidence,
-          createdAt: new Date().toISOString(),
-        });
-        return {
-          ...issue,
-          status: "resolved",
-          completionNote: note,
-          completionEvidence: evidence,
-          processingHistory: history,
-          updatedAt: new Date().toISOString(),
-        };
-      })
-    );
+  const completeIssue = async (id: string, note: string, evidence: string[], moderatorId: string, moderatorName: string) => {
+    const issue = issues.find((i) => i.id === id);
+    if (!issue) return;
+    const history = addProcessingStep(issue, {
+      action: "resolved",
+      note,
+      actorId: moderatorId,
+      actorName: moderatorName,
+      evidence,
+      createdAt: new Date().toISOString(),
+    });
+    await updateIssue(id, {
+      status: "resolved",
+      completionNote: note,
+      completionEvidence: evidence,
+      processingHistory: history,
+    });
   };
 
-  const rejectIssue = (id: string, note: string, moderatorId: string, moderatorName: string) => {
-    setIssues((prev) =>
-      prev.map((issue) => {
-        if (issue.id !== id) return issue;
-        const history = addProcessingStep(issue, {
-          action: "rejected",
-          note,
-          actorId: moderatorId,
-          actorName: moderatorName,
-          createdAt: new Date().toISOString(),
-        });
-        return {
-          ...issue,
-          status: "rejected",
-          processingHistory: history,
-          updatedAt: new Date().toISOString(),
-        };
-      })
-    );
+  const rejectIssue = async (id: string, note: string, moderatorId: string, moderatorName: string) => {
+    const issue = issues.find((i) => i.id === id);
+    if (!issue) return;
+    const history = addProcessingStep(issue, {
+      action: "rejected",
+      note,
+      actorId: moderatorId,
+      actorName: moderatorName,
+      createdAt: new Date().toISOString(),
+    });
+    await updateIssue(id, {
+      status: "rejected",
+      processingHistory: history,
+    });
   };
 
   const voteIssue = async (id: string, userId: string): Promise<boolean> => {

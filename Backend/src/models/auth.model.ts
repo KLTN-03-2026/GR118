@@ -16,6 +16,7 @@ export interface IAuth extends Document {
     lockEnd?: Date | null;
     lockReason?: string | null;
     role?: string | null;
+    managementScope?: string[] | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -72,6 +73,10 @@ const authSchema = new mongoose.Schema<IAuth>({
     role: {
         type: String,
         default: null
+    },
+    managementScope: {
+        type: [String],
+        default: []
     }
 }, {
     timestamps: true,

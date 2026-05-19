@@ -81,7 +81,7 @@ async function fetchUsersFromAPI(): Promise<Array<User & { password: string }>> 
 
 // Role badge
 function RoleBadge({ role }: { role: "admin" | "moderator" | "user" }) {
-  const cfg = ROLE_CONFIG[role];
+  const cfg = ROLE_CONFIG[role as keyof typeof ROLE_CONFIG] || ROLE_CONFIG.user;
   const Icon = cfg.icon;
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${cfg.color}`}>
@@ -186,7 +186,7 @@ function CreateAccountModal({
         joinedAt: userData.createdAt || new Date().toISOString(),
         reportsCount: 0,
         resolvedCount: 0,
-        role: roleName as "admin" | "moderator" | "user",
+        role: normalizeRole(roleName),
         managementScope: form.managementScope
       };
 
@@ -1506,7 +1506,7 @@ export function AdminUsersPage() {
                             <Ban size={11} className="text-white" />
                           </div>
                         )}
-                        <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white ${ROLE_CONFIG[u.role].dot}`}>
+                        <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white ${cfg.dot}`}>
                           <RoleIcon size={9} className="text-white" />
                         </div>
                       </div>

@@ -268,7 +268,13 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
     <IssuesContext.Provider value={{
       issues, addIssue, updateIssue, deleteIssue, addVerification, reviewVerification,
       voteIssue, addComment, refreshIssues: fetchIssues,
-      isLoading
+      isLoading,
+      receiveIssue,
+      assignIssue,
+      startProcessing,
+      requestAdditionalInfo,
+      completeIssue,
+      rejectIssue
     }}>
       {children}
     </IssuesContext.Provider>

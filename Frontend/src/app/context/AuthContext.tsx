@@ -62,6 +62,14 @@ const CURRENT_USER_KEY = "baocaovn_current_user";
 const ACCESS_TOKEN_KEY = "baocaovn_access_token";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081/api/v1";
 
+const normalizeRole = (roleStr: string): "admin" | "moderator" | "user" => {
+  if (!roleStr) return "user";
+  const r = roleStr.toLowerCase();
+  if (r.includes("admin")) return "admin";
+  if (r.includes("cán bộ") || r.includes("moderator") || r.includes("staff")) return "moderator";
+  return "user";
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 joinedAt: beUser.createdAt || new Date().toISOString(),
                 reportsCount: beUser.reportsCount || 0,
                 resolvedCount: beUser.resolvedCount || 0,
-                role: beUser.role || "user",
+                role: normalizeRole(beUser.role),
                 roleId: beUser.roleId,
                 permissions: beUser.permissions || {},
                 managementScope: beUser.managementScope || [],
@@ -147,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           joinedAt: beUser.createdAt || new Date().toISOString(),
           reportsCount: beUser.reportsCount || 0,
           resolvedCount: beUser.resolvedCount || 0,
-          role: beUser.role || "user",
+          role: normalizeRole(beUser.role),
           roleId: beUser.roleId,
           permissions: beUser.permissions || {},
           managementScope: beUser.managementScope || [],
@@ -201,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           joinedAt: beUser.createdAt || new Date().toISOString(),
           reportsCount: beUser.reportsCount || 0,
           resolvedCount: beUser.resolvedCount || 0,
-          role: beUser.role || "user",
+          role: normalizeRole(beUser.role),
           roleId: beUser.roleId,
           permissions: beUser.permissions || {},
           managementScope: beUser.managementScope || [],

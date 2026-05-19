@@ -129,7 +129,15 @@ export function AdminManagementPage() {
     return <Navigate to="/" replace />;
   }
 
-  const filteredIssues = issues.filter((issue) => {
+  const visibleIssues = issues.filter((i) => {
+    if (user && user.role === "moderator") {
+      const scope = user.managementScope || [];
+      return scope.includes(i.category);
+    }
+    return true;
+  });
+
+  const filteredIssues = visibleIssues.filter((issue) => {
     const matchesSearch =
       issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       issue.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -143,25 +151,25 @@ export function AdminManagementPage() {
   const stats = [
     {
       label: "Tổng báo cáo",
-      value: issues.length,
+      value: visibleIssues.length,
       icon: AlertCircle,
       color: "bg-blue-500",
     },
     {
       label: "Chờ xử lý",
-      value: issues.filter((i) => i.status === "pending").length,
+      value: visibleIssues.filter((i) => i.status === "pending").length,
       icon: Clock,
       color: "bg-yellow-500",
     },
     {
       label: "Đang xử lý",
-      value: issues.filter((i) => i.status === "processing").length,
+      value: visibleIssues.filter((i) => i.status === "processing").length,
       icon: Loader2,
       color: "bg-orange-500",
     },
     {
       label: "Đã giải quyết",
-      value: issues.filter((i) => i.status === "resolved").length,
+      value: visibleIssues.filter((i) => i.status === "resolved").length,
       icon: CheckCircle2,
       color: "bg-green-500",
     },

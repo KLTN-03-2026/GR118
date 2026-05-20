@@ -1,13 +1,48 @@
 import nodemailer from "nodemailer";
 
 /**
- * Dịch vụ gửi Email sử dụng Brevo API (Giải pháp duy nhất hoạt động trên Render vì không bị chặn cổng)
+ * Dịch vụ gửi Email đa phương thức (Hỗ trợ Gmail SMTP và Brevo API)
  */
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const SENDER_EMAIL = process.env.GMAIL_USER || "thaibc14@gmail.com";
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+const SENDER_EMAIL = GMAIL_USER || "thaibc14@gmail.com";
 
-console.log(`[Email Service] Provider: BREVO API (Reliable on Render)`);
+console.log(`[Email Service] Initialized with Gmail=${GMAIL_USER ? 'CONFIGURED' : 'MISSING'}, Brevo=${BREVO_API_KEY ? 'CONFIGURED' : 'MISSING'}`);
+
+/**
+ * Hàm gửi mail qua Gmail SMTP sử dụng Nodemailer
+ */
+async function sendEmailViaGmail(to: string, subject: string, htmlContent: string): Promise<boolean> {
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    console.error("[Email Service] ERROR: GMAIL_USER or GMAIL_APP_PASSWORD is not defined.");
+    return false;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD,
+      },
+    });
+
+    const info = await transporter.sendMail({
+      from: `"Hệ thống BáoCáoVN" <${GMAIL_USER}>`,
+      to: to,
+      subject: subject,
+      html: htmlContent,
+    });
+
+    console.log(`[Email Service] ACTUAL SUCCESS: Email sent to ${to} via Gmail SMTP. MessageId: ${info.messageId}`);
+    return true;
+  } catch (error: any) {
+    console.error(`[Email Service] Gmail SMTP Error:`, error.message || error);
+    return false;
+  }
+}
 
 /**
  * Hàm gửi mail lõi qua Brevo API
@@ -58,7 +93,7 @@ async function sendEmailViaBrevo(to: string, subject: string, htmlContent: strin
 
     if (response.ok) {
       const data = await response.json() as any;
-      console.log(`[Email Service] ACTUAL SUCCESS: Email sent to ${to}. MessageId: ${data.messageId || 'OK'}`);
+      console.log(`[Email Service] ACTUAL SUCCESS: Email sent to ${to} via Brevo. MessageId: ${data.messageId || 'OK'}`);
       return true;
     } else {
       const errorData = await response.json() as any;
@@ -69,6 +104,29 @@ async function sendEmailViaBrevo(to: string, subject: string, htmlContent: strin
     console.error(`[Email Service] Connection error to Brevo API:`, error.message || error);
     return false;
   }
+}
+
+/**
+ * Hàm gửi mail hợp nhất với cơ chế Fallback tự động
+ */
+export async function sendEmail(to: string, subject: string, htmlContent: string): Promise<boolean> {
+  // 1. Thử gửi qua Gmail SMTP nếu được cấu hình
+  if (GMAIL_USER && GMAIL_APP_PASSWORD) {
+    console.log(`[Email Service] Attempting to send email via Gmail SMTP to ${to}...`);
+    const success = await sendEmailViaGmail(to, subject, htmlContent);
+    if (success) return true;
+    console.warn(`[Email Service] Gmail SMTP failed. Falling back to alternative providers...`);
+  }
+
+  // 2. Thử gửi qua Brevo API nếu được cấu hình
+  if (BREVO_API_KEY) {
+    console.log(`[Email Service] Attempting to send email via Brevo API to ${to}...`);
+    const success = await sendEmailViaBrevo(to, subject, htmlContent);
+    if (success) return true;
+  }
+
+  console.error(`[Email Service] ERROR: All configured email providers failed to send email to ${to}.`);
+  return false;
 }
 
 export async function sendOtpEmail(toEmail: string, otp: string, type: "register" | "reset" | "login"): Promise<void> {
@@ -139,7 +197,7 @@ export async function sendOtpEmail(toEmail: string, otp: string, type: "register
 </html>
   `;
 
-  const success = await sendEmailViaBrevo(toEmail, subjects[type], html);
+  const success = await sendEmail(toEmail, subjects[type], html);
   
   if (!success) {
     console.error(`[Email Service] Failed to send OTP to ${toEmail}. Printing to log instead.`);
@@ -209,7 +267,7 @@ export async function sendAccountCreationEmail(toEmail: string, userName: string
 </html>
   `;
 
-  const success = await sendEmailViaBrevo(toEmail, "🚀 Tài khoản BáoCáoVN của bạn đã sẵn sàng", html);
+  const success = await sendEmail(toEmail, "🚀 Tài khoản BáoCáoVN của bạn đã sẵn sàng", html);
 
   if (!success) {
     console.error(`[Email Service] Failed to send credentials to ${toEmail}. Printing to log instead.`);

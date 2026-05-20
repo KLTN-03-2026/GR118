@@ -3,9 +3,12 @@
 ## For Vercel Deployment
 
 ### Step 1: Backend Environment (Render)
-Set this environment variable in Render backend settings:
+Set these environment variables in Render backend settings:
 ```
 FRONTEND_URL=https://your-vercel-app-url.vercel.app
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GMAIL_USER=thaibc14@gmail.com
+GMAIL_APP_PASSWORD=jgch iowl zynx qatx
 ```
 
 ### Step 2: Frontend Environment (Vercel)
@@ -13,6 +16,7 @@ Set these environment variables in Vercel project settings:
 ```
 VITE_API_BASE_URL=https://smart-city-issue-reporting-8c16.onrender.com/api/v1
 VITE_AI_BASE_URL=https://ai-0nhv.onrender.com
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
 ### Step 3: Verify URLs

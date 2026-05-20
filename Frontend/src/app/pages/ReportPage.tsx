@@ -611,7 +611,7 @@ export function ReportPage() {
       });
       toast.error(`File ${index + 1}: Lỗi phân tích`, {
         id: toastId,
-        description: "Vui lòng kiểm tra lại kết nối hoặc thử lại sau."
+        description: "Không thể kết nối đến máy chủ AI. Bạn vẫn có thể tiếp tục bằng cách nhập thông tin thủ công."
       });
     }
   };
@@ -780,7 +780,7 @@ export function ReportPage() {
   };
 
   const canNext = () => {
-    if (step === 0) return !!form.mediaFiles.length && aiDone && form.aiVerified;
+    if (step === 0) return !!form.mediaFiles.length && aiDone;
     if (step === 1) return !!form.title && !!form.description && !!form.category && descriptionStatus !== 'invalid' && descriptionStatus !== 'checking';
     if (step === 2) return !!form.location && !!form.district && !!form.ward && !!form.city;
     return true;
@@ -1037,6 +1037,13 @@ export function ReportPage() {
                                   <AlertCircle size={10} strokeWidth={4} />
                                 </div>
                               )}
+                            </div>
+                          )}
+                          {media.aiStatus === 'error' && (
+                            <div className="absolute top-2 left-2 flex gap-1">
+                              <div className="bg-red-500 text-white p-1 rounded-full shadow-lg border border-white" title="Lỗi phân tích AI">
+                                <AlertCircle size={10} strokeWidth={4} />
+                              </div>
                             </div>
                           )}
 

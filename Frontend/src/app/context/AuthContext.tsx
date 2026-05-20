@@ -316,7 +316,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.ok || !data.success) {
         return { success: false, error: data.message || "Gửi mã thất bại" };
       }
-      return { success: true };
+      return { success: true, code: data.code };
     } catch {
       return { success: false, error: "Không thể kết nối đến máy chủ" };
     }
@@ -333,7 +333,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!res.ok || !data.success) {
         return { success: false, error: data.message || "Gửi mã thất bại" };
       }
-      return { success: true };
+      return { success: true, code: data.code };
     } catch {
       return { success: false, error: "Không thể kết nối đến máy chủ" };
     }

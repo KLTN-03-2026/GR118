@@ -116,7 +116,7 @@ function CreateAccountModal({
 }) {
   const { roles } = useRoles();
   const activeRoles = roles.filter((r) => r.isActive);
-  
+
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -167,12 +167,12 @@ function CreateAccountModal({
         forcePasswordChange: true,
         managementScope: form.managementScope
       });
-      
+
       if (!res.success) {
         toast.error(res.message || "Tạo tài khoản thất bại");
         return;
       }
-      
+
       const data = res.data || res;
       const userData = data.user || data;
       const newUser: User & { password: string } = {
@@ -248,9 +248,8 @@ function CreateAccountModal({
               <select
                 value={form.roleId}
                 onChange={(e) => set("roleId", e.target.value)}
-                className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all appearance-none bg-white ${
-                  errors.roleId ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"
-                }`}
+                className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all appearance-none bg-white ${errors.roleId ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-indigo-400 focus:ring-indigo-100"
+                  }`}
               >
                 <option value="">-- Chọn vai trò --</option>
                 {activeRoles.map((role) => (
@@ -262,7 +261,7 @@ function CreateAccountModal({
               <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
             {errors.roleId && <p className="text-xs text-red-500 mt-1">{errors.roleId}</p>}
-            
+
             {/* Role info */}
             {selectedRole && (
               <div className="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl">
@@ -355,7 +354,7 @@ function CreateAccountModal({
             <div>
               <p className="text-sm font-bold text-amber-800">Mật khẩu tự động</p>
               <p className="text-xs text-amber-700 leading-relaxed mt-0.5">
-                Hệ thống sẽ tự động tạo mật khẩu ngẫu nhiên và gửi đến email <strong>{form.email || "của người dùng"}</strong>. 
+                Hệ thống sẽ tự động tạo mật khẩu ngẫu nhiên và gửi đến email <strong>{form.email || "của người dùng"}</strong>.
                 Người dùng sẽ được yêu cầu đổi mật khẩu trong lần đăng nhập đầu tiên.
               </p>
             </div>
@@ -513,11 +512,10 @@ function ChangeRoleModal({
                 <button
                   key={role.id}
                   onClick={() => setSelectedRoleId(role.id)}
-                  className={`w-full text-left px-4 py-3.5 rounded-xl border-2 transition-all ${
-                    isSelected
-                      ? "border-violet-500 bg-violet-50"
-                      : "border-gray-100 hover:border-gray-300 bg-white"
-                  }`}
+                  className={`w-full text-left px-4 py-3.5 rounded-xl border-2 transition-all ${isSelected
+                    ? "border-violet-500 bg-violet-50"
+                    : "border-gray-100 hover:border-gray-300 bg-white"
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isSelected ? "bg-violet-100" : "bg-gray-100"}`}>
@@ -687,9 +685,8 @@ function BanModal({
                 <button
                   key={key}
                   onClick={() => setLevel(key)}
-                  className={`px-3 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${
-                    level === key ? "border-red-500 bg-red-50 text-red-700" : "border-gray-200 text-gray-600 hover:border-gray-300"
-                  }`}
+                  className={`px-3 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${level === key ? "border-red-500 bg-red-50 text-red-700" : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
                 >
                   {key === "permanent" ? "🔒 " : "⏱ "}{label}
                 </button>
@@ -822,9 +819,8 @@ function EditPasswordModal({
                   setErrors((prev) => ({ ...prev, newPassword: "" }));
                 }}
                 placeholder="Tối thiểu 6 ký tự"
-                className={`w-full pl-10 pr-11 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${
-                  errors.newPassword ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-blue-400 focus:ring-blue-100"
-                }`}
+                className={`w-full pl-10 pr-11 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${errors.newPassword ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-blue-400 focus:ring-blue-100"
+                  }`}
               />
               <button
                 type="button"
@@ -852,9 +848,8 @@ function EditPasswordModal({
                   setErrors((prev) => ({ ...prev, confirmPassword: "" }));
                 }}
                 placeholder="Nhập lại mật khẩu mới"
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${
-                  errors.confirmPassword ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-blue-400 focus:ring-blue-100"
-                }`}
+                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${errors.confirmPassword ? "border-red-300 focus:ring-red-100" : "border-gray-200 focus:border-blue-400 focus:ring-blue-100"
+                  }`}
               />
             </div>
             {errors.confirmPassword && <p className="text-xs text-red-500 mt-1">{errors.confirmPassword}</p>}
@@ -1179,8 +1174,8 @@ export function AdminUsersPage() {
       let res;
       if (updates.banned !== undefined) {
         // Use api utility for lock/unlock
-        res = await api.post(`/auth/users/lockOrUnlock/${userId}`, { 
-          lockReason: updates.banReason 
+        res = await api.post(`/auth/users/lockOrUnlock/${userId}`, {
+          lockReason: updates.banReason
         });
       } else {
         // Use api utility for patch
@@ -1234,7 +1229,7 @@ export function AdminUsersPage() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
       });
-    } catch {}
+    } catch { }
     toast.success(`🔓 Đã mở khóa tài khoản: ${name}`);
   };
 
@@ -1396,11 +1391,10 @@ export function AdminUsersPage() {
                 <button
                   key={val}
                   onClick={() => setFilterRole(val)}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                    filterRole === val
-                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${filterRole === val
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                 >
                   {label}
                 </button>
@@ -1417,11 +1411,10 @@ export function AdminUsersPage() {
                 <button
                   key={val}
                   onClick={() => setFilterStatus(val)}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                    filterStatus === val
-                      ? val === "banned" ? "bg-red-500 text-white" : "bg-emerald-500 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold transition-all ${filterStatus === val
+                    ? val === "banned" ? "bg-red-500 text-white" : "bg-emerald-500 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                 >
                   {label}
                 </button>
@@ -1488,9 +1481,8 @@ export function AdminUsersPage() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
-                    u.banned ? "border-red-200 bg-red-50/30" : "border-gray-100"
-                  }`}
+                  className={`bg-white rounded-2xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${u.banned ? "border-red-200 bg-red-50/30" : "border-gray-100"
+                    }`}
                 >
                   <div className="p-4 sm:p-5">
                     <div className="flex items-start gap-4">

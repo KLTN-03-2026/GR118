@@ -15,7 +15,7 @@ const GOOGLE_CLIENT_ID = (import.meta as ImportMeta & {
 
 export default function App() {
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID || "dummy-id"}>
       <AuthProvider>
         <IssuesProvider>
           <NotificationProvider>

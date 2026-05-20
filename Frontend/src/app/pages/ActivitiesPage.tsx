@@ -125,11 +125,10 @@ export function ActivitiesPage() {
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all text-sm font-medium ${
-                showFilters
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all text-sm font-medium ${showFilters
                   ? "bg-green-50 border-green-300 text-green-600"
                   : "border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}
+                }`}
             >
               <FilterIcon size={16} />
               Lọc
@@ -156,11 +155,10 @@ export function ActivitiesPage() {
                   <button
                     key={key}
                     onClick={() => setStatusFilter(key as any)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      statusFilter === key
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${statusFilter === key
                         ? "bg-green-500 text-white"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                      }`}
                   >
                     {label}
                   </button>

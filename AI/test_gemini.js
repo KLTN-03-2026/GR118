@@ -28,7 +28,7 @@ async function testModels() {
       console.log(`✅ Success with ${modelName}: ${response.text().substring(0, 20)}...`);
       break; // Found one!
     } catch (e) {
-      console.log(`❌ Failed with ${modelName}: ${e.message.substring(0, 100)}`);
+      console.log(`❌ Failed with ${modelName}:`, e);
     }
   }
 }

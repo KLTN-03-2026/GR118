@@ -1,5 +1,14 @@
 [
   {
+    "hash": "4dfc09fc01fc01fc0ffc2fff073f0000001ec02fbce3cfe53f0462f40778f9f0",
+    "result": {
+      "is_valid": true,
+      "label": "Ngập lụt",
+      "category": "flood",
+      "confidence": 39
+    }
+  },
+  {
     "hash": "01ff01ff01ff01e13fc91f807f8037d017c017d247fb03f107ff03fb03f101e1",
     "result": {
       "is_valid": true,

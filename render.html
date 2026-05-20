@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thesis Defense Preparation</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            line-height: 1.8;
+            padding: 2rem
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, .4);
+            border: 1px solid #334155
+        }
+
+        h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #38bdf8, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+            font-weight: 800;
+            text-align: center;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #334155
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: #38bdf8;
+            margin: 2rem 0 1rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #334155
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            color: #a78bfa;
+            margin: 1.5rem 0 0.75rem
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: #cbd5e1
+        }
+
+        ul,
+        ol {
+            margin: 0.5rem 0 1rem 1.5rem;
+            color: #cbd5e1
+        }
+
+        li {
+            margin-bottom: 0.4rem
+        }
+
+        strong {
+            color: #f1f5f9
+        }
+
+        code {
+            background: #334155;
+            color: #7dd3fc;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em
+        }
+
+        pre {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 1.25rem;
+            overflow-x: auto;
+            margin: 1rem 0
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: #a5f3fc
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.92em
+        }
+
+        th {
+            background: #334155;
+            color: #38bdf8;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #475569
+        }
+
+        td {
+            padding: 10px 14px;
+            border: 1px solid #334155;
+            color: #cbd5e1
+        }
+
+        tr:nth-child(even) {
+            background: #1a2744
+        }
+
+        tr:hover {
+            background: #253554
+        }
+
+        blockquote {
+            border-left: 4px solid #818cf8;
+            background: #1a2744;
+            padding: 1rem 1.25rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+            color: #c4b5fd;
+            font-style: italic
+        }
+
+        hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #475569, transparent);
+            margin: 2rem 0
+        }
+
+        .mermaid {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            text-align: center;
+            border: 1px solid #334155
+        }
+
+        a {
+            color: #38bdf8;
+            text-decoration: none
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="content"></div>
+    <script>
+        const md = `# 📋 TÀI LIỆU CHUẨN BỊ BẢO VỆ KHÓA LUẬN TỐT NGHIỆP
+
+## Đề tài: Hệ thống Báo cáo Vấn đề Đô thị (Urban Issue Reporting System)
+
+---
+
+## 1. TỔNG QUAN HỆ THỐNG
+
+### 1.1 Mục tiêu đề tài
+Xây dựng hệ thống web cho phép **công dân** báo cáo các vấn đề hạ tầng đô thị (ổ gà, ngập lụt, rác thải, đèn hỏng...), **cán bộ** tiếp nhận và xử lý báo cáo theo lĩnh vực phụ trách, và **admin** quản trị toàn bộ hệ thống — tích hợp **AI phân tích hình ảnh** tự động.
+
+### 1.2 Kiến trúc hệ thống (3 tầng)
+
+\`\`\`mermaid
+graph TB
+    subgraph "Frontend - React + Vite"
+        A[SPA - React 18 + React Router 7]
+        B[Context API State Management]
+        C[UI: TailwindCSS 4 + Framer Motion + Lucide Icons]
+    end
+    subgraph "Backend - Node.js + Express 5"
+        D[REST API Server - Port 8081]
+        E[JWT Authentication + RBAC]
+        F[Mongoose ODM]
+    end
+    subgraph "AI Service - Node.js + Python"
+        G[Gemini 1.5 Flash - Cloud AI]
+        H[MobileNet v2 - Local Fallback]
+        I[CLIP - Python Classifier]
+        J[GPT-4o-mini - Content Moderation]
+    end
+    subgraph "Infrastructure"
+        K[(MongoDB Atlas)]
+        L[Cloudflare R2 - File Storage]
+        M[Render.com - Hosting]
+    end
+    A --> D
+    D --> K
+    D --> L
+    A --> G
+    G --> H
+    I --> H
+\`\`\`
+
+### 1.3 Technology Stack
+
+| Tầng | Công nghệ | Phiên bản | Vai trò |
+|------|----------|-----------|---------|
+| **Frontend** | React | 18.3.1 | UI Library |
+| | React Router | 7.13.0 | Client-side routing (SPA) |
+| | Vite | 6.4.2 | Build tool & Dev server |
+| | TailwindCSS | 4.1.12 | Utility-first CSS framework |
+| | Framer Motion | 12.23.24 | Animation library |
+| | Recharts | 2.15.2 | Data visualization/charts |
+| | Leaflet | 1.9.4 | Interactive maps |
+| | Sonner | 2.0.3 | Toast notifications |
+| **Backend** | Node.js + Express | 5.2.1 | REST API Server |
+| | TypeScript | 5.9.3 | Type safety |
+| | Mongoose | 9.2.4 | MongoDB ODM |
+| | JWT (jsonwebtoken) | 9.0.3 | Authentication tokens |
+| | bcrypt | 6.0.0 | Password hashing |
+| | Multer | 2.1.1 | File upload |
+| | Nodemailer | 8.0.5 | Email service |
+| **AI** | Google Gemini 1.5 Flash | Latest | Image analysis (Cloud) |
+| | TensorFlow.js + MobileNet v2 | — | Local AI fallback |
+| | OpenAI CLIP (Python) | — | Zero-shot image classification |
+| | GPT-4o-mini | — | Content moderation |
+| **Database** | MongoDB Atlas | — | NoSQL cloud database |
+| **Storage** | Cloudflare R2 (S3-compatible) | — | Media file storage |
+| **Deploy** | Render.com | — | Static site + Web service |
+
+---
+
+## 2. CÁC CHỨC NĂNG CHÍNH
+
+### 2.1 Phân hệ Công dân (User)
+- **Đăng ký / Đăng nhập** (Email + Mật khẩu, Google OAuth)
+- **Báo cáo vấn đề đô thị**: Upload ảnh/video → AI tự động phân loại → Điền form → Gửi báo cáo
+- **Xem danh sách báo cáo** trên bản đồ và dạng danh sách
+- **Theo dõi tiến trình** xử lý báo cáo cá nhân
+- **Bình chọn (Upvote)** và **Bình luận** trên báo cáo
+- **Đánh giá / Xác minh** (Rating 1-5 sao) kết quả xử lý
+- **Báo cáo Spam/Sai** nếu phát hiện báo cáo giả
+- **Đăng ký hoạt động cộng đồng** (Events)
+- **Quản lý hồ sơ cá nhân** + Đổi avatar
+
+### 2.2 Phân hệ Cán bộ (Moderator)
+- **Xem báo cáo theo lĩnh vực phụ trách** (\`managementScope\` filtering)
+- **Quy trình xử lý 6 bước**: Chờ xử lý → Đã tiếp nhận → Phân công → Đang xử lý → Yêu cầu bổ sung → Hoàn thành/Từ chối
+- **Lịch sử xử lý** (Processing History) với timeline
+- **Quản lý hoạt động cộng đồng** (tạo, sửa, điểm danh)
+
+### 2.3 Phân hệ Quản trị (Admin)
+- **Dashboard thống kê** tổng quan (biểu đồ Recharts)
+- **Quản lý người dùng**: Tạo, phân quyền, khóa/mở khóa, cảnh báo, xóa
+- **Quản lý vai trò (Roles)**: CRUD roles, gán \`managementScope\`
+- **Quản lý quyền (Permissions)**: Resource → Action → Permission → Role
+- **Quản lý đánh giá/xác minh** từ người dùng
+- **Thống kê nâng cao** theo thời gian, khu vực, danh mục
+
+### 2.4 Module AI
+- **Phân tích hình ảnh**: Tự động nhận dạng loại vấn đề đô thị (8 category)
+- **Kiểm duyệt nội dung**: Chặn ngôn từ tiêu cực, spam, quảng cáo (3 lớp bảo vệ)
+- **Knowledge Base**: Lưu cache kết quả AI (Perceptual Hashing) để tăng tốc
+
+---
+
+## 3. CƠ SỞ DỮ LIỆU (MongoDB)
+
+### 3.1 Các Collection chính
+
+| Collection | Mô tả | Trường quan trọng |
+|-----------|-------|-------------------|
+| \`auths\` | Tài khoản người dùng | userName, email, password (bcrypt), types, lockEnd, managementScope |
+| \`issues\` | Báo cáo vấn đề | issueCode (auto: VN001), category, status, lat/lng, aiAnalysis, processingHistory |
+| \`activities\` | Hoạt động cộng đồng | title, location, participants[], status |
+| \`roles\` | Vai trò | name, isActive, managementScope |
+| \`permissions\` | Quyền hạn | perm_name, resource, actions |
+| \`resources\` | Tài nguyên hệ thống | resource_name (issues, users_mgnt...) |
+| \`actions\` | Hành động | action_name (read, create, update, delete, assign) |
+| \`role_permissions\` | Mapping Role ↔ Permission | role_id, perm_id |
+| \`permission_actions\` | Mapping Permission ↔ Action | perm_id, action_id |
+| \`user_roles\` | Mapping User ↔ Role | user_id, role_id |
+| \`otps\` | OTP xác thực | email, otp (hashed), expiredAt |
+| \`counters\` | Auto-increment | id: "issueCode", seq |
+
+### 3.2 Issue Schema (Core Entity)
+
+\`\`\`
+Issue {
+  issueCode: "VN001" (auto-generated)
+  title, description
+  category: road | garbage | lighting | flood | noise | other
+  status: pending | received | processing | need_info | resolved | rejected
+  location, district, ward, city, lat, lng
+  imageUrl, mediaFiles[]
+  reporterId, reporterName
+  votes, votedUserIds[], comments, commentsList[]
+  verifications[] (Rating 1-5 sao)
+  spamReports[] (fake, spam, inappropriate, duplicate, other)
+  aiAnalysis { isAuthentic, confidenceScore, reasons[], tags[], severity }
+  processingHistory[] (audit trail mỗi bước xử lý)
+}
+\`\`\`
+
+---
+
+## 4. KIẾN TRÚC BACKEND (Clean Architecture)
+
+### 4.1 Cấu trúc thư mục
+
+\`\`\`
+Backend/src/
+├── server.ts          # Entry point
+├── app.ts             # Express config, CORS, routes
+├── config/database.ts # MongoDB Atlas connection
+├── models/            # Mongoose schemas (Data Layer)
+├── repos/             # Repository pattern (Data Access)
+├── dtos/              # Data Transfer Objects
+├── mapper/            # Entity ↔ DTO mapping
+├── modules/           # Controllers (Business Logic)
+│   ├── auth.controller/   # Login, Register, OTP, Profile
+│   ├── admin.controller/  # User, Role, Permission, Stats
+│   ├── issue.controller/  # CRUD Issues
+│   ├── activity.controller/
+│   ├── AI.controller/
+│   └── user.controller/
+├── middlewares/
+│   ├── isAuthenticated.ts    # JWT verify
+│   ├── checkPermission.ts    # RBAC middleware
+│   ├── rate-limit.middleware.ts
+│   └── upload.middleware.ts
+├── routers/           # Express route definitions
+├── utils/             # JWT, AppError, Email Service
+└── constant/          # Error codes
+\`\`\`
+
+### 4.2 Authentication Flow
+
+\`\`\`mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+    participant DB
+    Client->>Server: POST /auth/login {email, password}
+    Server->>DB: Find user by email
+    DB-->>Server: User document
+    Server->>Server: bcrypt.compare(password, hash)
+    Server->>Server: generateTokens(userId, roleIds)
+    Note right of Server: Access Token: 15min<br/>Refresh Token: 7 days
+    Server-->>Client: { accessToken, refreshToken, user }
+    Note left of Client: Store tokens in cookies
+    Client->>Server: GET /api/v1/issues (with accessToken)
+    Server->>Server: isAuthenticated middleware<br/>jwt.verify(token)
+    Server->>Server: checkPermission("issues", "read")
+    Server-->>Client: { issues: [...] }
+\`\`\`
+
+### 4.3 RBAC (Role-Based Access Control) — 5 bảng
+
+\`\`\`
+User → UserRole → Role → RolePermission → Permission → PermissionAction → Action + Resource
+\`\`\`
+
+Middleware \`checkPermission(resource, action)\`:
+1. Lấy \`roleIds\` từ JWT token
+2. Sync Resource nếu chưa tồn tại
+3. Sync Action nếu chưa tồn tại
+4. Tìm Permission IDs từ Role
+5. Kiểm tra Permission có Action tương ứng → Allow/Deny
+
+---
+
+## 5. MODULE AI — KIẾN TRÚC 3 TẦNG
+
+### 5.1 Pipeline phân tích ảnh
+
+\`\`\`mermaid
+graph TD
+    A[Upload Image] --> B{Knowledge Cache?}
+    B -->|Cache Hit<br/>Hamming < 10| C[Return Cached Result]
+    B -->|Cache Miss| D{Gemini API Available?}
+    D -->|Yes| E[Gemini 1.5 Flash<br/>Cloud Analysis]
+    D -->|No / Error| F[MobileNet v2<br/>Local Fallback]
+    E --> G{Confidence > 80%?}
+    G -->|Yes| H[Save to Knowledge + Dataset]
+    G -->|No| I[Return Result]
+    F --> J[Return Local Result]
+    H --> I
+\`\`\`
+
+### 5.2 Perceptual Hashing (Image Fingerprint)
+- Sử dụng **blockhash-core** (pHash) tính fingerprint 64-bit hex
+- So sánh **Hamming Distance** < 10 → coi là ảnh giống nhau
+- Tránh phân tích lại ảnh trùng lặp → tăng tốc response
+
+### 5.3 Content Moderation (3 layers)
+
+| Layer | Công nghệ | Mục đích |
+|-------|----------|----------|
+| Layer 1 | Local Profanity Filter | Danh sách từ khóa tục tĩu (VN + EN) |
+| Layer 2 | GPT-4o-mini | Semantic analysis: tục tĩu, spam, quảng cáo, off-topic |
+| Layer 3 | Fallback | Nếu API lỗi → chỉ dùng Layer 1 |
+
+### 5.4 Các model AI sử dụng
+
+| Model | Vai trò | Ưu điểm | Nhược điểm |
+|-------|---------|---------|------------|
+| **Gemini 1.5 Flash** | Cloud image analysis chính | Chính xác cao, hiểu ngữ cảnh VN | Cần API key, phụ thuộc internet |
+| **MobileNet v2** (TF.js) | Local fallback | Chạy offline, nhanh | Độ chính xác thấp hơn cho urban context |
+| **CLIP** (OpenAI, Python) | Zero-shot classification | Phân loại không cần train | Nặng, cần GPU |
+| **GPT-4o-mini** | Kiểm duyệt nội dung | Hiểu ngữ nghĩa sâu | Chi phí API |
+
+---
+
+## 6. BẢO MẬT
+
+| Biện pháp | Chi tiết |
+|-----------|----------|
+| **Password Hashing** | bcrypt (salt rounds mặc định) |
+| **JWT Tokens** | Access Token (15 phút) + Refresh Token (7 ngày) |
+| **CORS Policy** | Whitelist origins (localhost + production domains) |
+| **Rate Limiting** | General: 1000 req/15min, Auth: 50 req/15min, Password: 10 req/hour |
+| **RBAC** | 5-table permission system (Resource → Action → Permission → Role → User) |
+| **OTP** | Email-based OTP for password reset (hashed storage) |
+| **File Validation** | Multer filter (image/video only, max 20MB) + Magic number check |
+| **Input Validation** | Mongoose enum validation cho category, status |
+| **Content Moderation** | 3-layer AI-based filter (profanity + semantic + fallback) |
+| **Account Locking** | Temporary (24h, 3 days, 1 month) hoặc Permanent ban |
+
+---
+
+## 7. DEPLOYMENT
+
+- **Frontend**: Render.com Static Site (Vite build → \`dist/\`)
+- **Backend**: Render.com Web Service (Node.js)
+- **Database**: MongoDB Atlas (Cloud)
+- **File Storage**: Cloudflare R2 (S3-compatible API)
+- **AI Service**: Chạy riêng (port 8000), có thể deploy Docker
+
+---
+
+## 8. CÂU HỎI PHẢN BIỆN THƯỜNG GẶP & GỢI Ý TRẢ LỜI
+
+### Q1: "Tại sao chọn MongoDB thay vì SQL (MySQL/PostgreSQL)?"
+> MongoDB phù hợp vì: (1) Dữ liệu Issue có cấu trúc linh hoạt (nested arrays: verifications, comments, processingHistory), (2) Schema-less giúp mở rộng trường dễ dàng khi yêu cầu thay đổi, (3) Tương thích tốt với JSON response trong REST API, (4) MongoDB Atlas cung cấp free tier phù hợp đồ án.
+
+### Q2: "Tại sao dùng React Context thay vì Redux/Zustand?"
+> Hệ thống có 6 Context Providers (Auth, Issues, Activities, Notifications, Permissions, Roles). Quy mô ứng dụng vừa phải, Context API đủ đáp ứng mà không cần thêm dependency. Nếu scale lớn hơn, có thể migrate sang Zustand.
+
+### Q3: "Module AI hoạt động offline được không?"
+> Có. Hệ thống có **3 tầng fallback**: (1) Knowledge Cache (Perceptual Hash) → (2) Gemini Cloud → (3) MobileNet v2 local. Nếu mất internet, MobileNet v2 (TensorFlow.js) vẫn phân loại được ảnh với 8 nhóm vấn đề đô thị.
+
+### Q4: "Độ chính xác của AI như thế nào?"
+> Gemini 1.5 Flash đạt confidence >90% cho các trường hợp điển hình (rác thải, ngập lụt, ổ gà). MobileNet v2 local thấp hơn (~60-80%) do là general-purpose model. Hệ thống có cơ chế **self-learning**: ảnh có confidence >80% từ Gemini được tự động lưu vào dataset để train lại model local (train.py với Transfer Learning từ MobileNetV2).
+
+### Q5: "Hệ thống phân quyền RBAC hoạt động thế nào?"
+> Sử dụng **5 bảng**: Resources → Actions → Permissions → Roles → Users. Middleware \`checkPermission(resource, action)\` kiểm tra tại mỗi API endpoint. Ví dụ: \`checkPermission("issues", "update")\` → lấy roleIds từ JWT → tìm permissions → kiểm tra có action "update" trên resource "issues" hay không.
+
+### Q6: "Tại sao cần managementScope cho Cán bộ?"
+> Trong thực tế, mỗi cán bộ chỉ phụ trách một lĩnh vực cụ thể (ví dụ: cán bộ ngập lụt chỉ xử lý báo cáo ngập lụt). \`managementScope\` lưu danh sách category mà cán bộ quản lý, frontend lọc issues hiển thị dựa trên scope này. Cơ chế fallback: nếu user không có scope riêng → kế thừa từ Role.
+
+### Q7: "Hệ thống có xử lý concurrent access không?"
+> MongoDB cung cấp atomic operations cho single document updates. Với hệ thống này (quy mô cấp phường/quận), concurrent conflicts hiếm xảy ra. Nếu cần scale, có thể thêm Optimistic Locking với \`__v\` version field của Mongoose.
+
+### Q8: "Content Moderation có chặn được hết nội dung xấu không?"
+> Hệ thống sử dụng **3 lớp bảo vệ**: (1) Local keyword filter — nhanh, zero cost, chặn từ khóa hiển nhiên; (2) GPT-4o-mini semantic analysis — hiểu ngữ cảnh, phát hiện lách luật; (3) Fallback an toàn nếu API lỗi. Không đảm bảo 100% nhưng đạt mức độ chấp nhận được cho ứng dụng đô thị.
+
+### Q9: "Tại sao chọn Express 5 thay vì NestJS?"
+> Express 5 nhẹ và linh hoạt, phù hợp quy mô đồ án. NestJS có nhiều boilerplate hơn, phù hợp cho doanh nghiệp lớn. Dự án đã tự implement các pattern cần thiết: Repository pattern, DTO mapping, Middleware chain, Error handling — đảm bảo codebase có tổ chức tốt.
+
+### Q10: "File upload lưu ở đâu? Có giới hạn gì?"
+> Media files được upload qua Multer (memory storage) → push lên **Cloudflare R2** (S3-compatible). Giới hạn: 20MB/file, chỉ chấp nhận image/video (kiểm tra MIME type + magic bytes). R2 cho free 10GB/tháng, phù hợp đồ án.
+
+### Q11: "Hệ thống có responsive không?"
+> Có. Frontend sử dụng TailwindCSS responsive utilities (\`sm:\`, \`md:\`, \`lg:\`) và Flexbox/Grid layout. Tất cả 20 pages đều responsive trên mobile, tablet, desktop.
+
+### Q12: "Tại sao có cả Node.js và Python trong AI module?"
+> Node.js (index.js) là server chính xử lý API + Gemini + MobileNet. Python (classifier.py + train.py) dùng cho: (1) CLIP model — zero-shot classification chính xác hơn, và (2) Training script với Transfer Learning (MobileNetV2 + Keras). Hai ngôn ngữ bổ trợ nhau: Node.js cho production serving, Python cho ML research/training.
+
+### Q13: "Perceptual Hashing là gì và tại sao dùng?"
+> Perceptual Hashing (pHash) tạo "fingerprint" 64-bit cho mỗi ảnh. Ảnh giống nhau (dù resize, nén) có hash gần giống nhau (Hamming Distance < 10). Dùng để: (1) Tránh phân tích lại ảnh trùng → tiết kiệm API call, (2) Phát hiện ảnh duplicate trong báo cáo spam.
+
+### Q14: "Luồng xử lý báo cáo (Processing Workflow) như thế nào?"
+> 6 bước: \`pending\` → \`received\` (Cán bộ tiếp nhận) → \`assigned\` (Phân công) → \`processing\` (Đang xử lý) → \`need_info\` (Yêu cầu bổ sung) hoặc \`resolved\`/\`rejected\`. Mỗi bước lưu vào \`processingHistory[]\` với actorId, note, timestamp — tạo thành **audit trail** đầy đủ.
+
+---
+
+## 9. ĐIỂM MẠNH CỦA ĐỀ TÀI
+
+1. **Tích hợp AI thực tế**: Không chỉ demo, mà có pipeline hoàn chỉnh với fallback
+2. **Hệ thống RBAC đầy đủ**: 5-table permission model cấp enterprise
+3. **Quy trình xử lý chuyên nghiệp**: 6-step workflow với audit trail
+4. **3-layer Content Moderation**: Bảo vệ nội dung nhiều tầng
+5. **Self-learning AI**: Tự động thu thập dataset từ kết quả Gemini để train lại
+6. **Modern Tech Stack**: React 18, Express 5, TailwindCSS 4, TypeScript
+
+## 10. HẠN CHẾ & HƯỚNG PHÁT TRIỂN
+
+| Hạn chế | Hướng phát triển |
+|---------|-----------------|
+| AI phụ thuộc Gemini API (có rate limit) | Huấn luyện model riêng với dataset thu thập được |
+| Chưa có real-time notification | Thêm WebSocket (Socket.io) cho push notification |
+| Chưa có mobile app | Phát triển React Native app |
+| Thống kê chưa có export PDF/Excel | Thêm tính năng báo cáo xuất file |
+| Chưa có GIS phân tích không gian | Tích hợp PostGIS hoặc MongoDB Geospatial queries |
+`;
+
+        mermaid.initialize({ theme: 'dark', themeVariables: { primaryColor: '#818cf8', primaryTextColor: '#e2e8f0', primaryBorderColor: '#475569', lineColor: '#64748b', secondaryColor: '#1e293b', tertiaryColor: '#0f172a' } });
+
+        const renderer = new marked.Renderer();
+        renderer.code = function ({ text, lang }) {
+            if (lang === 'mermaid') {
+                return '<div class="mermaid">' + text + '</div>';
+            }
+            return '<pre><code>' + text + '</code></pre>';
+        };
+        marked.setOptions({ renderer });
+        document.getElementById('content').innerHTML = marked.parse(md);
+    </script>
+</body>
+
+</html>

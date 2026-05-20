@@ -1,4 +1,4 @@
-const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || ((import.meta as any).env.PROD ? "https://backend-cfgb.onrender.com/api/v1" : "http://localhost:8081/api/v1");
+const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || ((import.meta as any).env.PROD ? "https://smart-city-issue-reporting-8c16.onrender.com/api/v1" : "http://localhost:8081/api/v1");
 
 const ACCESS_TOKEN_KEY = "baocaovn_access_token";
 

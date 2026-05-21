@@ -27,7 +27,8 @@ interface HistoryEntry {
 }
 
 // Backend AI chat endpoint
-const CHAT_URL = "http://localhost:8081/api/v1/ai/chat";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? "https://smart-city-issue-reporting-8c16.onrender.com/api/v1" : "http://localhost:8081/api/v1");
+const CHAT_URL = `${API_BASE_URL}/ai/chat`;
 
 const SUPPORT_INFO = {
   hotline: "1900-xxxx",
@@ -251,11 +252,10 @@ export function SupportChatBox() {
                     <div className={`flex gap-1.5 max-w-[85%] ${message.sender === "user" ? "flex-row-reverse" : ""}`}>
                       {/* Avatar */}
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          message.sender === "user"
-                            ? "bg-gradient-to-br from-blue-500 to-indigo-600"
-                            : "bg-gradient-to-br from-indigo-500 to-violet-600"
-                        }`}
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${message.sender === "user"
+                          ? "bg-gradient-to-br from-blue-500 to-indigo-600"
+                          : "bg-gradient-to-br from-indigo-500 to-violet-600"
+                          }`}
                       >
                         {message.sender === "user" ? (
                           <User size={12} className="text-white" />
@@ -267,18 +267,16 @@ export function SupportChatBox() {
                       {/* Bubble */}
                       <div>
                         <div
-                          className={`px-3 py-2 rounded-2xl ${
-                            message.sender === "user"
-                              ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-tr-sm"
-                              : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm shadow-sm"
-                          }`}
+                          className={`px-3 py-2 rounded-2xl ${message.sender === "user"
+                            ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-tr-sm"
+                            : "bg-white text-gray-800 border border-gray-200 rounded-tl-sm shadow-sm"
+                            }`}
                         >
                           <p className="text-xs whitespace-pre-line leading-relaxed">{message.text}</p>
                         </div>
                         <p
-                          className={`text-[10px] text-gray-400 mt-0.5 ${
-                            message.sender === "user" ? "text-right" : "text-left"
-                          }`}
+                          className={`text-[10px] text-gray-400 mt-0.5 ${message.sender === "user" ? "text-right" : "text-left"
+                            }`}
                         >
                           {message.timestamp.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
                         </p>
@@ -373,11 +371,10 @@ export function SupportChatBox() {
           }}
           whileHover={{ scale: isOpen ? 1 : 1.1 }}
           whileTap={{ scale: 0.95 }}
-          className={`relative transition-all ${
-            isOpen
-              ? "w-14 h-14 bg-gradient-to-br from-red-500 to-red-600"
-              : "w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600"
-          } text-white rounded-full shadow-2xl flex items-center justify-center`}
+          className={`relative transition-all ${isOpen
+            ? "w-14 h-14 bg-gradient-to-br from-red-500 to-red-600"
+            : "w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600"
+            } text-white rounded-full shadow-2xl flex items-center justify-center`}
           style={{ cursor: isDragging ? "grabbing" : "grab" }}
         >
           <AnimatePresence mode="wait">

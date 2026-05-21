@@ -4,13 +4,14 @@ import {
   MessageCircle,
   X,
   Send,
-  Phone,
   User,
   Clock,
   Minimize2,
   PhoneCall,
   Mail,
   Headphones,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 
 interface Message {
@@ -20,40 +21,24 @@ interface Message {
   timestamp: Date;
 }
 
+interface HistoryEntry {
+  role: "user" | "model";
+  content: string;
+}
+
+// Backend AI chat endpoint
+const CHAT_URL = "http://localhost:8081/api/v1/ai/chat";
+
 const SUPPORT_INFO = {
   hotline: "1900-xxxx",
   email: "hotro@baocao.vn",
   workingHours: "8:00 - 22:00 (Thứ 2 - CN)",
 };
 
-const AUTO_RESPONSES = [
-  {
-    keywords: ["xin chào", "chào", "hello", "hi"],
-    response:
-      "Xin chào! Tôi là trợ lý ảo của hệ thống. Bạn cần hỗ trợ gì? Bạn có thể gọi hotline " +
-      SUPPORT_INFO.hotline +
-      " để được tư vấn trực tiếp.",
-  },
-  {
-    keywords: ["báo cáo", "gửi báo cáo", "report"],
-    response:
-      "Để gửi báo cáo vấn đề, bạn vui lòng đăng nhập và truy cập trang 'Báo cáo' từ menu. Nếu cần hỗ trợ, vui lòng gọi " +
-      SUPPORT_INFO.hotline,
-  },
-  {
-    keywords: ["liên hệ", "hotline", "gọi", "số điện thoại"],
-    response:
-      "Bạn có thể liên hệ qua:\n📞 Hotline: " +
-      SUPPORT_INFO.hotline +
-      "\n📧 Email: " +
-      SUPPORT_INFO.email +
-      "\n🕐 Giờ làm việc: " +
-      SUPPORT_INFO.workingHours,
-  },
-  {
-    keywords: ["giờ làm việc", "mở cửa", "working hours"],
-    response: "Chúng tôi làm việc " + SUPPORT_INFO.workingHours + ". Bạn có thể liên hệ bất cứ lúc nào!",
-  },
+const SUGGESTIONS = [
+  "Có bao nhiêu báo cáo đang chờ xử lý?",
+  "Hoạt động tình nguyện nào sắp diễn ra?",
+  "Cách gửi báo cáo vấn đề đô thị?",
 ];
 
 export function SupportChatBox() {
@@ -62,85 +47,98 @@ export function SupportChatBox() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "Xin chào! Tôi có thể giúp gì cho bạn?",
+      text: "Xin chào! 👋 Tôi là trợ lý AI của hệ thống Báo cáo Đô thị.\nTôi có thể giúp bạn:\n• Kiểm tra số lượng báo cáo đang diễn ra\n• Xem lịch hoạt động tình nguyện\n• Hướng dẫn sử dụng hệ thống\n\nBạn cần hỗ trợ gì? 😊",
       sender: "support",
       timestamp: new Date(),
     },
   ]);
   const [inputText, setInputText] = useState("");
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isTyping, setIsTyping] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const constraintsRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  // Initialize position at bottom right
+  // Focus input when opened
   useEffect(() => {
-    setPosition({
-      x: window.innerWidth - 100,
-      y: window.innerHeight - 100,
-    });
-  }, []);
+    if (isOpen && !isMinimized) {
+      setTimeout(() => inputRef.current?.focus(), 300);
+    }
+  }, [isOpen, isMinimized]);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  const sendToAI = async (userText: string): Promise<string> => {
+    setIsTyping(true);
+    try {
+      const res = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userText, history: history.slice(-8) }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const reply = data.reply || "Xin lỗi, tôi không thể phản hồi lúc này.";
+      setHistory((prev) => [
+        ...prev,
+        { role: "user", content: userText },
+        { role: "model", content: reply },
+      ]);
+      return reply;
+    } catch (err) {
+      console.error("[ChatBox] AI Error:", err);
+      return `⚠️ Trợ lý AI tạm thời không khả dụng. Vui lòng thử lại sau hoặc gọi hotline ${SUPPORT_INFO.hotline}! 🙏`;
+    } finally {
+      setIsTyping(false);
+    }
+  };
 
+  const handleSend = async () => {
+    if (!inputText.trim() || isTyping) return;
+    const userText = inputText.trim();
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: inputText,
+      text: userText,
       sender: "user",
       timestamp: new Date(),
     };
-
-    setMessages([...messages, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInputText("");
-
-    // Auto response after delay
-    setTimeout(() => {
-      const response = getAutoResponse(inputText);
-      const supportMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: response,
-        sender: "support",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, supportMessage]);
-    }, 1000);
+    const reply = await sendToAI(userText);
+    setMessages((prev) => [
+      ...prev,
+      { id: (Date.now() + 1).toString(), text: reply, sender: "support", timestamp: new Date() },
+    ]);
   };
 
-  const getAutoResponse = (text: string): string => {
-    const lowerText = text.toLowerCase();
-    for (const response of AUTO_RESPONSES) {
-      if (response.keywords.some((keyword) => lowerText.includes(keyword))) {
-        return response.response;
-      }
-    }
-    return `Cảm ơn bạn đã liên hệ! Để được hỗ trợ tốt nhất, vui lòng gọi hotline ${SUPPORT_INFO.hotline} hoặc gửi email đến ${SUPPORT_INFO.email}. Chúng tôi sẽ phản hồi sớm nhất!`;
+  const handleSuggestion = (text: string) => {
+    setInputText(text);
+    inputRef.current?.focus();
   };
 
   const handleCall = () => {
     window.open(`tel:${SUPPORT_INFO.hotline}`, "_self");
   };
 
-  const handleDrag = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const handleDrag = (_event: MouseEvent | TouchEvent | PointerEvent, _info: PanInfo) => {
     setIsDragging(true);
   };
 
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, _info: PanInfo) => {
     setTimeout(() => setIsDragging(false), 100);
   };
 
   return (
     <>
-      {/* Draggable Container */}
+      {/* Drag constraint overlay */}
       <div
         ref={constraintsRef}
         className="fixed inset-0 pointer-events-none z-[999]"
-        style={{ position: 'fixed', overflow: "hidden" }}
+        style={{ position: "fixed", overflow: "hidden" }}
       />
 
       <motion.div
@@ -162,7 +160,7 @@ export function SupportChatBox() {
               initial={{ opacity: 0, scale: 0.8, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: 20 }}
-              className="absolute bottom-20 right-0 w-[320px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+              className="absolute bottom-20 right-0 w-[340px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
               style={{ transformOrigin: "bottom right" }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -174,7 +172,7 @@ export function SupportChatBox() {
                       <Headphones size={16} />
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm">Hỗ trợ khách hàng</h3>
+                      <h3 className="font-bold text-sm">Hỗ trợ AI</h3>
                       <div className="flex items-center gap-1 text-xs">
                         <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                         <span className="opacity-90">Trực tuyến</span>
@@ -216,16 +214,35 @@ export function SupportChatBox() {
                 </div>
               </div>
 
-              {/* Contact Info */}
-              <div className="bg-blue-50 px-3 py-2 border-b border-blue-100">
+              {/* Info bar */}
+              <div className="bg-blue-50 px-3 py-2 border-b border-blue-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs text-blue-800">
                   <Clock size={12} />
                   <span className="font-medium">{SUPPORT_INFO.workingHours}</span>
                 </div>
+                <div className="flex items-center gap-1 text-[10px] text-indigo-600 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full">
+                  <Sparkles size={10} />
+                  <span>Gemini AI</span>
+                </div>
               </div>
 
               {/* Messages */}
-              <div className="h-[300px] overflow-y-auto p-3 space-y-2 bg-gray-50 relative">
+              <div className="h-[300px] overflow-y-auto p-3 space-y-2 bg-gray-50">
+                {/* Suggestion chips — show only at start */}
+                {messages.length <= 1 && (
+                  <div className="flex flex-wrap gap-1 pb-1">
+                    {SUGGESTIONS.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => handleSuggestion(s)}
+                        className="text-[10px] px-2 py-1 rounded-full border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors text-left"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -234,20 +251,20 @@ export function SupportChatBox() {
                     <div className={`flex gap-1.5 max-w-[85%] ${message.sender === "user" ? "flex-row-reverse" : ""}`}>
                       {/* Avatar */}
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
                           message.sender === "user"
                             ? "bg-gradient-to-br from-blue-500 to-indigo-600"
-                            : "bg-gradient-to-br from-gray-400 to-gray-500"
+                            : "bg-gradient-to-br from-indigo-500 to-violet-600"
                         }`}
                       >
                         {message.sender === "user" ? (
                           <User size={12} className="text-white" />
                         ) : (
-                          <Headphones size={12} className="text-white" />
+                          <Bot size={12} className="text-white" />
                         )}
                       </div>
 
-                      {/* Message Bubble */}
+                      {/* Bubble */}
                       <div>
                         <div
                           className={`px-3 py-2 rounded-2xl ${
@@ -259,40 +276,72 @@ export function SupportChatBox() {
                           <p className="text-xs whitespace-pre-line leading-relaxed">{message.text}</p>
                         </div>
                         <p
-                          className={`text-[10px] text-gray-500 mt-0.5 ${
+                          className={`text-[10px] text-gray-400 mt-0.5 ${
                             message.sender === "user" ? "text-right" : "text-left"
                           }`}
                         >
-                          {message.timestamp.toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {message.timestamp.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       </div>
                     </div>
                   </div>
                 ))}
+
+                {/* Typing indicator */}
+                <AnimatePresence>
+                  {isTyping && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      className="flex justify-start"
+                    >
+                      <div className="flex gap-1.5 items-end">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0">
+                          <Bot size={12} className="text-white" />
+                        </div>
+                        <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-sm shadow-sm px-3 py-2.5 flex gap-1 items-center">
+                          {[0, 1, 2].map((i) => (
+                            <motion.div
+                              key={i}
+                              className="w-1.5 h-1.5 rounded-full bg-indigo-400"
+                              animate={{ y: [0, -4, 0] }}
+                              transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15, ease: "easeInOut" }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <div ref={messagesEndRef} />
               </div>
 
               {/* Input */}
-              <div className="p-3 bg-white border-t border-gray-200">
+              <div className="p-3 bg-white border-t border-gray-100">
                 <div className="flex gap-2">
                   <input
+                    ref={inputRef}
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSend()}
-                    placeholder="Nhập tin nhắn..."
-                    className="flex-1 px-3 py-2 bg-gray-100 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                    placeholder={isTyping ? "AI đang trả lời..." : "Hỏi AI về báo cáo, tình nguyện..."}
+                    disabled={isTyping}
+                    className="flex-1 px-3 py-2 bg-gray-100 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 text-xs disabled:opacity-60 transition-all"
                   />
                   <button
                     onClick={handleSend}
-                    className="px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:shadow-lg transition-all flex items-center justify-center"
+                    disabled={isTyping || !inputText.trim()}
+                    className="px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:shadow-lg transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Send size={16} />
+                    <Send size={15} />
                   </button>
                 </div>
+                <p className="text-[9px] text-gray-400 mt-1.5 text-center">
+                  Powered by Gemini AI · Dữ liệu cập nhật theo thời gian thực
+                </p>
               </div>
             </motion.div>
           )}
@@ -309,14 +358,14 @@ export function SupportChatBox() {
               className="absolute bottom-20 right-0 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 font-semibold"
             >
               <MessageCircle size={20} />
-              <span>Hỗ trợ</span>
+              <span>Trợ lý AI</span>
             </motion.button>
           )}
         </AnimatePresence>
 
         {/* Floating Button */}
         <motion.button
-          onClick={(e) => {
+          onClick={() => {
             if (!isDragging) {
               setIsOpen(!isOpen);
               setIsMinimized(false);
@@ -328,7 +377,7 @@ export function SupportChatBox() {
             isOpen
               ? "w-14 h-14 bg-gradient-to-br from-red-500 to-red-600"
               : "w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600"
-          } text-white rounded-full shadow-2xl flex items-center justify-center cursor-pointer`}
+          } text-white rounded-full shadow-2xl flex items-center justify-center`}
           style={{ cursor: isDragging ? "grabbing" : "grab" }}
         >
           <AnimatePresence mode="wait">
@@ -355,18 +404,18 @@ export function SupportChatBox() {
             )}
           </AnimatePresence>
 
-          {/* Notification Badge */}
+          {/* Badge */}
           {!isOpen && (
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white"
+              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center border-2 border-white"
             >
-              !
+              <Sparkles size={10} className="text-white" />
             </motion.div>
           )}
 
-          {/* Pulse Effect */}
+          {/* Pulse */}
           {!isOpen && (
             <motion.div
               className="absolute inset-0 rounded-full bg-blue-400"

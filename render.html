@@ -510,6 +510,66 @@ graph TD
 
 ---
 
+## 8.2 CÂU HỎI VỀ SCRUM / AGILE
+
+### Q-S1: "Nhóm có áp dụng Scrum trong quá trình phát triển không?"
+> Có. Nhóm áp dụng **Scrum** với các Sprint 2 tuần. Mỗi Sprint bao gồm đầy đủ 4 buổi lễ (Ceremonies): **Sprint Planning** (lập kế hoạch đầu sprint), **Daily Standup** (đồng bộ tiến độ hằng ngày), **Sprint Review** (demo sản phẩm cuối sprint), và **Sprint Retrospective** (cải thiện quy trình). Backlog được quản lý trên **GitHub Projects/Trello** với các User Story được ước lượng bằng Story Points.
+
+### Q-S2: "Nhóm có bao nhiêu thành viên? Vai trò Scrum được phân công thế nào?"
+> Nhóm gồm **2 thành viên** (phù hợp với quy mô đồ án tốt nghiệp). Do nhóm nhỏ nên vai trò được điều chỉnh linh hoạt:
+> - **Product Owner (PO)**: Giảng viên hướng dẫn — định hướng tính năng và ưu tiên.
+> - **Scrum Master kiêm Developer**: Thành viên 1 — quản lý sprint, phát triển Backend & AI.
+> - **Developer**: Thành viên 2 — phát triển Frontend & tích hợp hệ thống.
+> Cả hai thành viên cùng tham gia tất cả các ceremonies và đóng góp vào Product Backlog.
+
+### Q-S3: "Sprint của nhóm kéo dài bao lâu? Bao nhiêu Sprint tất cả?"
+> Mỗi Sprint kéo dài **2 tuần**. Toàn bộ dự án thực hiện trong khoảng **6–8 Sprint**, tương ứng 3–4 tháng phát triển chính thức (không tính giai đoạn phân tích, thiết kế ban đầu và viết báo cáo).
+> - **Sprint 1–2**: Phân tích yêu cầu, thiết kế CSDL, khung Authentication.
+> - **Sprint 3–4**: Phân hệ Công dân (báo cáo vấn đề, bản đồ, bình chọn).
+> - **Sprint 5–6**: Phân hệ Cán bộ + Quản trị viên, tích hợp AI.
+> - **Sprint 7–8**: Content Moderation, Deployment, kiểm thử & hoàn thiện.
+
+### Q-S4: "Product Backlog của nhóm được quản lý thế nào?"
+> Product Backlog gồm các **User Story** theo định dạng: *"Với tư cách là [vai trò], tôi muốn [tính năng] để [lợi ích]"*. Mỗi story được ước lượng bằng **Story Points** (Fibonacci: 1, 2, 3, 5, 8) dựa trên độ phức tạp. Backlog được ưu tiên (prioritize) theo giá trị nghiệp vụ: tính năng cốt lõi (báo cáo, xử lý) ưu tiên trước tính năng bổ trợ (thống kê, events). Công cụ: **GitHub Issues + Milestone** hoặc Trello board theo cột To Do / In Progress / Done.
+
+### Q-S5: "Nhóm xử lý thay đổi yêu cầu trong quá trình phát triển thế nào?"
+> Đây là một trong những ưu điểm của Scrum so với Waterfall. Khi giảng viên hướng dẫn đề xuất thay đổi (ví dụ: thêm tính năng Spam Report, thêm bước \`need_info\` vào workflow), nhóm ghi nhận vào **Product Backlog**, ưu tiên và đưa vào Sprint tiếp theo — thay vì phải redesign toàn bộ hệ thống như mô hình thác nước. Tính linh hoạt này giúp sản phẩm cuối phù hợp với yêu cầu thực tế hơn.
+
+### Q-S6: "Definition of Done (DoD) của nhóm là gì?"
+> Một User Story được coi là **Done** khi đáp ứng đủ:
+> 1. Code đã được commit lên nhánh feature và merge vào \`main\` (qua Pull Request).
+> 2. API endpoint hoạt động đúng (test bằng Postman/Thunder Client).
+> 3. Giao diện Frontend hiển thị đúng trên Chrome (desktop + mobile responsive).
+> 4. Không có lỗi console nghiêm trọng.
+> 5. Demo được cho Scrum Master xem xét trong Sprint Review.
+
+### Q-S7: "Tại sao chọn Scrum thay vì Waterfall hay Kanban?"
+> - **Waterfall** không phù hợp vì yêu cầu đề tài thay đổi liên tục trong quá trình làm (thêm tính năng AI, thêm workflow bước). Phải thiết kế lại toàn bộ nếu dùng Waterfall.
+> - **Kanban** phù hợp cho maintenance nhưng thiếu cấu trúc time-box để đảm bảo tiến độ học kỳ.
+> - **Scrum** cân bằng tốt: Sprint 2 tuần tạo deadline cụ thể, Sprint Review đảm bảo có sản phẩm chạy được sau mỗi giai đoạn, Retrospective giúp nhóm cải thiện cách làm việc.
+
+### Q-S8: "Nhóm sử dụng công cụ gì để hỗ trợ Scrum?"
+> - **GitHub**: Version control, Pull Request workflow, Issues làm User Story, Milestone làm Sprint Goal.
+> - **Trello / GitHub Projects**: Kanban board theo dõi sprint backlog (To Do → In Progress → Done).
+> - **Discord**: Daily standup bất đồng bộ (gửi update hằng ngày theo format: *Hôm qua làm gì / Hôm nay làm gì / Blocker không?*).
+> - **Postman**: Kiểm thử API sau mỗi task backend.
+> - **Figma**: Thiết kế UI trước khi code (làm trước Sprint 1).
+
+### Q-S9: "Sprint Retrospective giúp ích gì cho nhóm?"
+> Sau mỗi Sprint, nhóm họp Retrospective 30 phút theo format **Start / Stop / Continue**:
+> - **Start**: Viết unit test cho các API quan trọng, cập nhật tài liệu song song với code.
+> - **Stop**: Để merge code trực tiếp vào main mà không qua Pull Request review.
+> - **Continue**: Daily sync qua Discord, phân chia task rõ ràng Backend/Frontend mỗi sprint.
+> Kết quả cụ thể: Từ Sprint 4 trở đi nhóm áp dụng bắt buộc Pull Request review trước khi merge, giảm đáng kể bug tích hợp giữa Frontend–Backend.
+
+### Q-S10: "Velocity của nhóm là bao nhiêu? Làm sao đảm bảo tiến độ?"
+> Velocity trung bình của nhóm đạt khoảng **20–25 Story Points/Sprint**. Để đảm bảo tiến độ:
+> 1. **Sprint Planning** nghiêm túc: Chỉ commit story points bằng 80% velocity dự kiến (buffer cho rủi ro).
+> 2. **Burndown chart** theo dõi hằng ngày — nếu thấy tụt tiến độ giữa sprint sẽ điều chỉnh scope (remove story thứ yếu, không thêm scope mới vào sprint đang chạy).
+> 3. **Sprint Goal rõ ràng**: Mỗi sprint có 1 mục tiêu chính (ví dụ: "Hoàn thành phân hệ Cán bộ"), tránh bị phân tâm bởi nhiều ưu tiên cùng lúc.
+
+---
+
 ## 9. ĐIỂM MẠNH CỦA ĐỀ TÀI
 
 1. **Tích hợp AI thực tế**: Không chỉ demo, mà có pipeline hoàn chỉnh với fallback

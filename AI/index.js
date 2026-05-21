@@ -100,7 +100,7 @@ function calculateImageHashFromData(decoded) {
       data: decoded.data,
       width: decoded.width,
       height: decoded.height
-    }, 16); 
+    }, 16);
   } catch (e) {
     console.error('Hashing error:', e);
     return null;
@@ -176,7 +176,7 @@ const PROFANITY_KEYWORDS = [
 function checkProfanityLocal(text) {
   if (!text) return false;
   const lowerText = text.toLowerCase().trim();
-  
+
   // Check for exact word matches (more lenient to catch variations)
   for (const keyword of PROFANITY_KEYWORDS) {
     // Use simpler regex that doesn't require word boundaries
@@ -210,9 +210,9 @@ app.post('/moderate', async (req, res) => {
     // LAYER 1: Quick local profanity check (ZERO TOLERANCE)
     if (checkProfanityLocal(title) || checkProfanityLocal(description)) {
       console.log(`[Moderation] Local filter caught profanity in title or description`);
-      return res.json({ 
-        is_flagged: true, 
-        reason: "Phát hiện ngôn từ tiêu cực/tục tĩu. Vui lòng kiểm tra lại nội dung." 
+      return res.json({
+        is_flagged: true,
+        reason: "Phát hiện ngôn từ tiêu cực/tục tĩu. Vui lòng kiểm tra lại nội dung."
       });
     }
 
@@ -256,7 +256,7 @@ app.post('/moderate', async (req, res) => {
 
     const result = JSON.parse(completion.choices[0].message.content);
     console.log(`[Moderation Result] Flagged: ${result.is_flagged}, Reason: ${result.reason}`);
-    
+
     res.json(result);
 
   } catch (error) {
@@ -265,9 +265,9 @@ app.post('/moderate', async (req, res) => {
     console.warn('[Moderation Fallback] API failed, using local profanity check as fallback');
     const hasProfanity = checkProfanityLocal(req.body?.title) || checkProfanityLocal(req.body?.description);
     if (hasProfanity) {
-      return res.json({ 
-        is_flagged: true, 
-        reason: "Phát hiện ngôn từ tiêu cực/tục tĩu (từ local filter do API lỗi)" 
+      return res.json({
+        is_flagged: true,
+        reason: "Phát hiện ngôn từ tiêu cực/tục tĩu (từ local filter do API lỗi)"
       });
     }
     // If local check passes, allow but log
@@ -291,7 +291,7 @@ app.post('/analyze', upload.single('file'), async (req, res) => {
     }
 
     const start_time = Date.now();
-    
+
     // 0. Initial Buffer Read
     const fileBuffer = fs.readFileSync(req.file.path);
     console.log(`[Step 0] File received: ${req.file.mimetype}, Size: ${req.file.size} bytes`);
@@ -312,7 +312,7 @@ app.post('/analyze', upload.single('file'), async (req, res) => {
     } catch (decodeErr) {
       console.warn(`[Step 1] Local decoding failed: ${decodeErr.message}`);
     }
-    
+
     // 2. Check Memory
     if (currentHash) {
       console.log('[Step 2] Checking memory...');
@@ -330,11 +330,11 @@ app.post('/analyze', upload.single('file'), async (req, res) => {
 
     // 3. AIService Call (Prioritize Gemini cloud)
     const canUseGemini = apiKey && apiKey !== '' && apiKey !== 'YOUR_API_KEY_HERE';
-    
+
     if (canUseGemini) {
       try {
         console.log(`[Step 3] Calling Gemini AI (v1.5 Flash Latest)...`);
-        
+
         const imagePart = {
           inlineData: {
             data: fileBuffer.toString('base64'),
@@ -354,10 +354,10 @@ app.post('/analyze', upload.single('file'), async (req, res) => {
         const result = await model.generateContent([prompt, imagePart]);
         const response = await result.response;
         const text = response.text();
-        
+
         const jsonStr = text.match(/\{[\s\S]*\}/)?.[0];
         if (!jsonStr) throw new Error('AI returned invalid format');
-        
+
         const analysis = JSON.parse(jsonStr);
 
         // Update Memory (ONLY for Gemini high-quality results)
@@ -366,7 +366,7 @@ app.post('/analyze', upload.single('file'), async (req, res) => {
           if (knowledge.length > 1000) knowledge.pop();
           fs.writeFileSync(KNOWLEDGE_PATH, JSON.stringify(knowledge, null, 2));
           console.log(`[Memory Update] Successfully saved result to knowledge.json (Hash: ${currentHash})`);
-          
+
           // CRITICAL: Save to Dataset for future training
           saveToDataset(req.file.path, analysis.category);
         }
@@ -391,7 +391,7 @@ app.post('/analyze', upload.single('file'), async (req, res) => {
       try {
         console.log('[Step 4] Running Local AI fallback...');
         const localAnalysis = await localAI.predict(decoded.data, decoded.width, decoded.height);
-        
+
         if (localAnalysis) {
           // Update Memory (Now also for Local AI as requested)
           if (localAnalysis.is_valid && currentHash && localAnalysis.confidence > 20) {
@@ -428,7 +428,7 @@ app.post('/analyze', upload.single('file'), async (req, res) => {
 
   } catch (error) {
     const isRateLimit = error.message?.includes('429') || error.status === 429;
-    
+
     if (isRateLimit) {
       console.warn('[AI Rate Limit] Gemini is busy, requested retry.');
       return res.status(429).json({
@@ -438,7 +438,7 @@ app.post('/analyze', upload.single('file'), async (req, res) => {
     }
 
     console.error('SERVER ERROR during /analyze:', error);
-    res.status(200).json({ 
+    res.status(200).json({
       is_valid: false,
       label: "Lỗi hệ thống phân tích",
       category: "other",

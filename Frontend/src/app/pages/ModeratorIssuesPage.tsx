@@ -1037,8 +1037,7 @@ export function ModeratorIssuesPage() {
   ].filter(Boolean).length;
 
   // Access control - MOVE AFTER ALL HOOKS
-  const hasAccess = user && (
-    user.role === "admin" || 
+  const hasAccess = user && user.role !== "admin" && (
     user.role === "moderator" || 
     user.role === "Cán bộ" || 
     user.role === "cán bộ" || 

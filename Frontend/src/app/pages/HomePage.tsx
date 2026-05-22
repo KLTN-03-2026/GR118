@@ -92,14 +92,16 @@ export function HomePage() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
 
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { activities } = useActivities();
   const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  const canCreateReport = !user || can("issues_vande", "create");
 
   const handleReportClick = () => {
     if (!user) {
       setAuthModalOpen(true);
-    } else {
+    } else if (canCreateReport) {
       navigate("/report");
     }
   };
@@ -186,13 +188,15 @@ export function HomePage() {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <Link
-              to="/report"
-              className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-semibold shadow-2xl shadow-red-500/30 hover:shadow-red-500/50 hover:scale-105 transition-all duration-300"
-            >
-              <PlusCircle size={20} />
-              Báo cáo vấn đề ngay
-            </Link>
+            {canCreateReport && (
+              <Link
+                to="/report"
+                className="flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-semibold shadow-2xl shadow-red-500/30 hover:shadow-red-500/50 hover:scale-105 transition-all duration-300"
+              >
+                <PlusCircle size={20} />
+                Báo cáo vấn đề ngay
+              </Link>
+            )}
             <Link
               to="/issues"
               className="flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm text-white border border-white/20 rounded-2xl font-semibold hover:bg-white/20 transition-all duration-300"
@@ -325,14 +329,16 @@ export function HomePage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                to="/report"
-                className="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-medium hover:scale-105 transition-transform duration-200 shadow-lg shadow-purple-200"
-              >
-                <Sparkles size={16} />
-                Thử ngay AI nhận dạng
-                <ArrowRight size={16} />
-              </Link>
+              {canCreateReport && (
+                <Link
+                  to="/report"
+                  className="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-medium hover:scale-105 transition-transform duration-200 shadow-lg shadow-purple-200"
+                >
+                  <Sparkles size={16} />
+                  Thử ngay AI nhận dạng
+                  <ArrowRight size={16} />
+                </Link>
+              )}
             </motion.div>
 
             {/* AI Visual */}
@@ -648,13 +654,22 @@ export function HomePage() {
               Mỗi báo cáo của bạn là một đóng góp cho thành phố tốt đẹp hơn.
               Hãy hành động ngay hôm nay!
             </p>
-            <Link
-              to="/report"
-              className="inline-flex items-center gap-3 px-10 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-bold text-lg shadow-2xl shadow-red-500/30 hover:scale-105 transition-all duration-300"
-            >
-              <PlusCircle size={22} />
-              Báo cáo vấn đề ngay
-            </Link>
+            {canCreateReport ? (
+              <Link
+                to="/report"
+                className="inline-flex items-center gap-3 px-10 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-bold text-lg shadow-2xl shadow-red-500/30 hover:scale-105 transition-all duration-300"
+              >
+                <PlusCircle size={22} />
+                Báo cáo vấn đề ngay
+              </Link>
+            ) : (
+              <Link
+                to="/issues"
+                className="inline-flex items-center gap-3 px-10 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl font-bold text-lg shadow-2xl shadow-red-500/30 hover:scale-105 transition-all duration-300"
+              >
+                Xem danh sách vấn đề
+              </Link>
+            )}
           </motion.div>
         </div>
       </section>

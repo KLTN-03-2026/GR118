@@ -467,8 +467,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const can = (resource: string, action: string): boolean => {
     if (!user) return false;
-    // Admin has all permissions bypass
-    if (user.role === "admin") return true; 
+    
+    // Admin has permissions bypass EXCEPT for report/issue management, processing, stats, and creation
+    if (user.role === "admin") {
+      if (resource === "issues_vande" && action === "create") return false;
+      if (
+        resource === "issues_mgnt" ||
+        resource === "issues_process" ||
+        resource === "issues" ||
+        resource === "reports_stats" ||
+        resource === "activities_mgnt" ||
+        resource === "activities_volunteer"
+      ) {
+        return false;
+      }
+      return true;
+    }
     
     // Check specific permissions mapping
     if (!user.permissions) {

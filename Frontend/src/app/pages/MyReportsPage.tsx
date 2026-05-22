@@ -49,7 +49,7 @@ export function MyReportsPage() {
     );
   }
 
-  if (!user) {
+  if (!user || user.role === "admin") {
     return <Navigate to="/" replace />;
   }
 

@@ -42,13 +42,18 @@ export function UserMenu({ onLoginClick, isLight = false }: UserMenuProps) {
 
   const menuItems = [
     { icon: User, label: "Hồ sơ cá nhân", to: "/profile" },
-    { icon: FileText, label: "Báo cáo của tôi", to: "/my-reports" },
-    { icon: Heart, label: "Hoạt động của tôi", to: "/activities/my-activities" },
-    ...(user.role === "moderator" || user.role === "admin" ? [{ icon: Calendar, label: "Quản lý hoạt động", to: "/moderator/activities" }] : []),
-    ...(user.role === "moderator" ? [{ icon: ClipboardCheck, label: "Xử lý báo cáo", to: "/moderator/issues" }] : []),
-    ...(user.role === "admin" ? [{ icon: LayoutDashboard, label: "Thống kê", to: "/dashboard" }] : []),
-    ...(user.role === "admin" ? [{ icon: Settings, label: "Quản lý báo cáo", to: "/admin" }] : []),
-    ...(user.role === "admin" ? [{ icon: Users, label: "Quản lý người dùng & phân quyền", to: "/admin/users" }] : []),
+    ...(user.role !== "admin" && user.role !== "moderator" ? [
+      { icon: FileText, label: "Báo cáo của tôi", to: "/my-reports" },
+      { icon: Heart, label: "Hoạt động của tôi", to: "/activities/my-activities" }
+    ] : []),
+    ...(user.role === "moderator" ? [
+      { icon: Calendar, label: "Quản lý hoạt động", to: "/moderator/activities" },
+      { icon: ClipboardCheck, label: "Xử lý báo cáo", to: "/moderator/issues" }
+    ] : []),
+    ...(user.role === "admin" ? [
+      { icon: LayoutDashboard, label: "Thống kê", to: "/dashboard" },
+      { icon: Users, label: "Quản lý người dùng & phân quyền", to: "/admin/users" }
+    ] : []),
   ];
 
   return (

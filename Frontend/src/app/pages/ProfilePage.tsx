@@ -441,7 +441,10 @@ export function ProfilePage() {
     navigate("/");
   };
 
-  const userIssues = issues.slice(0, 2);
+  const userIssues = issues
+    .filter((issue) => issue.reporterId === user?.id)
+    .sort((a, b) => new Date(b.reportedAt).getTime() - new Date(a.reportedAt).getTime())
+    .slice(0, 5);
 
   const stats = [
     { label: "Báo cáo", value: user.reportsCount, icon: FileText, color: "#ef4444" },
@@ -685,7 +688,11 @@ export function ProfilePage() {
             ) : (
               <div className="space-y-4">
                 {userIssues.map((issue) => (
-                  <div key={issue.id} className="flex gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <div
+                    key={issue.id}
+                    onClick={() => navigate(`/issues/${issue.id}`)}
+                    className="flex gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all duration-200"
+                  >
                     <img
                       src={issue.imageUrl}
                       alt={issue.title}
@@ -698,8 +705,8 @@ export function ProfilePage() {
                       </p>
                       <div className="flex items-center gap-2 mt-2">
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                          style={{ backgroundColor: { pending: "#f59e0b", processing: "#3b82f6", resolved: "#10b981", rejected: "#ef4444" }[issue.status] }}>
-                          {{ pending: "Chờ xử lý", processing: "Đang xử lý", resolved: "Đã giải quyết", rejected: "Từ chối" }[issue.status]}
+                          style={{ backgroundColor: { pending: "#f59e0b", received: "#f59e0b", processing: "#3b82f6", resolved: "#10b981", rejected: "#ef4444", need_info: "#ef4444" }[issue.status] || "#ef4444" }}>
+                          {{ pending: "Chờ xử lý", received: "Chờ xử lý", processing: "Đang xử lý", resolved: "Đã giải quyết", rejected: "Từ chối", need_info: "Cần bổ sung" }[issue.status] || "Không xác định"}
                         </span>
                       </div>
                     </div>

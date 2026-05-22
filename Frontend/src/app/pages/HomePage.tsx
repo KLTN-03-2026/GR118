@@ -74,7 +74,7 @@ const features = [
 
 export function HomePage() {
   const { issues, isLoading } = useIssues();
-  
+
   const categories = Object.entries(CATEGORY_LABELS).map(([key, label]) => ({
     key,
     label,
@@ -83,8 +83,8 @@ export function HomePage() {
   }));
 
   const heroRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ 
-    target: heroRef, 
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
     offset: ["start start", "end start"],
     layoutEffect: false
   });
@@ -176,7 +176,7 @@ export function HomePage() {
             transition={{ duration: 0.6, delay: 0.35 }}
             className="text-gray-300 text-lg sm:text-xl mb-8 max-w-2xl mx-auto leading-relaxed"
           >
-            Kết nối cộng đồng với chính quyền. Báo cáo vấn đề công cộng dễ dàng, 
+            Kết nối cộng đồng với chính quyền. Báo cáo vấn đề công cộng dễ dàng,
             AI tự động nhận dạng và phân loại, theo dõi tiến độ xử lý minh bạch.
           </motion.p>
 
@@ -309,7 +309,7 @@ export function HomePage() {
                 <span className="text-purple-600">chỉ bằng 1 ảnh chụp</span>
               </h2>
               <p className="text-gray-500 leading-relaxed mb-6">
-                Hệ thống AI của chúng tôi sử dụng mô hình học sâu tiên tiến để phân tích hình ảnh, 
+                Hệ thống AI của chúng tôi sử dụng mô hình học sâu tiên tiến để phân tích hình ảnh,
                 tự động nhận dạng loại vấn đề, vị trí và mức độ nghiêm trọng chỉ trong vài giây.
               </p>
               <ul className="space-y-3">
@@ -520,7 +520,7 @@ export function HomePage() {
                 (new Date(activity.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
               );
               const spotsLeft = activity.maxParticipants - activity.currentParticipants;
-              
+
               return (
                 <motion.div
                   key={activity.id}
@@ -539,19 +539,18 @@ export function HomePage() {
                         />
                         <div className="absolute top-4 left-4">
                           <Badge
-                            className={`${
-                              activity.status === "upcoming"
+                            className={`${activity.status === "upcoming"
                                 ? "bg-blue-500"
                                 : activity.status === "ongoing"
-                                ? "bg-green-500"
-                                : "bg-gray-500"
-                            } text-white`}
+                                  ? "bg-green-500"
+                                  : "bg-gray-500"
+                              } text-white`}
                           >
                             {activity.status === "upcoming"
                               ? "Sắp diễn ra"
                               : activity.status === "ongoing"
-                              ? "Đang diễn ra"
-                              : "Đã kết thúc"}
+                                ? "Đang diễn ra"
+                                : "Đã kết thúc"}
                           </Badge>
                         </div>
                       </div>
@@ -646,7 +645,7 @@ export function HomePage() {
               Cùng xây dựng cộng đồng văn minh hơn!
             </h2>
             <p className="text-gray-300 text-lg mb-8">
-              Mỗi báo cáo của bạn là một đóng góp cho thành phố tốt đẹp hơn. 
+              Mỗi báo cáo của bạn là một đóng góp cho thành phố tốt đẹp hơn.
               Hãy hành động ngay hôm nay!
             </p>
             <Link

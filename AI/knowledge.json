@@ -1,5 +1,23 @@
 [
   {
+    "hash": "47c0ffc07fc06f805fc0bfd033f801f002f809c0ede0ff753f013f000ff00ffe",
+    "result": {
+      "is_valid": true,
+      "label": "Biển báo / Cột / Đèn",
+      "category": "signs",
+      "confidence": 33
+    }
+  },
+  {
+    "hash": "cbf1e768d6a981c08fcb8de305e30e611f7717633e62164109831fc3dfc1ddc0",
+    "result": {
+      "is_valid": true,
+      "label": "Rác thải",
+      "category": "trash",
+      "confidence": 32
+    }
+  },
+  {
     "hash": "4dfc09fc01fc01fc0ffc2fff073f0000001ec02fbce3cfe53f0462f40778f9f0",
     "result": {
       "is_valid": true,

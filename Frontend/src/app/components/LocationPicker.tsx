@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { 
-  MapContainer, 
-  TileLayer, 
-  Marker, 
-  useMapEvents, 
-  useMap 
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  useMapEvents,
+  useMap
 } from "react-leaflet";
 import L from "leaflet";
 import { Search, MapPin, Loader2, Navigation } from "lucide-react";
@@ -39,8 +39,8 @@ interface LocationPickerProps {
 }
 
 // Internal component to handle map clicks
-function LocationMarker({ position, setPosition, onChange }: { 
-  position: [number, number], 
+function LocationMarker({ position, setPosition, onChange }: {
+  position: [number, number],
   setPosition: (pos: [number, number]) => void,
   onChange: (lat: number, lng: number) => void
 }) {
@@ -64,11 +64,11 @@ function ChangeView({ center, zoom }: { center: [number, number], zoom: number }
   return null;
 }
 
-export function LocationPicker({ 
-  lat, 
-  lng, 
-  onChange, 
-  height = "300px", 
+export function LocationPicker({
+  lat,
+  lng,
+  onChange,
+  height = "300px",
   zoom = 15,
   city,
   district,
@@ -169,7 +169,7 @@ export function LocationPicker({
     if (!query || !query.trim()) return;
     setLoading(true);
     setShowSuggestions(false);
-    
+
     try {
       const searchParts = [query];
       if (ward) searchParts.push(ward);
@@ -280,20 +280,20 @@ export function LocationPicker({
       </div>
 
       <div className="relative rounded-2xl overflow-hidden border border-gray-100 shadow-inner group" style={{ height }}>
-        <MapContainer 
-          center={position} 
-          zoom={zoom} 
-          scrollWheelZoom={true} 
+        <MapContainer
+          center={position}
+          zoom={zoom}
+          scrollWheelZoom={true}
           style={{ height: "100%", width: "100%", zIndex: 10 }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <LocationMarker 
-            position={position} 
-            setPosition={setPosition} 
-            onChange={(lt, lg) => handleReverseGeocode(lt, lg)} 
+          <LocationMarker
+            position={position}
+            setPosition={setPosition}
+            onChange={(lt, lg) => handleReverseGeocode(lt, lg)}
           />
           <ChangeView center={position} zoom={zoom} />
         </MapContainer>

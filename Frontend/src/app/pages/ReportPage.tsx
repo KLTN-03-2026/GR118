@@ -164,17 +164,13 @@ export function ReportPage() {
     setDescriptionReason(null);
 
     try {
-      const res = await fetch('http://localhost:8081/api/v1/ai/check-profanity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ title, description })
-      });
+      const res = await api.post('/ai/check-profanity', { title, description });
 
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.message || 'Moderation service error');
+      if (!res.success) {
+        throw new Error(res.message || 'Moderation service error');
+      }
 
-      if (json.data && json.data.isProfane) {
+      if (res.data && res.data.isProfane) {
         setDescriptionStatus('invalid');
         setDescriptionReason("Nội dung chứa từ ngữ không phù hợp hoặc nhạy cảm.");
         toast.warning("Phát hiện từ ngữ không phù hợp", {

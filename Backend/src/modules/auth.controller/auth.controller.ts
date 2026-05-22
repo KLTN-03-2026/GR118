@@ -152,6 +152,7 @@ export const login = async (req: Request, res: Response) => {
                 user: {
                     _id: user._id,
                     userName: user.userName,
+                    name: user.name,
                     email: user.email,
                     role: primaryRole,
                     roleId: primaryRoleId,
@@ -233,6 +234,7 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
                 user: {
                     _id: user._id,
                     userName: user.userName,
+                    name: user.name,
                     email: user.email,
                     role: primaryRole,
                     roleId: primaryRoleId,
@@ -362,6 +364,7 @@ export const getProfile = async (req: Request, res: Response) => {
             user: {
                 _id: user._id,
                 userName: user.userName,
+                name: user.name,
                 email: user.email,
                 role: primaryRole,
                 roleId: primaryRoleId,

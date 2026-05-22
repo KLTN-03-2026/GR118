@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, logout, refreshToken, loginWithGoogle, getProfile, TestEmail } from '../modules/auth.controller/auth.controller';
+import { register, login, logout, refreshToken, loginWithGoogle, getProfile, updateProfile, TestEmail } from '../modules/auth.controller/auth.controller';
 import { sendOtp, verifyOtp, resetPasswordWithOtp } from '../modules/auth.controller/otp.controller';
 import { SeedDemoData } from '../modules/auth.controller/seed.controller';
 import isAuthenticated from '../middlewares/isAuthenticated';
@@ -19,6 +19,7 @@ router.post("/loginGoogle", authLimiter, loginWithGoogle);
 router.post("/logout", logout);
 router.post("/refresh-token", refreshToken);
 router.get("/profile", isAuthenticated, getProfile);
+router.patch("/profile", isAuthenticated, updateProfile);
 router.get("/stats", isAuthenticated, GetStats);
 router.get("/test-email", TestEmail);
 

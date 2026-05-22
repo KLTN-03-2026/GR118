@@ -16,6 +16,8 @@ export const CreateNewUser = async (
     userName: string, 
     email: string, 
     password: string,
+    city?: string,
+    phone?: string,
     session?: mongoose.ClientSession
 ): Promise<ServiceResponse<IAuth>> => {
     userName = userName?.trim();
@@ -58,6 +60,8 @@ export const CreateNewUser = async (
         userName,
         email,
         password: hashedPassword,
+        city: city || null,
+        phone: phone || null
     }], { session });
     
     return {

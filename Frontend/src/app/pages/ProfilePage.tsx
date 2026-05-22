@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import {
@@ -371,6 +371,17 @@ export function ProfilePage() {
     phone: user?.phone || "",
     city: user?.city || "",
   });
+
+  // Sync user context state when loaded asynchronously
+  useEffect(() => {
+    if (user) {
+      setForm({
+        name: user.name || "",
+        phone: user.phone || "",
+        city: user.city || "",
+      });
+    }
+  }, [user]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

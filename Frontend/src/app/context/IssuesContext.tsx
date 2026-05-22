@@ -10,12 +10,12 @@ interface IssuesContextType {
   deleteIssue: (id: string) => void;
   addVerification: (issueId: string, verification: Verification) => Promise<boolean>;
   reviewVerification: (issueId: string, verificationId: string, adminNote: string) => void;
-  receiveIssue: (id: string, moderatorId: string, moderatorName: string) => void;
-  assignIssue: (id: string, assignedTo: string, moderatorId: string, moderatorName: string) => void;
-  startProcessing: (id: string, note: string, moderatorId: string, moderatorName: string) => void;
-  requestAdditionalInfo: (id: string, request: string, moderatorId: string, moderatorName: string) => void;
-  completeIssue: (id: string, note: string, evidence: string[], moderatorId: string, moderatorName: string) => void;
-  rejectIssue: (id: string, note: string, moderatorId: string, moderatorName: string) => void;
+  receiveIssue: (id: string, moderatorId: string, moderatorName: string) => Promise<boolean>;
+  assignIssue: (id: string, assignedTo: string, moderatorId: string, moderatorName: string) => Promise<boolean>;
+  startProcessing: (id: string, note: string, moderatorId: string, moderatorName: string) => Promise<boolean>;
+  requestAdditionalInfo: (id: string, request: string, moderatorId: string, moderatorName: string) => Promise<boolean>;
+  completeIssue: (id: string, note: string, evidence: string[], moderatorId: string, moderatorName: string) => Promise<boolean>;
+  rejectIssue: (id: string, note: string, moderatorId: string, moderatorName: string) => Promise<boolean>;
   voteIssue: (id: string, userId: string) => Promise<boolean>;
   addComment: (id: string, comment: any) => Promise<boolean>;
   refreshIssues: () => Promise<void>;
@@ -124,9 +124,9 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  const receiveIssue = async (id: string, moderatorId: string, moderatorName: string) => {
+  const receiveIssue = async (id: string, moderatorId: string, moderatorName: string): Promise<boolean> => {
     const issue = issues.find((i) => i.id === id);
-    if (!issue) return;
+    if (!issue) return false;
     const history = addProcessingStep(issue, {
       action: "received",
       note: "Báo cáo đã được tiếp nhận và đang chờ phân công xử lý.",
@@ -134,7 +134,7 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
       actorName: moderatorName,
       createdAt: new Date().toISOString(),
     });
-    await updateIssue(id, {
+    return await updateIssue(id, {
       status: "received",
       moderatorId,
       moderatorName,
@@ -143,9 +143,9 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const assignIssue = async (id: string, assignedTo: string, moderatorId: string, moderatorName: string) => {
+  const assignIssue = async (id: string, assignedTo: string, moderatorId: string, moderatorName: string): Promise<boolean> => {
     const issue = issues.find((i) => i.id === id);
-    if (!issue) return;
+    if (!issue) return false;
     const history = addProcessingStep(issue, {
       action: "assigned",
       note: `Báo cáo đã được phân công cho: ${assignedTo}`,
@@ -154,16 +154,16 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
       assignedTo,
       createdAt: new Date().toISOString(),
     });
-    await updateIssue(id, {
+    return await updateIssue(id, {
       assignedTo,
       assignedAt: new Date().toISOString(),
       processingHistory: history,
     });
   };
 
-  const startProcessing = async (id: string, note: string, moderatorId: string, moderatorName: string) => {
+  const startProcessing = async (id: string, note: string, moderatorId: string, moderatorName: string): Promise<boolean> => {
     const issue = issues.find((i) => i.id === id);
-    if (!issue) return;
+    if (!issue) return false;
     const history = addProcessingStep(issue, {
       action: "processing",
       note: note || "Báo cáo đang được xử lý.",
@@ -171,16 +171,16 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
       actorName: moderatorName,
       createdAt: new Date().toISOString(),
     });
-    await updateIssue(id, {
+    return await updateIssue(id, {
       status: "processing",
       processingNote: note,
       processingHistory: history,
     });
   };
 
-  const requestAdditionalInfo = async (id: string, request: string, moderatorId: string, moderatorName: string) => {
+  const requestAdditionalInfo = async (id: string, request: string, moderatorId: string, moderatorName: string): Promise<boolean> => {
     const issue = issues.find((i) => i.id === id);
-    if (!issue) return;
+    if (!issue) return false;
     const history = addProcessingStep(issue, {
       action: "need_info",
       note: request,
@@ -188,16 +188,16 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
       actorName: moderatorName,
       createdAt: new Date().toISOString(),
     });
-    await updateIssue(id, {
+    return await updateIssue(id, {
       status: "need_info",
       additionalInfoRequest: request,
       processingHistory: history,
     });
   };
 
-  const completeIssue = async (id: string, note: string, evidence: string[], moderatorId: string, moderatorName: string) => {
+  const completeIssue = async (id: string, note: string, evidence: string[], moderatorId: string, moderatorName: string): Promise<boolean> => {
     const issue = issues.find((i) => i.id === id);
-    if (!issue) return;
+    if (!issue) return false;
     const history = addProcessingStep(issue, {
       action: "resolved",
       note,
@@ -206,7 +206,7 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
       evidence,
       createdAt: new Date().toISOString(),
     });
-    await updateIssue(id, {
+    return await updateIssue(id, {
       status: "resolved",
       completionNote: note,
       completionEvidence: evidence,
@@ -214,9 +214,9 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const rejectIssue = async (id: string, note: string, moderatorId: string, moderatorName: string) => {
+  const rejectIssue = async (id: string, note: string, moderatorId: string, moderatorName: string): Promise<boolean> => {
     const issue = issues.find((i) => i.id === id);
-    if (!issue) return;
+    if (!issue) return false;
     const history = addProcessingStep(issue, {
       action: "rejected",
       note,
@@ -224,7 +224,7 @@ export function IssuesProvider({ children }: { children: ReactNode }) {
       actorName: moderatorName,
       createdAt: new Date().toISOString(),
     });
-    await updateIssue(id, {
+    return await updateIssue(id, {
       status: "rejected",
       processingHistory: history,
     });
@@ -293,12 +293,12 @@ export function useIssues() {
       deleteIssue: () => {},
       addVerification: () => {},
       reviewVerification: () => {},
-      receiveIssue: () => {},
-      assignIssue: () => {},
-      startProcessing: () => {},
-      requestAdditionalInfo: () => {},
-      completeIssue: () => {},
-      rejectIssue: () => {},
+      receiveIssue: async () => false,
+      assignIssue: async () => false,
+      startProcessing: async () => false,
+      requestAdditionalInfo: async () => false,
+      completeIssue: async () => false,
+      rejectIssue: async () => false,
       voteIssue: async () => false,
       addComment: async () => false,
       refreshIssues: async () => {},

@@ -122,11 +122,11 @@ export const LockOrUnlockUser = async (req: Request, res: Response, next: NextFu
 
 export const CreateNewUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { userName, name, fullName, email, password, roleIds, managementScope } = req.body;
+        const { userName, name, fullName, email, password, roleIds, managementScope, city, phone } = req.body;
         const finalUserName = userName || email; // Sử dụng email làm userName nếu trống
         const finalName = name || fullName;
 
-        const result = await userRepo.createNewUserByAdmin(finalUserName, finalName, email, password, roleIds, managementScope);
+        const result = await userRepo.createNewUserByAdmin(finalUserName, finalName, email, password, roleIds, managementScope, city, phone);
         if (!result.success || !result.data) {
             const err = ERROR_CODES.INVALID_INPUT;
             return next(new AppError(err.statusCode, err.code, result.message || "Failed to create user"));
@@ -163,10 +163,10 @@ export const UpdateUser = async (req: Request, res: Response, next: NextFunction
             return next(new AppError(err.statusCode, err.code, "User not found"));
         }
 
-        const { userName, email, password, roleIds, roleId, managementScope } = req.body;
+        const { userName, name, email, password, roleIds, roleId, managementScope, city, phone } = req.body;
         
         console.log(`[UpdateUser] Request for ID: ${id}`);
-        console.log(`[UpdateUser] Payload:`, JSON.stringify({ userName, email, hasPassword: !!password, roleIds, roleId, managementScope }));
+        console.log(`[UpdateUser] Payload:`, JSON.stringify({ userName, name, email, hasPassword: !!password, roleIds, roleId, managementScope, city, phone }));
 
         // Fallback: nếu client gửi roleId (số ít) thay vì roleIds (mảng)
         let finalRoleIds = roleIds;
@@ -176,10 +176,13 @@ export const UpdateUser = async (req: Request, res: Response, next: NextFunction
 
         const result = await userRepo.updateUserByAdmin(id, {
             userName,
+            name,
             email,
             password,
             roleIds: finalRoleIds,
-            managementScope
+            managementScope,
+            city,
+            phone
         });
 
         if (!result.success || !result.data) {

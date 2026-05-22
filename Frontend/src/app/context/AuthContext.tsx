@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const beUser = result.user;
               const updatedUserData: User = {
                 id: beUser._id,
-                name: beUser.userName,
+                name: beUser.name || beUser.userName,
                 email: beUser.email,
                 phone: beUser.phone,
                 city: beUser.city,
@@ -147,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const beUser = result.user;
         const userData: User = {
           id: beUser._id,
-          name: beUser.userName,
+          name: beUser.name || beUser.userName,
           email: beUser.email,
           phone: beUser.phone,
           city: beUser.city,
@@ -201,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const beUser = result.user;
         const userData: User = {
           id: beUser._id,
-          name: beUser.userName,
+          name: beUser.name || beUser.userName,
           email: beUser.email,
           phone: beUser.phone,
           city: beUser.city,
@@ -298,11 +298,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateProfile = (data: Partial<User>) => {
+  const updateProfile = async (data: Partial<User>) => {
     if (!user) return;
+    const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+    
+    // Optimistic UI update
     const updated = { ...user, ...data };
     setUser(updated);
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updated));
+
+    if (token) {
+      try {
+        await fetch(`${API_BASE_URL}/auth/profile`, {
+          method: "PATCH",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: data.name,
+            phone: data.phone,
+            city: data.city
+          }),
+          credentials: "include"
+        });
+      } catch (error) {
+        console.error("Failed to update profile on backend:", error);
+      }
+    }
   };
 
   const sendResetCode = async (email: string): Promise<{ success: boolean; error?: string; code?: string }> => {

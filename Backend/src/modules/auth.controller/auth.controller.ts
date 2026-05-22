@@ -24,7 +24,7 @@ const client = new OAuth2Client(googleClientId);
 export const register = async (req: Request, res: Response) => {
     const session = await mongoose.startSession();
     try {
-        let { userName, email, password } = req.body;
+        let { userName, email, password, city, phone } = req.body;
 
         const result = await session.withTransaction(async () => {
             const verifiedOtp = await otpModel.findOne({
@@ -37,7 +37,7 @@ export const register = async (req: Request, res: Response) => {
                 throw new Error("Vui lòng xác thực email bằng mã OTP trước khi đăng ký");
             }
 
-            const createRes = await authRepo.CreateNewUser(userName, email, password, session);
+            const createRes = await authRepo.CreateNewUser(userName, email, password, city, phone, session);
 
             if (!createRes.success || !createRes.data) {
                 throw new Error(createRes.message || "Không thể tạo tài khoản");
@@ -152,10 +152,14 @@ export const login = async (req: Request, res: Response) => {
                 user: {
                     _id: user._id,
                     userName: user.userName,
+                    name: user.name,
                     email: user.email,
                     role: primaryRole,
                     roleId: primaryRoleId,
                     permissions: permissions,
+                    phone: user.phone,
+                    city: user.city,
+                    avatar: user.avatar,
                     managementScope: user.managementScope && user.managementScope.length > 0 ? user.managementScope : (roleRes.length > 0 ? roleRes[0].managementScope || [] : [])
                 }
             })
@@ -230,10 +234,14 @@ export const loginWithGoogle = async (req: Request, res: Response) => {
                 user: {
                     _id: user._id,
                     userName: user.userName,
+                    name: user.name,
                     email: user.email,
                     role: primaryRole,
                     roleId: primaryRoleId,
                     permissions: permissions,
+                    phone: user.phone,
+                    city: user.city,
+                    avatar: user.avatar,
                     managementScope: user.managementScope && user.managementScope.length > 0 ? user.managementScope : (roleRes.length > 0 ? roleRes[0].managementScope || [] : [])
                 }
             });
@@ -356,6 +364,7 @@ export const getProfile = async (req: Request, res: Response) => {
             user: {
                 _id: user._id,
                 userName: user.userName,
+                name: user.name,
                 email: user.email,
                 role: primaryRole,
                 roleId: primaryRoleId,
@@ -373,6 +382,51 @@ export const getProfile = async (req: Request, res: Response) => {
         });
     } catch (error) {
         console.error("GetProfile error:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+}
+
+export const updateProfile = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?._id;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+
+        const { name, phone, city } = req.body;
+
+        const user = await authModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        if (name !== undefined) {
+            user.name = name.trim();
+        }
+        if (phone !== undefined) {
+            user.phone = phone ? phone.trim() : null;
+        }
+        if (city !== undefined) {
+            user.city = city ? city.trim() : null;
+        }
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            user: {
+                _id: user._id,
+                userName: user.userName,
+                email: user.email,
+                name: user.name,
+                phone: user.phone,
+                city: user.city,
+                avatar: user.avatar,
+            }
+        });
+    } catch (error) {
+        console.error("UpdateProfile error:", error);
         return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }

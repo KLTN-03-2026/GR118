@@ -6,7 +6,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Calendar, TrendingUp, CheckCircle, Clock, AlertCircle, FileText, Filter, Download, BarChart3, RefreshCw, Star, Zap, Inbox, ClipboardList } from "lucide-react";
+import { Calendar, TrendingUp, CheckCircle, Clock, AlertCircle, FileText, Filter, Download, BarChart3, RefreshCw, Star, Zap, Inbox, ClipboardList, MapPin } from "lucide-react";
 import { CATEGORY_LABELS, IssueCategory, STATUS_LABELS, STATUS_COLORS } from "../data/issues";
 import { PageTitle } from "../components/PageTitle";
 import { Skeleton, SkeletonCircle, SkeletonText } from "../components/ui/skeleton";
@@ -67,6 +67,7 @@ export function StatisticsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("all");
   const [selectedSeverity, setSelectedSeverity] = useState<string>("all");
+  const [hasSetDefaultDistrict, setHasSetDefaultDistrict] = useState<boolean>(false);
 
   // State cho thống kê từ server
   const [serverStats, setServerStats] = useState<any>(null);
@@ -101,9 +102,101 @@ export function StatisticsPage() {
     return Array.from(districtSet).sort();
   }, [issues]);
 
+// Helper function to normalize location names for robust matching
+const normalizeLocationName = (name: string): string => {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/đ/g, "d")
+    .replace(/(tinh|thanh pho|tp\.|tp|quan|huyen|thi xa|phuong|xa)\b/g, "") // remove prefixes
+    .replace(/[^a-z0-9]/g, "") // remove spaces and special characters
+    .trim();
+};
+
+  // Thiết lập mặc định Quận/Huyện từ thông tin tài khoản của user (khi danh sách quận/huyện đã tải xong)
+  useEffect(() => {
+    console.log("[StatisticsPage] Checking default district:", {
+      userCity: user?.city,
+      districts,
+      hasSetDefaultDistrict
+    });
+    if (user?.city && districts.length > 0 && !hasSetDefaultDistrict) {
+      const userCityLower = user.city.toLowerCase().trim();
+      const userCityNorm = normalizeLocationName(user.city);
+      console.log("[StatisticsPage] Attempting match for user city:", { userCityLower, userCityNorm });
+      
+      // 1. Tìm khớp chính xác quận/huyện
+      let matched = districts.find(d => d.toLowerCase().trim() === userCityLower);
+      
+      // 2. Tìm khớp tương đối nếu không có khớp chính xác (ví dụ: user.city = "Quận 1", district = "Quận 1")
+      if (!matched) {
+        matched = districts.find(d => {
+          const dLower = d.toLowerCase().trim();
+          return dLower.includes(userCityLower) || userCityLower.includes(dLower);
+        });
+      }
+
+      // 3. Tìm khớp nâng cao bằng cách sử dụng normalizeLocationName
+      if (!matched) {
+        matched = districts.find(d => {
+          const dNorm = normalizeLocationName(d);
+          return dNorm === userCityNorm || dNorm.includes(userCityNorm) || userCityNorm.includes(dNorm);
+        });
+      }
+
+      // 4. Fallback: Nếu user.city là Tỉnh/Thành phố (ví dụ: "TP. Hồ Chí Minh"), tìm quận/huyện thuộc Tỉnh/Thành đó có nhiều báo cáo nhất
+      if (!matched) {
+        const issuesInCity = issues.filter(issue => {
+          const issueCityNorm = normalizeLocationName(issue.city);
+          return issueCityNorm === userCityNorm || issueCityNorm.includes(userCityNorm) || userCityNorm.includes(issueCityNorm);
+        });
+
+        if (issuesInCity.length > 0) {
+          const districtCounts: Record<string, number> = {};
+          issuesInCity.forEach(issue => {
+            districtCounts[issue.district] = (districtCounts[issue.district] || 0) + 1;
+          });
+
+          let bestDistrict = "";
+          let maxCount = -1;
+          Object.entries(districtCounts).forEach(([dist, count]) => {
+            if (count > maxCount) {
+              maxCount = count;
+              bestDistrict = dist;
+            }
+          });
+
+          if (bestDistrict && districts.includes(bestDistrict)) {
+            matched = bestDistrict;
+            console.log("[StatisticsPage] Fallback matched parent city district:", matched);
+          }
+        }
+      }
+      
+      console.log("[StatisticsPage] Final match result:", matched);
+      if (matched) {
+        setSelectedDistrict(matched);
+        setHasSetDefaultDistrict(true);
+      }
+    }
+  }, [user, districts, hasSetDefaultDistrict, issues]);
+
+  // Reset flag set default district khi đổi user đăng nhập hoặc cập nhật thông tin location
+  useEffect(() => {
+    setHasSetDefaultDistrict(false);
+  }, [user?.id, user?.city]);
+
   // Lọc báo cáo theo các tiêu chí
   const filteredIssues = useMemo(() => {
     let filtered = [...issues];
+
+    // Nếu là cán bộ (moderator), chỉ xem các báo cáo thuộc lĩnh vực phụ trách (managementScope)
+    if (user && user.role === "moderator") {
+      const scope = user.managementScope || [];
+      filtered = filtered.filter((issue) => scope.includes(issue.category));
+    }
 
     // Lọc theo thời gian
     if (startDate) {
@@ -136,14 +229,16 @@ export function StatisticsPage() {
     }
 
     return filtered;
-  }, [issues, startDate, endDate, selectedCategory, selectedDistrict, selectedSeverity]);
+  }, [issues, user, startDate, endDate, selectedCategory, selectedDistrict, selectedSeverity]);
 
   // Thống kê tổng quan
   const stats = useMemo(() => {
-    const total = serverStats?.totalReports || filteredIssues.length;
-    const pending = serverStats?.pendingReports || filteredIssues.filter((i) => i.status === "pending").length;
-    const resolved = serverStats?.resolvedReports || filteredIssues.filter((i) => i.status === "resolved").length;
-    const inProgress = serverStats?.processingReports || filteredIssues.filter((i) => i.status === "processing" || i.status === "received" || i.status === "need_info").length;
+    const isModerator = user?.role === "moderator";
+
+    const total = (isModerator ? null : serverStats?.totalReports) || filteredIssues.length;
+    const pending = (isModerator ? null : serverStats?.pendingReports) || filteredIssues.filter((i) => i.status === "pending").length;
+    const resolved = (isModerator ? null : serverStats?.resolvedReports) || filteredIssues.filter((i) => i.status === "resolved").length;
+    const inProgress = (isModerator ? null : serverStats?.processingReports) || filteredIssues.filter((i) => i.status === "processing" || i.status === "received" || i.status === "need_info").length;
     const received = filteredIssues.filter((i) => i.status === "received").length;
     const processing = filteredIssues.filter((i) => i.status === "processing").length;
     const needInfo = filteredIssues.filter((i) => i.status === "need_info").length;
@@ -158,12 +253,37 @@ export function StatisticsPage() {
       processing,
       needInfo,
       rejected,
-      completionRate: serverStats?.completionRate || (total > 0 ? Math.round((resolved / total) * 100) : 0),
-      totalUsers: serverStats?.totalUsers || 0,
-      aiAccuracy: serverStats?.aiAccuracy || 92,
-      growth: serverStats?.growth || { reports: "+0%", users: "+0%", resolved: "+0%" }
+      completionRate: (isModerator ? null : serverStats?.completionRate) || (total > 0 ? Math.round((resolved / total) * 100) : 0),
+      totalUsers: isModerator ? 0 : (serverStats?.totalUsers || 0),
+      aiAccuracy: (isModerator ? null : serverStats?.aiAccuracy) || 92,
+      growth: (isModerator ? null : serverStats?.growth) || { reports: "+0%", users: "+0%", resolved: "+0%" }
     };
-  }, [filteredIssues, serverStats]);
+  }, [filteredIssues, serverStats, user]);
+
+  // Tính toán đánh giá trung bình cho báo cáo của cán bộ
+  const avgRatingOfIssues = useMemo(() => {
+    let sum = 0;
+    let count = 0;
+    filteredIssues.forEach((issue) => {
+      if (issue.verifications && issue.verifications.length > 0) {
+        issue.verifications.forEach((v) => {
+          sum += v.rating;
+          count++;
+        });
+      }
+    });
+    return count > 0 ? (sum / count).toFixed(1) : "0.0";
+  }, [filteredIssues]);
+
+  // Lấy danh sách các lĩnh vực cán bộ phụ trách hiển thị lên tiêu đề
+  const managedCategoriesText = useMemo(() => {
+    if (user?.role === "moderator" && user.managementScope) {
+      return user.managementScope
+        .map((cat) => CATEGORY_LABELS[cat as IssueCategory] || cat)
+        .join(", ");
+    }
+    return "";
+  }, [user]);
 
   // Dữ liệu cho biểu đồ trạng thái
   const statusData = useMemo(() => {
@@ -336,7 +456,11 @@ export function StatisticsPage() {
               <div className="w-8 h-[2px] bg-indigo-600"></div>
               Bảng thống kê
             </div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Tổng quan toàn quốc</h1>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              {user?.role === "moderator"
+                ? `Thống kê đơn vị (${managedCategoriesText})`
+                : "Tổng quan toàn quốc"}
+            </h1>
             <p className="text-sm text-slate-500 flex items-center gap-1">
               <Clock size={14} /> Cập nhật lúc {new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} ngày {new Date().toLocaleDateString('vi-VN')}
             </p>
@@ -353,6 +477,109 @@ export function StatisticsPage() {
             </Button>
           </div>
         </div>
+
+        {/* Filters Card */}
+        <Card className="p-6 shadow-md border-0 bg-white/90 backdrop-blur-sm">
+          <div className="flex items-center gap-2 mb-4 text-slate-800 font-bold text-sm">
+            <Filter size={16} className="text-indigo-600" />
+            Bộ lọc thống kê
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Start Date */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase">Từ ngày</label>
+              <div className="relative">
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="pl-9 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 rounded-xl w-full"
+                />
+                <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
+
+            {/* End Date */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase">Đến ngày</label>
+              <div className="relative">
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="pl-9 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 rounded-xl w-full"
+                />
+                <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
+
+            {/* Category Filter */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase">Lĩnh vực</label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 rounded-xl bg-white">
+                  <SelectValue placeholder="Tất cả lĩnh vực" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả lĩnh vực</SelectItem>
+                  {user?.role === "moderator"
+                    ? user.managementScope?.map((cat) => (
+                        <SelectItem key={cat} value={cat}>
+                          {CATEGORY_LABELS[cat as IssueCategory] || cat}
+                        </SelectItem>
+                      ))
+                    : Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Province/City Filter (Read-only) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase">Tỉnh / Thành phố</label>
+              <div className="relative">
+                <Input
+                  type="text"
+                  value={user?.city || "Toàn quốc"}
+                  readOnly
+                  disabled
+                  className="pl-9 border-slate-200 bg-slate-50 text-slate-500 rounded-xl w-full cursor-not-allowed font-medium select-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
+
+            {/* District Filter */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase">Quận / Huyện</label>
+              <Select value={selectedDistrict} onValueChange={setSelectedDistrict}>
+                <SelectTrigger className="border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 rounded-xl bg-white">
+                  <SelectValue placeholder="Tất cả quận/huyện" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả quận/huyện</SelectItem>
+                  {districts.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+
+          </div>
+          {(startDate || endDate || selectedCategory !== "all" || selectedDistrict !== "all" || selectedSeverity !== "all") && (
+            <div className="mt-4 flex justify-end">
+              <Button onClick={handleResetFilters} variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50 text-xs font-bold px-3 py-1.5 h-auto">
+                Xóa tất cả bộ lọc
+              </Button>
+            </div>
+          )}
+        </Card>
 
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -388,14 +615,25 @@ export function StatisticsPage() {
             icon={AlertCircle}
             color="red"
           />
-          <StatCard
-            label="Người dùng"
-            value={stats.totalUsers.toLocaleString()} 
-            change={stats.growth.users}
-            subtext="đăng ký sử dụng"
-            icon={TrendingUp}
-            color="blue"
-          />
+          {user?.role === "moderator" ? (
+            <StatCard
+              label="Đánh giá trung bình"
+              value={avgRatingOfIssues}
+              change="+0.2"
+              subtext="từ người dân phản hồi"
+              icon={Star}
+              color="blue"
+            />
+          ) : (
+            <StatCard
+              label="Người dùng"
+              value={stats.totalUsers.toLocaleString()} 
+              change={stats.growth.users}
+              subtext="đăng ký sử dụng"
+              icon={TrendingUp}
+              color="blue"
+            />
+          )}
           <StatCard
             label="AI Chính xác"
             value={`${stats.aiAccuracy}%`} 

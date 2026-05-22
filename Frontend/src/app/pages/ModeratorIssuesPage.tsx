@@ -288,57 +288,58 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
   const canComplete = status === "processing";
   const canReject = status === "pending" || status === "received";
 
-  const runAction = async (fn: () => void) => {
+  const runAction = async (fn: () => Promise<any>) => {
     setLoading(true);
+    // Keep the small delay for better UX (showing loading state)
     await new Promise((r) => setTimeout(r, 600));
-    fn();
+    await fn();
     setLoading(false);
     setActiveAction(null);
   };
 
-  const handleReceive = () => runAction(() => {
-    receiveIssue(issue.id, userId, userName);
-    toast.success("✅ Đã tiếp nhận báo cáo thành công!");
+  const handleReceive = () => runAction(async () => {
+    const success = await receiveIssue(issue.id, userId, userName);
+    if (success) toast.success("✅ Đã tiếp nhận báo cáo thành công!");
   });
-
+  
   const handleAssign = () => {
     if (!assignedTo.trim()) { toast.error("Vui lòng nhập tên người/đội phụ trách"); return; }
-    runAction(() => {
-      assignIssue(issue.id, assignedTo.trim(), userId, userName);
-      toast.success(`👤 Đã phân công cho: ${assignedTo}`);
+    runAction(async () => {
+      const success = await assignIssue(issue.id, assignedTo.trim(), userId, userName);
+      if (success) toast.success(`👤 Đã phân công cho: ${assignedTo}`);
     });
   };
-
+  
   const handleProcessing = () => {
     if (!processingNote.trim()) { toast.error("Vui lòng nhập ghi chú cập nhật tiến độ"); return; }
-    runAction(() => {
-      startProcessing(issue.id, processingNote.trim(), userId, userName);
-      toast.success("🔄 Đã cập nhật trạng thái Đang xử lý!");
+    runAction(async () => {
+      const success = await startProcessing(issue.id, processingNote.trim(), userId, userName);
+      if (success) toast.success("🔄 Đã cập nhật trạng thái Đang xử lý!");
     });
   };
-
+  
   const handleNeedInfo = () => {
     if (!infoRequest.trim()) { toast.error("Vui lòng nhập nội dung yêu cầu bổ sung"); return; }
-    runAction(() => {
-      requestAdditionalInfo(issue.id, infoRequest.trim(), userId, userName);
-      toast.success("ℹ️ Đã gửi yêu cầu bổ sung thông tin!");
+    runAction(async () => {
+      const success = await requestAdditionalInfo(issue.id, infoRequest.trim(), userId, userName);
+      if (success) toast.success("ℹ️ Đã gửi yêu cầu bổ sung thông tin!");
     });
   };
-
+  
   const handleComplete = () => {
     if (!completionNote.trim()) { toast.error("Vui lòng nhập kết quả xử lý"); return; }
     const validEvidence = evidenceUrls.filter((u) => u.trim());
-    runAction(() => {
-      completeIssue(issue.id, completionNote.trim(), validEvidence, userId, userName);
-      toast.success("🎉 Báo cáo đã được đánh dấu Hoàn thành!");
+    runAction(async () => {
+      const success = await completeIssue(issue.id, completionNote.trim(), validEvidence, userId, userName);
+      if (success) toast.success("🎉 Báo cáo đã được đánh dấu Hoàn thành!");
     });
   };
-
+  
   const handleReject = () => {
     if (!rejectNote.trim()) { toast.error("Vui lòng nhập lý do từ chối"); return; }
-    runAction(() => {
-      rejectIssue(issue.id, rejectNote.trim(), userId, userName);
-      toast.success("Đã từ chối báo cáo");
+    runAction(async () => {
+      const success = await rejectIssue(issue.id, rejectNote.trim(), userId, userName);
+      if (success) toast.success("Đã từ chối báo cáo");
     });
   };
 
@@ -357,7 +358,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
     <div className="space-y-3">
       {/* Action Buttons */}
       <div className="grid grid-cols-2 gap-2">
-        {canReceive && can("issues", "update") && (
+        {canReceive && can("issues_process", "update") && (
           <button
             onClick={() => setActiveAction("receive")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -369,7 +370,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <Inbox size={15} /> Tiếp nhận
           </button>
         )}
-        {canAssign && can("issues", "update") && (
+        {canAssign && can("issues_process", "assign") && (
           <button
             onClick={() => setActiveAction("assign")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -381,7 +382,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <UserCheck size={15} /> Phân công
           </button>
         )}
-        {canProcess && can("issues", "update") && (
+        {canProcess && can("issues_process", "update") && (
           <button
             onClick={() => setActiveAction("processing")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -393,7 +394,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <RefreshCw size={15} /> Cập nhật tiến độ
           </button>
         )}
-        {canNeedInfo && can("issues", "update") && (
+        {canNeedInfo && can("issues_process", "update") && (
           <button
             onClick={() => setActiveAction("need_info")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -405,7 +406,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <Info size={15} /> Yêu cầu bổ sung
           </button>
         )}
-        {canComplete && can("issues", "approve") && (
+        {canComplete && can("issues_process", "approve") && (
           <button
             onClick={() => setActiveAction("complete")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -417,7 +418,7 @@ function ActionPanel({ issue, userId, userName }: { issue: Issue; userId: string
             <CheckSquare size={15} /> Hoàn thành
           </button>
         )}
-        {canReject && can("issues", "update") && (
+        {canReject && can("issues_process", "update") && (
           <button
             onClick={() => setActiveAction("reject")}
             className={`flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -990,7 +991,7 @@ export function ModeratorIssuesPage() {
     if (filterStatus !== "all") list = list.filter((i) => i.status === filterStatus);
     if (filterCategory !== "all") list = list.filter((i) => i.category === filterCategory);
     if (filterSeverity !== "all") list = list.filter((i) => i.aiAnalysis?.severity === filterSeverity);
-    if (filterAssigned === "mine") list = list.filter((i) => i.moderatorId === user.id);
+    if (filterAssigned === "mine") list = list.filter((i) => i.moderatorId === user?.id);
 
     // Sort
     list.sort((a, b) => {
@@ -1015,7 +1016,7 @@ export function ModeratorIssuesPage() {
     });
 
     return list;
-  }, [visibleIssues, search, filterStatus, filterCategory, filterSeverity, filterAssigned, sortBy, user.id]);
+  }, [visibleIssues, search, filterStatus, filterCategory, filterSeverity, filterAssigned, sortBy, user?.id]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -1025,8 +1026,8 @@ export function ModeratorIssuesPage() {
     processing: visibleIssues.filter((i) => i.status === "processing").length,
     need_info: visibleIssues.filter((i) => i.status === "need_info").length,
     resolved: visibleIssues.filter((i) => i.status === "resolved").length,
-    mine: visibleIssues.filter((i) => i.moderatorId === user.id).length,
-  }), [visibleIssues, user.id]);
+    mine: visibleIssues.filter((i) => i.moderatorId === user?.id).length,
+  }), [visibleIssues, user?.id]);
 
   const activeFilterCount = [
     filterStatus !== "all",

@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const beUser = result.user;
               const updatedUserData: User = {
                 id: beUser._id,
-                name: beUser.userName,
+                name: beUser.name || beUser.userName,
                 email: beUser.email,
                 phone: beUser.phone,
                 city: beUser.city,
@@ -147,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const beUser = result.user;
         const userData: User = {
           id: beUser._id,
-          name: beUser.userName,
+          name: beUser.name || beUser.userName,
           email: beUser.email,
           phone: beUser.phone,
           city: beUser.city,
@@ -201,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const beUser = result.user;
         const userData: User = {
           id: beUser._id,
-          name: beUser.userName,
+          name: beUser.name || beUser.userName,
           email: beUser.email,
           phone: beUser.phone,
           city: beUser.city,

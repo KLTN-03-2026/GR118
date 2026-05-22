@@ -23,6 +23,7 @@ import {
   Video,
   Search,
   Home,
+  Navigation,
   Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -148,6 +149,7 @@ export function ReportPage() {
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
   const suggestionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -212,6 +214,17 @@ export function ReportPage() {
     };
   }, [form.title, form.description, checkProfanity]);
 
+
+  // Set default reporter name and phone from logged in user
+  useEffect(() => {
+    if (user) {
+      setForm((f) => ({
+        ...f,
+        reporterName: f.reporterName || user.name || "",
+        reporterPhone: f.reporterPhone || user.phone || "",
+      }));
+    }
+  }, [user]);
 
   // Fetch all provinces on mount
   useEffect(() => {
@@ -525,6 +538,42 @@ export function ReportPage() {
       toast.error("Lỗi khi tìm kiếm địa chỉ");
     } finally {
       setIsSearchingAddress(false);
+    }
+  };
+
+  const handleCurrentLocation = () => {
+    if ("geolocation" in navigator) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude, longitude } = pos.coords;
+          try {
+            const res = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
+              {
+                headers: {
+                  "User-Agent": "IssueReportingSystem/1.0",
+                },
+              }
+            );
+            const data = await res.json();
+            await syncAdministrativeLevels(latitude, longitude, data);
+            toast.success("Đã lấy vị trí hiện tại của bạn");
+          } catch (err) {
+            console.error("Geocoding current location failed:", err);
+            setForm(f => ({ ...f, lat: latitude, lng: longitude }));
+          } finally {
+            setIsLocating(false);
+          }
+        },
+        (error) => {
+          console.error("Geolocation failed:", error);
+          toast.error("Không thể lấy vị trí hiện tại. Vui lòng cho phép quyền truy cập vị trí.");
+          setIsLocating(false);
+        }
+      );
+    } else {
+      toast.error("Trình duyệt của bạn không hỗ trợ định vị");
     }
   };
 
@@ -1337,15 +1386,34 @@ export function ReportPage() {
                           onFocus={() => {
                             if (addressSuggestions.length > 0) setShowSuggestions(true);
                           }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleSearchAddress();
+                            }
+                          }}
                           placeholder="VD: 123 Đường Nguyễn Huệ"
-                          className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm"
+                          className="w-full pl-11 pr-20 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white"
                         />
                         
-                        {isFetchingSuggestions && (
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                          {isFetchingSuggestions && (
                             <Loader2 size={14} className="animate-spin text-gray-400" />
-                          </div>
-                        )}
+                          )}
+                          <button
+                            type="button"
+                            onClick={handleCurrentLocation}
+                            disabled={isLocating}
+                            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+                            title="Sử dụng vị trí hiện tại"
+                          >
+                            {isLocating ? (
+                              <Loader2 size={14} className="animate-spin text-red-500" />
+                            ) : (
+                              <Navigation size={14} />
+                            )}
+                          </button>
+                        </div>
                         
                         <AnimatePresence>
                         {showSuggestions && addressSuggestions.length > 0 && (
@@ -1363,7 +1431,7 @@ export function ReportPage() {
                                   syncAdministrativeLevels(
                                     parseFloat(suggestion.lat),
                                     parseFloat(suggestion.lon),
-                                    { properties: suggestion.properties, address: suggestion.properties }
+                                    { properties: suggestion.properties, address: { ...suggestion.properties, road: suggestion.properties.street || suggestion.properties.name } }
                                   );
                                   setShowSuggestions(false);
                                   toast.success("Đã cập nhật vị trí từ gợi ý");
@@ -1390,6 +1458,7 @@ export function ReportPage() {
                   city={form.city}
                   district={form.district}
                   ward={form.ward}
+                  showSearch={false}
                   onChange={async (lat, lng, addressData) => {
                     syncAdministrativeLevels(lat, lng, addressData);
                   }}
@@ -1435,16 +1504,58 @@ export function ReportPage() {
                 </div>
 
                 {/* Reporter info */}
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={form.anonymous}
-                      onChange={(e) => setForm((f) => ({ ...f, anonymous: e.target.checked }))}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setForm((f) => ({
+                          ...f,
+                          anonymous: checked,
+                          reporterName: checked ? "Người dùng ẩn danh" : (user?.name || ""),
+                          reporterPhone: checked ? "" : (user?.phone || ""),
+                        }));
+                      }}
                       className="w-4 h-4 rounded accent-red-500"
                     />
-                    <span className="text-sm text-gray-600">Báo cáo ẩn danh</span>
+                    <span className="text-sm text-gray-600 font-semibold">Báo cáo ẩn danh</span>
                   </label>
+
+                  <AnimatePresence>
+                    {!form.anonymous && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-3 overflow-hidden"
+                      >
+                        <div className="relative">
+                          <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="text"
+                            value={form.reporterName}
+                            onChange={(e) => setForm((f) => ({ ...f, reporterName: e.target.value }))}
+                            placeholder="Họ và tên"
+                            className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition-all duration-200 text-sm"
+                          />
+                        </div>
+
+                        <div className="relative">
+                          <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="text"
+                            value={form.reporterPhone}
+                            onChange={(e) => setForm((f) => ({ ...f, reporterPhone: e.target.value }))}
+                            placeholder="Số điện thoại (để nhận thông báo)"
+                            className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition-all duration-200 text-sm"
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <div className="bg-amber-50 rounded-xl p-3 flex gap-2 border border-amber-100">

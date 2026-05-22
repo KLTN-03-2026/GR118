@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { Link } from "react-router";
+import { Link, Navigate } from "react-router";
 import {
   Calendar,
   MapPin,
@@ -21,16 +21,8 @@ export function MyActivitiesPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState<string | null>(null);
 
-  if (!user) {
-    return (
-      <div className="min-h-screen pt-28 flex flex-col items-center justify-center text-gray-400">
-        <AlertCircle size={48} className="mb-4" />
-        <p className="text-lg font-medium">Vui lòng đăng nhập để xem hoạt động của bạn</p>
-        <Link to="/" className="mt-4 text-green-500 hover:underline">
-          ← Về trang chủ
-        </Link>
-      </div>
-    );
+  if (!user || user.role === "admin") {
+    return <Navigate to="/" replace />;
   }
 
   const myParticipations = getUserParticipations(user.id);

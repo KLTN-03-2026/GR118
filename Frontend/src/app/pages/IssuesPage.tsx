@@ -8,14 +8,18 @@ import { PageTitle } from "../components/PageTitle";
 import { useIssues } from "../context/IssuesContext";
 import { Skeleton, SkeletonText, SkeletonCircle } from "../components/ui/skeleton";
 import { Card } from "../components/ui/card";
+import { useAuth } from "../context/AuthContext";
 
 export function IssuesPage() {
+  const { user, can } = useAuth();
   const { issues, isLoading } = useIssues();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<IssueCategory | "all">("all");
   const [statusFilter, setStatusFilter] = useState<IssueStatus | "all">("all");
   const [sortBy, setSortBy] = useState<"date" | "votes" | "comments">("date");
   const [showFilters, setShowFilters] = useState(false);
+
+  const canCreateReport = !user || can("issues_vande", "create");
 
   const filtered = useMemo(() => {
     let list = [...issues];
@@ -59,13 +63,15 @@ export function IssuesPage() {
               </>
             }
             action={
-              <Link
-                to="/report"
-                className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-200 hover:scale-105 transition-transform duration-200"
-              >
-                <PlusCircle size={18} />
-                Báo cáo mới
-              </Link>
+              canCreateReport ? (
+                <Link
+                  to="/report"
+                  className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg shadow-red-200 hover:scale-105 transition-transform duration-200"
+                >
+                  <PlusCircle size={18} />
+                  Báo cáo mới
+                </Link>
+              ) : undefined
             }
           />
         </motion.div>

@@ -1,7 +1,17 @@
 import { Link } from "react-router";
 import { Shield, Phone, Mail, MapPin, Facebook, Youtube, Twitter } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export function Footer() {
+  const { user, can } = useAuth();
+
+  const links = [
+    { to: "/", label: "Trang chủ" },
+    ...(!user || can("issues_vande", "create") ? [{ to: "/report", label: "Báo cáo vấn đề" }] : []),
+    { to: "/issues", label: "Danh sách vấn đề" },
+    ...(!user || can("stats_overview", "read") ? [{ to: "/dashboard", label: "Thống kê" }] : []),
+  ];
+
   return (
     <footer className="bg-[#1a1a2e] text-white mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
@@ -28,12 +38,7 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4 text-white">Liên kết nhanh</h4>
             <ul className="space-y-2 text-sm text-gray-400">
-              {[
-                { to: "/", label: "Trang chủ" },
-                { to: "/report", label: "Báo cáo vấn đề" },
-                { to: "/issues", label: "Danh sách vấn đề" },
-                { to: "/dashboard", label: "Thống kê" },
-              ].map((link) => (
+              {links.map((link) => (
                 <li key={link.to}>
                   <Link to={link.to} className="hover:text-white transition-colors duration-200">
                     {link.label}

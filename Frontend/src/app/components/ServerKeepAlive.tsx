@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { api } from "../../utils/api";
 
-const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || (import.meta.env.PROD ? "https://ai-0nhv.onrender.com" : "http://localhost:8000");
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || (import.meta.env.PROD ? "https://smart-issue-reporting-ai.onrender.com" : "http://localhost:8000");
 
 export function ServerKeepAlive() {
   useEffect(() => {

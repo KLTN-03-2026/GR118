@@ -145,9 +145,9 @@ export const SeedDemoData = async (req: Request, res: Response, next: NextFuncti
         // 5. SEED DEMO USERS
         const hashedPassword = await bcrypt.hash("123456", 12);
         const demoUsers = [
-            { name: "Admin", email: "admin@baocaovn.com", roleId: "role_admin" },
-            { name: "Cán bộ", email: "canbo@baocaovn.com", roleId: "role_canbo" },
-            { name: "Công dân", email: "user@baocaovn.com", roleId: "role_congdan" }
+            { name: "Admin", email: "admin@baocaovn.com", roleId: "role_admin", city: "TP. Hồ Chí Minh" },
+            { name: "Cán bộ", email: "canbo@baocaovn.com", roleId: "role_canbo", city: "Đà Nẵng" },
+            { name: "Công dân", email: "user@baocaovn.com", roleId: "role_congdan", city: "TP. Hồ Chí Minh" }
         ];
 
         for (const u of demoUsers) {
@@ -157,8 +157,13 @@ export const SeedDemoData = async (req: Request, res: Response, next: NextFuncti
                     userName: u.name,
                     email: u.email,
                     password: hashedPassword,
-                    types: "login"
+                    types: "login",
+                    city: u.city
                 });
+            } else {
+                // Đảm bảo cập nhật trường city nếu chưa có
+                user.city = u.city;
+                await user.save();
             }
 
             // Sync role

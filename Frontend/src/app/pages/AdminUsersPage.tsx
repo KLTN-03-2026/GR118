@@ -165,7 +165,9 @@ function CreateAccountModal({
         roleIds: [form.roleId],
         sendEmail: true,
         forcePasswordChange: true,
-        managementScope: form.managementScope
+        managementScope: form.managementScope,
+        city: form.city,
+        phone: form.phone.trim()
       });
 
       if (!res.success) {

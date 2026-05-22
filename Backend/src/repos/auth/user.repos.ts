@@ -337,7 +337,9 @@ export const createNewUserByAdmin = async (
     email: string,
     password: string,
     roleIds?: string[],
-    managementScope?: string[]
+    managementScope?: string[],
+    city?: string,
+    phone?: string
 ) => {
     userName = userName?.trim().toLowerCase();
     name = name?.trim();
@@ -391,7 +393,9 @@ export const createNewUserByAdmin = async (
         email,
         password: hashedPassword,
         types: "login",
-        managementScope: managementScope || []
+        managementScope: managementScope || [],
+        city: city || null,
+        phone: phone || null
     });
 
     // Nếu Admin không chọn role, mặc định gán role "công dân"

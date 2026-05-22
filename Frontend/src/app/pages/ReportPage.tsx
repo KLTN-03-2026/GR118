@@ -116,7 +116,7 @@ export function ReportPage() {
   const [descriptionStatus, setDescriptionStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
   const [descriptionReason, setDescriptionReason] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [form, setForm] = useState<FormData>({
     mediaFiles: [],
@@ -150,7 +150,7 @@ export function ReportPage() {
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
-  const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const suggestionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const checkProfanity = useCallback(async (title: string, description: string) => {
     if (!title.trim() && !description.trim()) {
@@ -488,7 +488,6 @@ export function ReportPage() {
 
     setIsSearchingAddress(true);
     
-    // Use natural language query for Photon
     const searchParts = [query];
     if (form.ward) searchParts.push(form.ward);
     if (form.district) searchParts.push(form.district);
@@ -498,7 +497,6 @@ export function ReportPage() {
     const biasParams = (form.lat && form.lng) ? `&lat=${form.lat}&lon=${form.lng}` : "";
 
     try {
-      // Switching to Photon for consistency and to avoid Nominatim 429/CORS
       const res = await fetch(
         `https://photon.komoot.io/api/?q=${encodeURIComponent(fullQuery)}${biasParams}&limit=1`
       );
@@ -515,7 +513,6 @@ export function ReportPage() {
           ...f,
           lat: newLat,
           lng: newLng,
-          // Update location with a cleaner name if it was empty
           location: f.location || result.properties.name || result.properties.street || f.location
         }));
         
@@ -528,6 +525,26 @@ export function ReportPage() {
       toast.error("Lỗi khi tìm kiếm địa chỉ");
     } finally {
       setIsSearchingAddress(false);
+    }
+  };
+
+  // Geocode trực tiếp theo tên tỉnh/huyện/xã (tránh vấn đề stale state)
+  const geocodeByAdminArea = async (city: string, district?: string, ward?: string) => {
+    const parts = [ward, district, city].filter(Boolean);
+    if (parts.length === 0) return;
+    const q = parts.join(" ");
+    try {
+      const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.features?.length > 0) {
+        const f = data.features[0];
+        const newLat = f.geometry.coordinates[1];
+        const newLng = f.geometry.coordinates[0];
+        setForm(prev => ({ ...prev, lat: newLat, lng: newLng }));
+      }
+    } catch (e) {
+      console.error("geocodeByAdminArea failed:", e);
     }
   };
 
@@ -1254,9 +1271,8 @@ export function ReportPage() {
                     onChange={(e) => {
                       const code = Number(e.target.value);
                       const name = provinces.find(p => p.code === code)?.name || "";
-                      handleCityChange(code, name).then(() => {
-                        if (name) handleSearchAddress(""); 
-                      });
+                      handleCityChange(code, name);
+                      if (name) geocodeByAdminArea(name);
                     }}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white"
                   >
@@ -1275,9 +1291,8 @@ export function ReportPage() {
                     onChange={(e) => {
                       const code = Number(e.target.value);
                       const name = districts.find(d => d.code === code)?.name || "";
-                      handleDistrictChange(code, name).then(() => {
-                        if (name) handleSearchAddress("");
-                      });
+                      handleDistrictChange(code, name);
+                      if (name) geocodeByAdminArea(form.city, name);
                     }}
                     disabled={!form.city || loadingDistricts}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white disabled:bg-gray-50 disabled:cursor-not-allowed"
@@ -1298,7 +1313,7 @@ export function ReportPage() {
                       const code = Number(e.target.value);
                       const name = wards.find(w => w.code === code)?.name || "";
                       setForm(f => ({ ...f, ward: name }));
-                      if (name) handleSearchAddress("");
+                      if (name) geocodeByAdminArea(form.city, form.district, name);
                     }}
                     disabled={!form.district || loadingWards}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all duration-200 text-sm bg-white disabled:bg-gray-50 disabled:cursor-not-allowed"
@@ -1430,34 +1445,6 @@ export function ReportPage() {
                     />
                     <span className="text-sm text-gray-600">Báo cáo ẩn danh</span>
                   </label>
-
-                  {!form.anonymous && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="space-y-3"
-                    >
-                      <div className="relative">
-                        <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          value={form.reporterName}
-                          onChange={(e) => setForm((f) => ({ ...f, reporterName: e.target.value }))}
-                          placeholder="Họ và tên"
-                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all text-sm"
-                        />
-                      </div>
-                      <div className="relative">
-                        <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          value={form.reporterPhone}
-                          onChange={(e) => setForm((f) => ({ ...f, reporterPhone: e.target.value }))}
-                          placeholder="Số điện thoại (để nhận thông báo)"
-                          className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-300 transition-all text-sm"
-                        />
-                      </div>
-                    </motion.div>
-                  )}
                 </div>
 
                 <div className="bg-amber-50 rounded-xl p-3 flex gap-2 border border-amber-100">
